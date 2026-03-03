@@ -2441,6 +2441,148 @@ describe('accounts', () => {
       expect(Object.keys(rendered.result.current.editedComment.pendingEdits).length).toBe(0)
       expect(Object.keys(rendered.result.current.editedComment.failedEdits).length).toBe(0)
     })
+
+    test('purge comment moderation succeeded', async () => {
+      const commentCid = rendered.result.current.accountComments[0].cid
+      expect(commentCid).not.toBe(undefined)
+      const subplebbitAddress = rendered.result.current.accountComments[0].subplebbitAddress
+      expect(subplebbitAddress).not.toBe(undefined)
+
+      rendered.rerender(commentCid)
+
+      // wait for useComment to load comment from store
+      await waitFor(() => rendered.result.current.comment?.cid && rendered.result.current.comment.index === undefined)
+      expect(rendered.result.current.comment?.cid).toBe(commentCid)
+      expect(rendered.result.current.comment.index).toBe(undefined)
+
+      // publish moderation options
+      let challengeVerificationCount = 0
+      const commentModerationTimestamp = Math.ceil(Date.now() / 1000)
+      const publishCommentModerationOptions = {
+        timestamp: commentModerationTimestamp,
+        commentCid,
+        subplebbitAddress,
+        commentModeration: {purged: true},
+        onChallenge: (challenge: any, comment: any) => comment.publishChallengeAnswers(),
+        onChallengeVerification: () => challengeVerificationCount++,
+      }
+
+      // publish moderation
+      expect(rendered.result.current.editedComment.editedComment).toBe(undefined)
+      expect(rendered.result.current.editedComment.state).toBe('unedited')
+      await act(async () => {
+        await accountsActions.publishCommentModeration(publishCommentModerationOptions)
+      })
+
+      // edit is pending because the comment from store doesn't yet have purged: true
+      await waitFor(() => rendered.result.current.editedComment.editedComment)
+      expect(rendered.result.current.comment.purged).toBe(undefined)
+      expect(rendered.result.current.editedComment.editedComment).not.toBe(undefined)
+      expect(rendered.result.current.editedComment.state).toBe('pending')
+      expect(rendered.result.current.editedComment.editedComment.purged).toBe(true)
+      expect(rendered.result.current.editedComment.pendingEdits.purged).toBe(true)
+      expect(Object.keys(rendered.result.current.editedComment.succeededEdits).length).toBe(0)
+      expect(Object.keys(rendered.result.current.editedComment.pendingEdits).length).toBe(1)
+      expect(Object.keys(rendered.result.current.editedComment.failedEdits).length).toBe(0)
+
+      // update comment with purged prop in store
+      const updatedComment = {...commentsStore.getState().comments[commentCid]}
+      updatedComment.purged = true
+      updatedComment.updatedAt = commentModerationTimestamp + 1
+      commentsStore.setState(({comments}) => ({comments: {...comments, [commentCid]: updatedComment}}))
+
+      // wait for comment to become updated
+      await waitFor(() => rendered.result.current.comment.purged === true && rendered.result.current.comment.index === undefined)
+      expect(rendered.result.current.comment.purged).toBe(true)
+      expect(rendered.result.current.comment.index).toBe(undefined)
+
+      // wait for edit to become succeeded
+      await waitFor(() => rendered.result.current.editedComment.state === 'succeeded')
+      expect(rendered.result.current.editedComment.editedComment).not.toBe(undefined)
+      expect(rendered.result.current.editedComment.state).toBe('succeeded')
+      expect(rendered.result.current.editedComment.editedComment.purged).toBe(true)
+      expect(rendered.result.current.editedComment.succeededEdits.purged).toBe(true)
+      expect(Object.keys(rendered.result.current.editedComment.succeededEdits).length).toBe(1)
+      expect(Object.keys(rendered.result.current.editedComment.pendingEdits).length).toBe(0)
+      expect(Object.keys(rendered.result.current.editedComment.failedEdits).length).toBe(0)
+    })
+
+    test('purge comment moderation failed', async () => {
+      const commentCid = rendered.result.current.accountComments[0].cid
+      expect(commentCid).not.toBe(undefined)
+      const subplebbitAddress = rendered.result.current.accountComments[0].subplebbitAddress
+      expect(subplebbitAddress).not.toBe(undefined)
+
+      rendered.rerender(commentCid)
+
+      // wait for useComment to load comment from store
+      await waitFor(() => rendered.result.current.comment?.cid && rendered.result.current.comment.index === undefined)
+      expect(rendered.result.current.comment?.cid).toBe(commentCid)
+      expect(rendered.result.current.comment.index).toBe(undefined)
+
+      // publish moderation options
+      let challengeVerificationCount = 0
+      const commentModerationTimestamp = Math.ceil(Date.now() / 1000) - 60 * 60 // 1 hour ago to make the edit not pending
+      const publishCommentModerationOptions = {
+        timestamp: commentModerationTimestamp,
+        commentCid,
+        subplebbitAddress,
+        commentModeration: {purged: true},
+        onChallenge: (challenge: any, comment: any) => comment.publishChallengeAnswers(),
+        onChallengeVerification: () => challengeVerificationCount++,
+      }
+
+      // publish moderation
+      expect(rendered.result.current.editedComment.editedComment).toBe(undefined)
+      expect(rendered.result.current.editedComment.state).toBe('unedited')
+      await act(async () => {
+        await accountsActions.publishCommentModeration(publishCommentModerationOptions)
+      })
+
+      // edit failed (not pending) because is already 1 hour old
+      await waitFor(() => rendered.result.current.editedComment.editedComment)
+      expect(rendered.result.current.comment.purged).toBe(undefined)
+      // updatedAt is required to evaluate the status of a CommentModeration
+      await waitFor(() => rendered.result.current.comment.updatedAt)
+      expect(rendered.result.current.comment.updatedAt).toBeGreaterThan(commentModerationTimestamp)
+      expect(rendered.result.current.editedComment.editedComment).not.toBe(undefined)
+      expect(rendered.result.current.editedComment.state).toBe('failed')
+      expect(rendered.result.current.editedComment.editedComment.purged).toBe(undefined)
+      expect(rendered.result.current.editedComment.failedEdits.purged).toBe(true)
+      expect(Object.keys(rendered.result.current.editedComment.succeededEdits).length).toBe(0)
+      expect(Object.keys(rendered.result.current.editedComment.pendingEdits).length).toBe(0)
+      expect(Object.keys(rendered.result.current.editedComment.failedEdits).length).toBe(1)
+
+      // edit becomes pending if comment.updatedAt is too old
+      let updatedComment = {...commentsStore.getState().comments[commentCid]}
+      updatedComment.updatedAt = commentModerationTimestamp + 1
+      commentsStore.setState(({comments}) => ({comments: {...comments, [commentCid]: updatedComment}}))
+
+      // edit is pending because the comment from store updatedAt is too old
+      await waitFor(() => rendered.result.current.editedComment?.state === 'pending')
+      expect(rendered.result.current.editedComment.editedComment).not.toBe(undefined)
+      expect(rendered.result.current.editedComment.state).toBe('pending')
+      expect(rendered.result.current.editedComment.editedComment.purged).toBe(true)
+      expect(rendered.result.current.editedComment.pendingEdits.purged).toBe(true)
+      expect(Object.keys(rendered.result.current.editedComment.succeededEdits).length).toBe(0)
+      expect(Object.keys(rendered.result.current.editedComment.pendingEdits).length).toBe(1)
+      expect(Object.keys(rendered.result.current.editedComment.failedEdits).length).toBe(0)
+
+      // add purged: true to comment
+      updatedComment = {...commentsStore.getState().comments[commentCid]}
+      updatedComment.purged = true
+      commentsStore.setState(({comments}) => ({comments: {...comments, [commentCid]: updatedComment}}))
+
+      // edit is succeeded
+      await waitFor(() => rendered.result.current.editedComment?.state === 'succeeded')
+      expect(rendered.result.current.editedComment.editedComment).not.toBe(undefined)
+      expect(rendered.result.current.editedComment.state).toBe('succeeded')
+      expect(rendered.result.current.editedComment.editedComment.purged).toBe(true)
+      expect(rendered.result.current.editedComment.succeededEdits.purged).toBe(true)
+      expect(Object.keys(rendered.result.current.editedComment.succeededEdits).length).toBe(1)
+      expect(Object.keys(rendered.result.current.editedComment.pendingEdits).length).toBe(0)
+      expect(Object.keys(rendered.result.current.editedComment.failedEdits).length).toBe(0)
+    })
   })
 
   describe('wallets', () => {

@@ -653,6 +653,7 @@ const getCommentUpdateContent = async (comment: any) => {
   const isPinned = await getArrayItem(rareTrue, commentUpdateSeedNumber.increment())
   const isRemoved = await getArrayItem(rareTrue, commentUpdateSeedNumber.increment())
   const isLocked = await getArrayItem(rareTrue, commentUpdateSeedNumber.increment())
+  const isPurged = await getArrayItem(rareTrue, commentUpdateSeedNumber.increment())
 
   if (isDeleted) {
     commentUpdateContent.deleted = true
@@ -666,6 +667,12 @@ const getCommentUpdateContent = async (comment: any) => {
     }
   } else if (isLocked && comment.depth === 0) {
     commentUpdateContent.locked = true
+    const hasReason = await getArrayItem([true, false], commentUpdateSeedNumber.increment())
+    if (hasReason) {
+      commentUpdateContent.reason = await getArrayItem(reasons, commentUpdateSeedNumber.increment())
+    }
+  } else if (isPurged) {
+    commentUpdateContent.purged = true
     const hasReason = await getArrayItem([true, false], commentUpdateSeedNumber.increment())
     if (hasReason) {
       commentUpdateContent.reason = await getArrayItem(reasons, commentUpdateSeedNumber.increment())
@@ -1091,6 +1098,7 @@ class Comment extends Publication {
   locked: boolean | undefined
   deleted: boolean | undefined
   removed: boolean | undefined
+  purged: boolean | undefined
   edit: any
   original: any
   reason: string | undefined
@@ -1118,6 +1126,7 @@ class Comment extends Publication {
     this.locked = createCommentOptions?.locked
     this.deleted = createCommentOptions?.deleted
     this.removed = createCommentOptions?.removed
+    this.purged = createCommentOptions?.purged
     this.reason = createCommentOptions?.reason
     this.replies = new Pages({comment: this})
     if (this.cid) {

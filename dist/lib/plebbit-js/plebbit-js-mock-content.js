@@ -587,6 +587,7 @@ const getCommentUpdateContent = (comment) => __awaiter(void 0, void 0, void 0, f
     const isPinned = yield getArrayItem(rareTrue, commentUpdateSeedNumber.increment());
     const isRemoved = yield getArrayItem(rareTrue, commentUpdateSeedNumber.increment());
     const isLocked = yield getArrayItem(rareTrue, commentUpdateSeedNumber.increment());
+    const isPurged = yield getArrayItem(rareTrue, commentUpdateSeedNumber.increment());
     if (isDeleted) {
         commentUpdateContent.deleted = true;
     }
@@ -602,6 +603,13 @@ const getCommentUpdateContent = (comment) => __awaiter(void 0, void 0, void 0, f
     }
     else if (isLocked && comment.depth === 0) {
         commentUpdateContent.locked = true;
+        const hasReason = yield getArrayItem([true, false], commentUpdateSeedNumber.increment());
+        if (hasReason) {
+            commentUpdateContent.reason = yield getArrayItem(reasons, commentUpdateSeedNumber.increment());
+        }
+    }
+    else if (isPurged) {
+        commentUpdateContent.purged = true;
         const hasReason = yield getArrayItem([true, false], commentUpdateSeedNumber.increment());
         if (hasReason) {
             commentUpdateContent.reason = yield getArrayItem(reasons, commentUpdateSeedNumber.increment());
@@ -1004,6 +1012,7 @@ class Comment extends Publication {
         this.locked = createCommentOptions === null || createCommentOptions === void 0 ? void 0 : createCommentOptions.locked;
         this.deleted = createCommentOptions === null || createCommentOptions === void 0 ? void 0 : createCommentOptions.deleted;
         this.removed = createCommentOptions === null || createCommentOptions === void 0 ? void 0 : createCommentOptions.removed;
+        this.purged = createCommentOptions === null || createCommentOptions === void 0 ? void 0 : createCommentOptions.purged;
         this.reason = createCommentOptions === null || createCommentOptions === void 0 ? void 0 : createCommentOptions.reason;
         this.replies = new Pages({ comment: this });
         if (this.cid) {

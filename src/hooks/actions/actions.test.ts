@@ -742,6 +742,59 @@ describe('actions', () => {
       expect(typeof onChallengeVerification.mock.calls[0][1]).not.toBe(undefined)
     })
 
+    test('can publish purge comment moderation', async () => {
+      const onChallenge = vi.fn()
+      const onChallengeVerification = vi.fn()
+      const publishCommentModerationOptions = {
+        subplebbitAddress: '12D3KooW... acions.test',
+        commentCid: 'Qm... acions.test',
+        commentModeration: {purged: true},
+        onChallenge,
+        onChallengeVerification,
+      }
+      rendered.rerender(publishCommentModerationOptions)
+
+      // wait for ready
+      await waitFor(() => rendered.result.current.state === 'ready')
+      expect(rendered.result.current.state).toBe('ready')
+
+      // publish
+      await act(async () => {
+        await rendered.result.current.publishCommentModeration()
+      })
+
+      await waitFor(() => rendered.result.current.state === 'publishing-challenge-request')
+      expect(rendered.result.current.state).toBe('publishing-challenge-request')
+
+      // wait for challenge
+      await waitFor(() => rendered.result.current.challenge)
+      expect(rendered.result.current.error).toBe(undefined)
+      expect(rendered.result.current.challenge.challenges).toEqual([{challenge: '2+2=?', type: 'text'}])
+
+      // publish challenge verification
+      act(() => {
+        rendered.result.current.publishChallengeAnswers(['4'])
+      })
+
+      await waitFor(() => rendered.result.current.state === 'publishing-challenge-answer')
+      expect(rendered.result.current.state).toBe('publishing-challenge-answer')
+
+      await waitFor(() => rendered.result.current.state === 'waiting-challenge-verification')
+      expect(rendered.result.current.state).toBe('waiting-challenge-verification')
+
+      // wait for challenge verification
+      await waitFor(() => rendered.result.current.challengeVerification)
+      expect(rendered.result.current.state).toBe('succeeded')
+      expect(rendered.result.current.challengeVerification.challengeSuccess).toBe(true)
+      expect(rendered.result.current.error).toBe(undefined)
+
+      // check callbacks
+      expect(onChallenge.mock.calls[0][0].type).toBe('CHALLENGE')
+      expect(typeof onChallenge.mock.calls[0][1]).not.toBe(undefined)
+      expect(onChallengeVerification.mock.calls[0][0].type).toBe('CHALLENGEVERIFICATION')
+      expect(typeof onChallengeVerification.mock.calls[0][1]).not.toBe(undefined)
+    })
+
     test(`can error`, async () => {
       // mock the comment edit publish to error out
       const commentModerationPublish = CommentModeration.prototype.publish
