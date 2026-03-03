@@ -7,7 +7,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { renderHook, act as tlAct } from "@testing-library/react";
+var __rest = (this && this.__rest) || function (s, e) {
+    var t = {};
+    for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p) && e.indexOf(p) < 0)
+        t[p] = s[p];
+    if (s != null && typeof Object.getOwnPropertySymbols === "function")
+        for (var i = 0, p = Object.getOwnPropertySymbols(s); i < p.length; i++) {
+            if (e.indexOf(p[i]) < 0 && Object.prototype.propertyIsEnumerable.call(s, p[i]))
+                t[p[i]] = s[p[i]];
+        }
+    return t;
+};
+import { render, act as tlAct } from "@testing-library/react";
+import React from "react";
 import { resetCommentsStore, resetCommentsDatabaseAndStore } from "../stores/comments";
 import { resetSubplebbitsStore, resetSubplebbitsDatabaseAndStore } from "../stores/subplebbits";
 import { resetAccountsStore, resetAccountsDatabaseAndStore } from "../stores/accounts";
@@ -16,6 +28,25 @@ import { resetSubplebbitsPagesStore, resetSubplebbitsPagesDatabaseAndStore, } fr
 import { resetAuthorsCommentsStore, resetAuthorsCommentsDatabaseAndStore, } from "../stores/authors-comments";
 import { resetRepliesStore, resetRepliesDatabaseAndStore } from "../stores/replies";
 import { resetRepliesPagesStore, resetRepliesPagesDatabaseAndStore } from "../stores/replies-pages";
+// Custom renderHook that sets result.current synchronously during render,
+// matching @testing-library/react-hooks behavior. RTL v16's renderHook defers
+// result.current via useEffect, which breaks polling-based waitFor patterns
+// when Zustand store updates trigger re-renders outside act().
+function renderHook(callback, options) {
+    const _a = options || {}, { initialProps } = _a, renderOptions = __rest(_a, ["initialProps"]);
+    const result = { current: null, all: [] };
+    function TestComponent({ renderCallbackProps }) {
+        const pendingResult = callback(renderCallbackProps);
+        result.current = pendingResult;
+        result.all.push(pendingResult);
+        return null;
+    }
+    const { rerender: baseRerender, unmount } = render(React.createElement(TestComponent, { renderCallbackProps: initialProps }), renderOptions);
+    function rerender(rerenderCallbackProps) {
+        return baseRerender(React.createElement(TestComponent, { renderCallbackProps: rerenderCallbackProps }));
+    }
+    return { result, rerender, unmount };
+}
 const restorables = [];
 export const silenceUpdateUnmountedComponentWarning = () => {
     const originalError = console.error;
@@ -132,25 +163,10 @@ export const resetDatabasesAndStores = () => __awaiter(void 0, void 0, void 0, f
     // always accounts last because it has async initialization
     yield resetAccountsDatabaseAndStore();
 });
-// renderHook wrapper that tracks all intermediate render results in result.all
-// (replaces @testing-library/react-hooks' result.all which doesn't exist in @testing-library/react)
-const renderHookWithHistory = (callback, options) => {
-    const allResults = [];
-    const rendered = renderHook((props) => {
-        const value = callback(props);
-        allResults.push(value);
-        return value;
-    }, options);
-    // Use Proxy because result.result may be frozen in React 19
-    const resultWithAll = new Proxy(rendered.result, {
-        get(target, prop) {
-            if (prop === "all")
-                return allResults;
-            return target[prop];
-        },
-    });
-    return Object.assign(Object.assign({}, rendered), { result: resultWithAll });
-};
+// renderHookWithHistory is kept for backward compatibility but our custom
+// renderHook already tracks result.all, so this is just a passthrough.
+const renderHookWithHistory = renderHook;
+export { renderHook };
 const testUtils = {
     silenceTestWasNotWrappedInActWarning,
     silenceUpdateUnmountedComponentWarning,
