@@ -1,5 +1,5 @@
-import { act, renderHook } from "@testing-library/react";
-import testUtils from "../../lib/test-utils";
+import { act } from "@testing-library/react";
+import testUtils, { renderHook } from "../../lib/test-utils";
 import { Comment } from "../../types";
 import { useFeed, useBufferedFeeds, useAccount, useSubplebbit, setPlebbitJs } from "../..";
 import * as accountsActions from "../../stores/accounts/accounts-actions";

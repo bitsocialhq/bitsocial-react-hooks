@@ -1,5 +1,5 @@
-import { act, renderHook } from "@testing-library/react";
-import testUtils from "../../lib/test-utils";
+import { act } from "@testing-library/react";
+import testUtils, { renderHook } from "../../lib/test-utils";
 import useRepliesStore, {
   defaultRepliesPerPage as repliesPerPage,
   feedOptionsToFeedName,

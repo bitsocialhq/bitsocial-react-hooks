@@ -1,5 +1,5 @@
-import { act, renderHook } from "@testing-library/react";
-import testUtils from "../lib/test-utils";
+import { act } from "@testing-library/react";
+import testUtils, { renderHook } from "../lib/test-utils";
 import { useComment, useComments, useReplies, useValidateComment, setPlebbitJs } from "..";
 import commentsStore from "../stores/comments";
 import repliesCommentsStore from "../stores/replies/replies-comments-store";

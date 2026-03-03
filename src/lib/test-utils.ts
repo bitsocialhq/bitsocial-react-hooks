@@ -1,4 +1,5 @@
-import { waitFor as tlWaitFor, renderHook, act as tlAct } from "@testing-library/react";
+import { render, act as tlAct } from "@testing-library/react";
+import React from "react";
 import { resetCommentsStore, resetCommentsDatabaseAndStore } from "../stores/comments";
 import { resetSubplebbitsStore, resetSubplebbitsDatabaseAndStore } from "../stores/subplebbits";
 import { resetAccountsStore, resetAccountsDatabaseAndStore } from "../stores/accounts";
@@ -15,6 +16,38 @@ import { resetRepliesStore, resetRepliesDatabaseAndStore } from "../stores/repli
 import { resetRepliesPagesStore, resetRepliesPagesDatabaseAndStore } from "../stores/replies-pages";
 import localForageLru from "./localforage-lru";
 import localForage from "localforage";
+
+// Custom renderHook that sets result.current synchronously during render,
+// matching @testing-library/react-hooks behavior. RTL v16's renderHook defers
+// result.current via useEffect, which breaks polling-based waitFor patterns
+// when Zustand store updates trigger re-renders outside act().
+function renderHook<Result, Props>(
+  callback: (props: Props) => Result,
+  options?: { initialProps?: Props },
+) {
+  const { initialProps, ...renderOptions } = options || {};
+  const result = { current: null as Result | null, all: [] as Result[] };
+
+  function TestComponent({ renderCallbackProps }: { renderCallbackProps: Props }) {
+    const pendingResult = callback(renderCallbackProps);
+    result.current = pendingResult;
+    result.all.push(pendingResult);
+    return null;
+  }
+
+  const { rerender: baseRerender, unmount } = render(
+    React.createElement(TestComponent, { renderCallbackProps: initialProps as Props }),
+    renderOptions as any,
+  );
+
+  function rerender(rerenderCallbackProps: Props) {
+    return baseRerender(
+      React.createElement(TestComponent, { renderCallbackProps: rerenderCallbackProps }),
+    );
+  }
+
+  return { result, rerender, unmount };
+}
 
 const restorables: any = [];
 
@@ -144,27 +177,11 @@ export const resetDatabasesAndStores = async () => {
   await resetAccountsDatabaseAndStore();
 };
 
-// renderHook wrapper that tracks all intermediate render results in result.all
-// (replaces @testing-library/react-hooks' result.all which doesn't exist in @testing-library/react)
-const renderHookWithHistory = <Result, Props>(
-  callback: (props: Props) => Result,
-  options?: any,
-) => {
-  const allResults: Result[] = [];
-  const rendered = renderHook<Result, Props>((props) => {
-    const value = callback(props);
-    allResults.push(value);
-    return value;
-  }, options);
-  // Use Proxy because result.result may be frozen in React 19
-  const resultWithAll = new Proxy(rendered.result, {
-    get(target, prop) {
-      if (prop === "all") return allResults;
-      return (target as any)[prop];
-    },
-  });
-  return { ...rendered, result: resultWithAll };
-};
+// renderHookWithHistory is kept for backward compatibility but our custom
+// renderHook already tracks result.all, so this is just a passthrough.
+const renderHookWithHistory = renderHook;
+
+export { renderHook };
 
 const testUtils = {
   silenceTestWasNotWrappedInActWarning,

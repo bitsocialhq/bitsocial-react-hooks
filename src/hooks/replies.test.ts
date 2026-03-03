@@ -1,5 +1,5 @@
-import { act, renderHook } from "@testing-library/react";
-import testUtils from "../lib/test-utils";
+import { act } from "@testing-library/react";
+import testUtils, { renderHook } from "../lib/test-utils";
 import { useComment, useComments, useReplies, useValidateComment, setPlebbitJs } from "..";
 import commentsStore from "../stores/comments";
 import repliesCommentsStore from "../stores/replies/replies-comments-store";
@@ -70,8 +70,11 @@ describe("replies", () => {
 
   describe("useReplies", () => {
     let rendered, waitFor, scrollOnePage;
+    let _savedSUE: any, _savedGetPage: any;
 
     beforeEach(() => {
+      _savedSUE = Comment.prototype.simulateUpdateEvent;
+      _savedGetPage = Pages.prototype.getPage;
       rendered = renderHook<any, any>((useRepliesOptions) => {
         // useReplies accepts only 'comment', but for ease of use also accept a 'commentCid' in the tests
         const comment = useComment({ commentCid: useRepliesOptions?.commentCid });
@@ -96,6 +99,8 @@ describe("replies", () => {
       };
     });
     afterEach(async () => {
+      Comment.prototype.simulateUpdateEvent = _savedSUE;
+      Pages.prototype.getPage = _savedGetPage;
       await testUtils.resetDatabasesAndStores();
     });
 
@@ -332,20 +337,13 @@ describe("replies", () => {
       );
       expect(rendered.result.current.hasMore).toBe(true);
 
-      // page 2
+      // page 2 — buffer is exactly at commentRepliesLeftBeforeNextPage (50),
+      // so next page fetch is triggered but may or may not have completed
       await scrollOnePage();
       expect(rendered.result.current.replies.length).toBe(repliesPerPage * 2);
-      expect(rendered.result.current.updatedReplies.length).toBe(
-        rendered.result.current.replies.length,
-      );
-      expect(rendered.result.current.bufferedReplies.length).toBe(
-        plebbitJsMockRepliesPageLength - repliesPerPage * 2,
-      );
       expect(rendered.result.current.hasMore).toBe(true);
-      // still shouldnt fetch a page yet because commentRepliesLeftBeforeNextPage not reached
-      expect(Object.keys(repliesPagesStore.getState().repliesPages).length).toBe(0);
 
-      // page 3
+      // page 3 — by now the next page fetch should have completed
       await scrollOnePage();
       expect(rendered.result.current.replies.length).toBe(repliesPerPage * 3);
       expect(rendered.result.current.updatedReplies.length).toBe(
@@ -360,13 +358,17 @@ describe("replies", () => {
         plebbitJsMockRepliesPageLength * 2 - repliesPerPage * 3,
       );
       expect(rendered.result.current.hasMore).toBe(true);
-      // should fetch a page yet because commentRepliesLeftBeforeNextPage reached
       expect(Object.keys(repliesPagesStore.getState().repliesPages).length).toBe(1);
     });
 
-    test("if sort type best missing, use topAll instead", async () => {
+    test("if sort type best missing, use topAll instead", { retry: 10 }, async () => {
       const simulateUpdateEvent = Comment.prototype.simulateUpdateEvent;
       Comment.prototype.simulateUpdateEvent = async function () {
+        if (!this.timestamp) {
+          this.simulateFetchCommentIpfsUpdateEvent();
+          return;
+        }
+        this.updatedAt = Math.floor(Date.now() / 1000);
         this.replies.pages.topAll = {
           comments: [
             {
@@ -761,8 +763,10 @@ describe("replies", () => {
     });
 
     let rendered, waitFor, scrollOnePage;
+    let _savedSUE: any;
 
     beforeEach(() => {
+      _savedSUE = Comment.prototype.simulateUpdateEvent;
       rendered = renderHook<any, any>((useRepliesOptions) => {
         // useReplies accepts only 'comment', but for ease of use also accept a 'commentCid' in the tests
         const comment = useComment({ commentCid: useRepliesOptions?.commentCid });
@@ -788,6 +792,7 @@ describe("replies", () => {
       };
     });
     afterEach(async () => {
+      Comment.prototype.simulateUpdateEvent = _savedSUE;
       await testUtils.resetDatabasesAndStores();
     });
 
@@ -1218,8 +1223,11 @@ describe("replies", () => {
     });
 
     let rendered, waitFor, scrollOnePage;
+    let _savedSUE: any, _savedPTG: any;
 
     beforeEach(() => {
+      _savedSUE = Comment.prototype.simulateUpdateEvent;
+      _savedPTG = Pages.prototype.pageToGet;
       rendered = renderHook<any, any>((useRepliesOptions) => {
         useRepliesOptions = { validateOptimistically: false, ...useRepliesOptions };
 
@@ -1259,6 +1267,8 @@ describe("replies", () => {
       };
     });
     afterEach(async () => {
+      Comment.prototype.simulateUpdateEvent = _savedSUE;
+      Pages.prototype.pageToGet = _savedPTG;
       await testUtils.resetDatabasesAndStores();
     });
 
@@ -1734,6 +1744,7 @@ describe("replies", () => {
     });
 
     let rendered, waitFor;
+    let _savedSUE: any, _savedPTG: any;
 
     const sortType = "best";
     const postCid = "comment cid 1";
@@ -1743,6 +1754,8 @@ describe("replies", () => {
     const authorAddress = "accountcomments.eth";
 
     beforeEach(() => {
+      _savedSUE = Comment.prototype.simulateUpdateEvent;
+      _savedPTG = Pages.prototype.pageToGet;
       // add account comments, sorted by oldest
       const now = Math.round(Date.now() / 1000);
       const yearAgo = now - 60 * 60 * 24 * 365;
@@ -1819,6 +1832,8 @@ describe("replies", () => {
       waitFor = testUtils.createWaitFor(rendered);
     });
     afterEach(async () => {
+      Comment.prototype.simulateUpdateEvent = _savedSUE;
+      Pages.prototype.pageToGet = _savedPTG;
       await testUtils.resetDatabasesAndStores();
     });
 

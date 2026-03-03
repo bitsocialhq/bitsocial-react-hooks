@@ -1,5 +1,5 @@
-import { act, renderHook, waitFor as tlWaitFor } from "@testing-library/react";
-import testUtils from "../../lib/test-utils";
+import { act, waitFor as tlWaitFor } from "@testing-library/react";
+import testUtils, { renderHook } from "../../lib/test-utils";
 import useSubplebbitsPagesStore, {
   resetSubplebbitsPagesDatabaseAndStore,
 } from "./subplebbits-pages-store";
