@@ -98,6 +98,7 @@ src/
 - Never mark work complete without verification.
 - After code changes, run: `yarn build`.
 - After test changes, run: `yarn test`.
+- Maintain mandatory 100% test coverage for hooks and stores (`src/hooks/`, `src/stores/`); every feature or bug fix in these areas must include/adjust tests to keep coverage at 100%.
 - Before committing, run: `yarn prettier` to format.
 - If verification fails, fix and re-run until passing.
 
