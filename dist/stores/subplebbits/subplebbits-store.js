@@ -23,8 +23,8 @@ const subplebbitsStore = createStore((setState, getState) => ({
     subplebbits: {},
     errors: {},
     addSubplebbitToStore(subplebbitAddress, account) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             assert(subplebbitAddress !== '' && typeof subplebbitAddress === 'string', `subplebbitsStore.addSubplebbitToStore invalid subplebbitAddress argument '${subplebbitAddress}'`);
             assert(typeof ((_a = account === null || account === void 0 ? void 0 : account.plebbit) === null || _a === void 0 ? void 0 : _a.getSubplebbit) === 'function', `subplebbitsStore.addSubplebbitToStore invalid account argument '${account}'`);
             // subplebbit is in store already, do nothing
@@ -140,8 +140,8 @@ const subplebbitsStore = createStore((setState, getState) => ({
     },
     // user is the owner of the subplebbit and can edit it locally
     editSubplebbit(subplebbitAddress, subplebbitEditOptions, account) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             assert(subplebbitAddress !== '' && typeof subplebbitAddress === 'string', `subplebbitsStore.editSubplebbit invalid subplebbitAddress argument '${subplebbitAddress}'`);
             assert(subplebbitEditOptions && typeof subplebbitEditOptions === 'object', `subplebbitsStore.editSubplebbit invalid subplebbitEditOptions argument '${subplebbitEditOptions}'`);
             assert(typeof ((_a = account === null || account === void 0 ? void 0 : account.plebbit) === null || _a === void 0 ? void 0 : _a.createSubplebbit) === 'function', `subplebbitsStore.editSubplebbit invalid account argument '${account}'`);
@@ -166,8 +166,8 @@ const subplebbitsStore = createStore((setState, getState) => ({
     },
     // internal action called by accountsActions.createSubplebbit
     createSubplebbit(createSubplebbitOptions, account) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             assert(!createSubplebbitOptions || typeof createSubplebbitOptions === 'object', `subplebbitsStore.createSubplebbit invalid createSubplebbitOptions argument '${createSubplebbitOptions}'`);
             if (!(createSubplebbitOptions === null || createSubplebbitOptions === void 0 ? void 0 : createSubplebbitOptions.signer)) {
                 assert(!(createSubplebbitOptions === null || createSubplebbitOptions === void 0 ? void 0 : createSubplebbitOptions.address), `subplebbitsStore.createSubplebbit createSubplebbitOptions.address '${createSubplebbitOptions === null || createSubplebbitOptions === void 0 ? void 0 : createSubplebbitOptions.address}' must be undefined to create a subplebbit`);
@@ -186,8 +186,8 @@ const subplebbitsStore = createStore((setState, getState) => ({
     },
     // internal action called by accountsActions.deleteSubplebbit
     deleteSubplebbit(subplebbitAddress, account) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             assert(subplebbitAddress && typeof subplebbitAddress === 'string', `subplebbitsStore.deleteSubplebbit invalid subplebbitAddress argument '${subplebbitAddress}'`);
             assert(typeof ((_a = account === null || account === void 0 ? void 0 : account.plebbit) === null || _a === void 0 ? void 0 : _a.createSubplebbit) === 'function', `subplebbitsStore.deleteSubplebbit invalid account argument '${account}'`);
             const subplebbit = yield account.plebbit.createSubplebbit({ address: subplebbitAddress });

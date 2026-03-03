@@ -117,8 +117,8 @@ function createLocalForageInstance(localForageLruOptions) {
         },
     };
     function updateDatabases(key, value) {
-        var _a, _b;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b;
             try {
                 yield database1.setItem(key, value);
             }

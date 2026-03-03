@@ -157,7 +157,7 @@ const onSubplebbitPostsClientsStateChange = (subplebbitAddress) => (clientState,
 const fetchPageSubplebbits = {}; // cache plebbit.createSubplebbits because sometimes it's slow
 let fetchPagePending = {};
 const fetchPage = (pageCid, subplebbitAddress, account, pageType) => __awaiter(void 0, void 0, void 0, function* () {
-    var _d;
+    var _a;
     // subplebbit page is cached
     const cachedSubplebbitPage = yield subplebbitsPagesDatabase.getItem(pageCid);
     if (cachedSubplebbitPage) {
@@ -166,7 +166,7 @@ const fetchPage = (pageCid, subplebbitAddress, account, pageType) => __awaiter(v
     if (!fetchPageSubplebbits[subplebbitAddress]) {
         fetchPageSubplebbits[subplebbitAddress] = yield account.plebbit.createSubplebbit({ address: subplebbitAddress });
         // set clients states on subplebbits store so the frontend can display it
-        utils.pageClientsOnStateChange((_d = fetchPageSubplebbits[subplebbitAddress][pageType]) === null || _d === void 0 ? void 0 : _d.clients, onSubplebbitPostsClientsStateChange(subplebbitAddress));
+        utils.pageClientsOnStateChange((_a = fetchPageSubplebbits[subplebbitAddress][pageType]) === null || _a === void 0 ? void 0 : _a.clients, onSubplebbitPostsClientsStateChange(subplebbitAddress));
     }
     const onError = (error) => log.error(`subplebbitsPagesStore subplebbit '${subplebbitAddress}' failed subplebbit.posts.getPage page cid '${pageCid}':`, error);
     const fetchedSubplebbitPage = yield utils.retryInfinity(() => fetchPageSubplebbits[subplebbitAddress][pageType].getPage({ cid: pageCid }), { onError });

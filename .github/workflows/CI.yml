@@ -34,13 +34,19 @@ jobs:
           - ubuntu-22.04
 
     steps:
-      - run: sudo apt install -y xvfb
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: 'yarn'
 
       - run: yarn install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('yarn.lock') }}
+      - run: yarn lint
+      - run: yarn type-check
       - name: Run unit tests
         id: run_unit_tests
         run: yarn test --pool=forks # --pool=forks fixes "Segmentation fault" error in CI

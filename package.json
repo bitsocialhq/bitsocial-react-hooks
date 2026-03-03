@@ -31,7 +31,9 @@
     "test:server": "rm -rf .plebbit/ && node test/test-server",
     "test:server:wait-on": "wait-on http://localhost:59281 --timeout 120000",
     "test:mock-content": "vitest run --config config/vitest.config.ts src/lib/plebbit-js/plebbit-js-mock-content.donttest.ts",
-    "prettier": "prettier {src,test,config}/**/*.{cjs,js,jsx,ts,tsx} --config config/prettier.config.js --write",
+    "lint": "oxlint src/**/*.{js,ts,tsx}",
+    "prettier": "oxfmt src/**/*.{js,ts,tsx} test/**/*.{js,ts,tsx} config/**/*.{js,ts,tsx}",
+    "type-check": "tsgo --noEmit",
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0"
   },
   "dependencies": {
@@ -50,44 +52,44 @@
   "peerDependencies": {
     "react": ">=16.8"
   },
+  "resolutions": {
+    "vite": "npm:rolldown-vite@7.3.1"
+  },
   "devDependencies": {
-    "@playwright/test": "1.54.2",
     "@testing-library/react-hooks": "7.0.2",
-    "@tsconfig/recommended": "1.0.1",
+    "@tsconfig/recommended": "1.0.13",
     "@types/lodash.isequal": "4.5.6",
     "@types/memoizee": "0.4.8",
-    "@types/node": "16.9.0",
+    "@types/node": "22.19.13",
     "@types/react": "17.0.21",
-    "@types/uuid": "8.3.4",
-    "@typescript-eslint/eslint-plugin": "5.7.0",
-    "@typescript-eslint/parser": "5.7.0",
-    "@vitest/browser": "3.2.4",
+    "@types/uuid": "11.0.0",
+    "@typescript/native-preview": "7.0.0-dev.20260303.1",
+    "@vitest/browser": "4.0.18",
     "conventional-changelog-cli": "4.1.0",
     "cross-env": "10.0.0",
     "cz-conventional-changelog": "3.3.0",
-    "dotenv": "16.0.1",
-    "eslint": "8.4.1",
-    "eslint-plugin-react-hooks": "4.3.0",
-    "eslint-plugin-tsdoc": "0.2.14",
+    "dotenv": "16.6.1",
     "fs-extra": "10.1.0",
     "husky": "4.3.8",
-    "jsdom": "26.1.0",
+    "jsdom": "27.3.0",
     "kubo": "0.39.0",
     "lint-staged": "12.3.8",
-    "prettier": "3.6.2",
+    "oxfmt": "0.36.0",
+    "oxlint": "1.51.0",
+    "playwright": "1.56.1",
     "react": "17.0.2",
     "react-dom": "17.0.2",
     "react-test-renderer": "17.0.2",
     "tcp-port-used": "1.0.2",
     "tempy": "1.0.1",
-    "typescript": "5.1.3",
-    "vite": "5.1.2",
-    "vitest": "3.2.4",
-    "wait-on": "6.0.1"
+    "typescript": "5.9.3",
+    "vite": "npm:rolldown-vite@7.3.1",
+    "vitest": "4.0.18",
+    "wait-on": "9.0.3"
   },
   "lint-staged": {
     "{src,test,config}/**/*.{cjs,js,jsx,ts,tsx}": [
-      "prettier --config config/prettier.config.js --write"
+      "oxfmt --write"
     ]
   },
   "husky": {

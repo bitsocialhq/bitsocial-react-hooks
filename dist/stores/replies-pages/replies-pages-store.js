@@ -158,7 +158,7 @@ const onCommentRepliesClientsStateChange = (commentCid) => (clientState, clientT
 const fetchPageComments = {}; // cache plebbit.createComment because sometimes it's slow
 let fetchPagePending = {};
 const fetchPage = (pageCid, comment, account) => __awaiter(void 0, void 0, void 0, function* () {
-    var _d;
+    var _a;
     // replies page is cached
     const cachedRepliesPage = yield repliesPagesDatabase.getItem(pageCid);
     if (cachedRepliesPage) {
@@ -172,7 +172,7 @@ const fetchPage = (pageCid, comment, account) => __awaiter(void 0, void 0, void 
             depth: comment.depth,
         });
         // set clients states on subplebbits store so the frontend can display it
-        utils.pageClientsOnStateChange((_d = fetchPageComments[comment.cid].replies) === null || _d === void 0 ? void 0 : _d.clients, onCommentRepliesClientsStateChange(comment.cid));
+        utils.pageClientsOnStateChange((_a = fetchPageComments[comment.cid].replies) === null || _a === void 0 ? void 0 : _a.clients, onCommentRepliesClientsStateChange(comment.cid));
     }
     const onError = (error) => log.error(`repliesPagesStore comment '${comment.cid}' failed comment.replies.getPage page cid '${pageCid}':`, error);
     const fetchedRepliesPage = yield utils.retryInfinity(() => fetchPageComments[comment.cid].replies.getPage({ cid: pageCid }), { onError });

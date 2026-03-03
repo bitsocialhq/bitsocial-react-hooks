@@ -253,10 +253,10 @@ export const getImageUrl = (_seed) => __awaiter(void 0, void 0, void 0, function
         jpg,
         webp,
         webp,
-        'https://samplelib.com/lib/preview/png/sample-bumblebee-400x300.png',
-        'https://c.tenor.com/WHs8ooxWJUIAAAAM/really-great-example-right-here-echo-gaming.gif',
-        'https://filesamples.com/samples/image/bmp/sample_640%C3%97426.bmp',
-        'https://brokensite.xyz/images/dog.png',
+        'https://samplelib.com/lib/preview/png/sample-bumblebee-400x300.png', // png
+        'https://c.tenor.com/WHs8ooxWJUIAAAAM/really-great-example-right-here-echo-gaming.gif', // gif
+        'https://filesamples.com/samples/image/bmp/sample_640%C3%97426.bmp', // bmp
+        'https://brokensite.xyz/images/dog.png', // broken image
         'https://brokensite.xyz/images/dog.jpeg', // broken jpeg
     ];
     const imageUrl = (yield getArrayItem(imageUrls, seed.increment())) + (yield getArrayItem(urlSuffixes, seed.increment()));
@@ -418,7 +418,7 @@ const getReplyContent = (getReplyContentOptions, seed) => __awaiter(void 0, void
     return replyContent;
 });
 const getSubplebbitContent = (seed) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b;
+    var _a;
     const subplebbitNumberSeed = SeedIncrementer(yield getNumberHash(seed));
     const subplebbit = {
         pubsubTopic: yield seedToCid(subplebbitNumberSeed.seed),
@@ -454,7 +454,7 @@ const getSubplebbitContent = (seed) => __awaiter(void 0, void 0, void 0, functio
     }
     const hasAuthorFlairs = yield getArrayItem([true, false], subplebbitNumberSeed.increment());
     if (hasAuthorFlairs) {
-        subplebbit.flairs = { post: (_b = subplebbit.flairs) === null || _b === void 0 ? void 0 : _b.post, author: authorFlairs };
+        subplebbit.flairs = { post: (_a = subplebbit.flairs) === null || _a === void 0 ? void 0 : _a.post, author: authorFlairs };
     }
     const hasSuggested = yield getArrayItem([true, false], subplebbitNumberSeed.increment());
     if (hasSuggested) {
@@ -532,7 +532,7 @@ const getCommentUpdateContent = (comment) => __awaiter(void 0, void 0, void 0, f
     if (hasReplies) {
         commentUpdateContent.replyCount = yield getNumberBetween(0, 30, commentUpdateSeedNumber.increment());
         if (comment.depth > 0) {
-            commentUpdateContent.replyCount = commentUpdateContent.replyCount / Math.pow((comment.depth + 1), 2);
+            commentUpdateContent.replyCount = commentUpdateContent.replyCount / (comment.depth + 1) ** 2;
         }
         if (commentUpdateContent.replyCount < 1) {
             commentUpdateContent.replyCount = 0;

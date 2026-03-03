@@ -150,7 +150,7 @@ export const setAccountsOrder = (newOrderedAccountNames) => __awaiter(void 0, vo
     accountsStore.setState({ accountIds });
 });
 export const importAccount = (serializedAccount) => __awaiter(void 0, void 0, void 0, function* () {
-    var _c, _d;
+    var _a, _b;
     const { accounts, accountNamesToAccountIds, activeAccountId } = accountsStore.getState();
     assert(accounts && accountNamesToAccountIds && activeAccountId, `can't use accountsStore.accountActions before initialized`);
     let imported;
@@ -158,7 +158,7 @@ export const importAccount = (serializedAccount) => __awaiter(void 0, void 0, vo
         imported = JSON.parse(serializedAccount);
     }
     catch (e) { }
-    assert((imported === null || imported === void 0 ? void 0 : imported.account) && ((_c = imported === null || imported === void 0 ? void 0 : imported.account) === null || _c === void 0 ? void 0 : _c.id) && ((_d = imported === null || imported === void 0 ? void 0 : imported.account) === null || _d === void 0 ? void 0 : _d.name), `accountsActions.importAccount failed JSON.stringify json serializedAccount '${serializedAccount}'`);
+    assert((imported === null || imported === void 0 ? void 0 : imported.account) && ((_a = imported === null || imported === void 0 ? void 0 : imported.account) === null || _a === void 0 ? void 0 : _a.id) && ((_b = imported === null || imported === void 0 ? void 0 : imported.account) === null || _b === void 0 ? void 0 : _b.name), `accountsActions.importAccount failed JSON.stringify json serializedAccount '${serializedAccount}'`);
     // add subplebbit roles already in subplebbits store to imported account
     // TODO: add test to check if roles get added
     const subplebbits = getAccountSubplebbits(imported.account, subplebbitsStore.getState().subplebbits);
@@ -365,7 +365,7 @@ export const unblockCid = (cid, accountName) => __awaiter(void 0, void 0, void 0
     accountsStore.setState({ accounts: updatedAccounts });
 });
 export const publishComment = (publishCommentOptions, accountName) => __awaiter(void 0, void 0, void 0, function* () {
-    var _e, _f;
+    var _a, _b;
     const { accounts, accountsComments, accountNamesToAccountIds, activeAccountId } = accountsStore.getState();
     assert(accounts && accountNamesToAccountIds && activeAccountId, `can't use accountsStore.accountActions before initialized`);
     let account = accounts[activeAccountId];
@@ -379,7 +379,7 @@ export const publishComment = (publishCommentOptions, accountName) => __awaiter(
         .filter((comment) => comment.cid)
         // author can change his address, his previousCommentCid becomes invalid
         .filter((comment) => { var _a, _b; return ((_a = comment.author) === null || _a === void 0 ? void 0 : _a.address) === ((_b = account.author) === null || _b === void 0 ? void 0 : _b.address); });
-    const previousCommentCid = (_e = accountCommentsWithCids[accountCommentsWithCids.length - 1]) === null || _e === void 0 ? void 0 : _e.cid;
+    const previousCommentCid = (_a = accountCommentsWithCids[accountCommentsWithCids.length - 1]) === null || _a === void 0 ? void 0 : _a.cid;
     const author = Object.assign({}, account.author);
     if (previousCommentCid) {
         author.previousCommentCid = previousCommentCid;
@@ -396,7 +396,7 @@ export const publishComment = (publishCommentOptions, accountName) => __awaiter(
     // set fetching link dimensions state
     let fetchingLinkDimensionsStates;
     if (publishCommentOptions.link) {
-        (_f = publishCommentOptions.onPublishingStateChange) === null || _f === void 0 ? void 0 : _f.call(publishCommentOptions, 'fetching-link-dimensions');
+        (_b = publishCommentOptions.onPublishingStateChange) === null || _b === void 0 ? void 0 : _b.call(publishCommentOptions, 'fetching-link-dimensions');
         fetchingLinkDimensionsStates = { state: 'publishing', publishingState: 'fetching-link-dimensions' };
     }
     // save comment to db
@@ -430,14 +430,14 @@ export const publishComment = (publishCommentOptions, accountName) => __awaiter(
     }))();
     let lastChallenge;
     function publishAndRetryFailedChallengeVerification() {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             comment.once('challenge', (challenge) => __awaiter(this, void 0, void 0, function* () {
                 lastChallenge = challenge;
                 publishCommentOptions.onChallenge(challenge, comment);
             }));
             comment.once('challengeverification', (challengeVerification) => __awaiter(this, void 0, void 0, function* () {
-                var _b;
+                var _a;
                 publishCommentOptions.onChallengeVerification(challengeVerification, comment);
                 if (!challengeVerification.challengeSuccess && lastChallenge) {
                     // publish again automatically on fail
@@ -452,7 +452,7 @@ export const publishComment = (publishCommentOptions, accountName) => __awaiter(
                 else {
                     // the challengeverification message of a comment publication should in theory send back the CID
                     // of the published comment which is needed to resolve it for replies, upvotes, etc
-                    if ((_b = challengeVerification === null || challengeVerification === void 0 ? void 0 : challengeVerification.commentUpdate) === null || _b === void 0 ? void 0 : _b.cid) {
+                    if ((_a = challengeVerification === null || challengeVerification === void 0 ? void 0 : challengeVerification.commentUpdate) === null || _a === void 0 ? void 0 : _a.cid) {
                         const commentWithCid = comment;
                         yield accountsDatabase.addAccountComment(account.id, commentWithCid, accountCommentIndex);
                         accountsStore.setState(({ accountsComments, commentCidsToAccountsComments }) => {
@@ -489,7 +489,7 @@ export const publishComment = (publishCommentOptions, accountName) => __awaiter(
                 (_a = publishCommentOptions.onError) === null || _a === void 0 ? void 0 : _a.call(publishCommentOptions, error, comment);
             });
             comment.on('publishingstatechange', (publishingState) => __awaiter(this, void 0, void 0, function* () {
-                var _c;
+                var _a;
                 // set publishing state on account comment so the frontend can display it, dont persist in db because a reload cancels publishing
                 accountsStore.setState(({ accountsComments }) => {
                     const accountComments = [...(accountsComments[account.id] || [])];
@@ -501,7 +501,7 @@ export const publishComment = (publishCommentOptions, accountName) => __awaiter(
                     accountComments[accountCommentIndex] = Object.assign(Object.assign({}, accountComment), { publishingState });
                     return { accountsComments: Object.assign(Object.assign({}, accountsComments), { [account.id]: accountComments }) };
                 });
-                (_c = publishCommentOptions.onPublishingStateChange) === null || _c === void 0 ? void 0 : _c.call(publishCommentOptions, publishingState);
+                (_a = publishCommentOptions.onPublishingStateChange) === null || _a === void 0 ? void 0 : _a.call(publishCommentOptions, publishingState);
             }));
             // set clients on account comment so the frontend can display it, dont persist in db because a reload cancels publishing
             utils.clientsOnStateChange(comment.clients, (clientState, clientType, clientUrl, chainTicker) => {
@@ -558,7 +558,7 @@ export const publishVote = (publishVoteOptions, accountName) => __awaiter(void 0
     let vote = yield account.plebbit.createVote(createVoteOptions);
     let lastChallenge;
     const publishAndRetryFailedChallengeVerification = () => __awaiter(void 0, void 0, void 0, function* () {
-        var _g;
+        var _a;
         vote.once('challenge', (challenge) => __awaiter(void 0, void 0, void 0, function* () {
             lastChallenge = challenge;
             publishVoteOptions.onChallenge(challenge, vote);
@@ -583,7 +583,7 @@ export const publishVote = (publishVoteOptions, accountName) => __awaiter(void 0
             yield vote.publish();
         }
         catch (error) {
-            (_g = publishVoteOptions.onError) === null || _g === void 0 ? void 0 : _g.call(publishVoteOptions, error, vote);
+            (_a = publishVoteOptions.onError) === null || _a === void 0 ? void 0 : _a.call(publishVoteOptions, error, vote);
         }
     });
     publishAndRetryFailedChallengeVerification();
@@ -610,7 +610,7 @@ export const publishCommentEdit = (publishCommentEditOptions, accountName) => __
     let commentEdit = yield account.plebbit.createCommentEdit(createCommentEditOptions);
     let lastChallenge;
     const publishAndRetryFailedChallengeVerification = () => __awaiter(void 0, void 0, void 0, function* () {
-        var _h;
+        var _a;
         commentEdit.once('challenge', (challenge) => __awaiter(void 0, void 0, void 0, function* () {
             publishCommentEditOptions.onChallenge(challenge, commentEdit);
         }));
@@ -634,7 +634,7 @@ export const publishCommentEdit = (publishCommentEditOptions, accountName) => __
             yield commentEdit.publish();
         }
         catch (error) {
-            (_h = publishCommentEditOptions.onError) === null || _h === void 0 ? void 0 : _h.call(publishCommentEditOptions, error, commentEdit);
+            (_a = publishCommentEditOptions.onError) === null || _a === void 0 ? void 0 : _a.call(publishCommentEditOptions, error, commentEdit);
         }
     });
     publishAndRetryFailedChallengeVerification();
@@ -667,7 +667,7 @@ export const publishCommentModeration = (publishCommentModerationOptions, accoun
     let commentModeration = yield account.plebbit.createCommentModeration(createCommentModerationOptions);
     let lastChallenge;
     const publishAndRetryFailedChallengeVerification = () => __awaiter(void 0, void 0, void 0, function* () {
-        var _j;
+        var _a;
         commentModeration.once('challenge', (challenge) => __awaiter(void 0, void 0, void 0, function* () {
             publishCommentModerationOptions.onChallenge(challenge, commentModeration);
         }));
@@ -691,7 +691,7 @@ export const publishCommentModeration = (publishCommentModerationOptions, accoun
             yield commentModeration.publish();
         }
         catch (error) {
-            (_j = publishCommentModerationOptions.onError) === null || _j === void 0 ? void 0 : _j.call(publishCommentModerationOptions, error, commentModeration);
+            (_a = publishCommentModerationOptions.onError) === null || _a === void 0 ? void 0 : _a.call(publishCommentModerationOptions, error, commentModeration);
         }
     });
     publishAndRetryFailedChallengeVerification();
@@ -708,7 +708,7 @@ export const publishCommentModeration = (publishCommentModerationOptions, accoun
     });
 });
 export const publishSubplebbitEdit = (subplebbitAddress, publishSubplebbitEditOptions, accountName) => __awaiter(void 0, void 0, void 0, function* () {
-    var _k;
+    var _a;
     const { accounts, accountNamesToAccountIds, activeAccountId } = accountsStore.getState();
     assert(accounts && accountNamesToAccountIds && activeAccountId, `can't use accountsStore.accountActions before initialized`);
     let account = accounts[activeAccountId];
@@ -728,7 +728,7 @@ export const publishSubplebbitEdit = (subplebbitAddress, publishSubplebbitEditOp
         yield subplebbitsStore.getState().editSubplebbit(subplebbitAddress, subplebbitEditOptions, account);
         // create fake success challenge verification for consistent behavior with remote subplebbit edit
         publishSubplebbitEditOptions.onChallengeVerification({ challengeSuccess: true });
-        (_k = publishSubplebbitEditOptions.onPublishingStateChange) === null || _k === void 0 ? void 0 : _k.call(publishSubplebbitEditOptions, 'succeeded');
+        (_a = publishSubplebbitEditOptions.onPublishingStateChange) === null || _a === void 0 ? void 0 : _a.call(publishSubplebbitEditOptions, 'succeeded');
         return;
     }
     assert(!publishSubplebbitEditOptions.address || publishSubplebbitEditOptions.address === subplebbitAddress, `accountsActions.publishSubplebbitEdit can't edit address of a remote subplebbit`);
@@ -743,7 +743,7 @@ export const publishSubplebbitEdit = (subplebbitAddress, publishSubplebbitEditOp
     let subplebbitEdit = yield account.plebbit.createSubplebbitEdit(createSubplebbitEditOptions);
     let lastChallenge;
     const publishAndRetryFailedChallengeVerification = () => __awaiter(void 0, void 0, void 0, function* () {
-        var _l;
+        var _a;
         subplebbitEdit.once('challenge', (challenge) => __awaiter(void 0, void 0, void 0, function* () {
             publishSubplebbitEditOptions.onChallenge(challenge, subplebbitEdit);
         }));
@@ -767,7 +767,7 @@ export const publishSubplebbitEdit = (subplebbitAddress, publishSubplebbitEditOp
             yield subplebbitEdit.publish();
         }
         catch (error) {
-            (_l = publishSubplebbitEditOptions.onError) === null || _l === void 0 ? void 0 : _l.call(publishSubplebbitEditOptions, error, subplebbitEdit);
+            (_a = publishSubplebbitEditOptions.onError) === null || _a === void 0 ? void 0 : _a.call(publishSubplebbitEditOptions, error, subplebbitEdit);
         }
     });
     publishAndRetryFailedChallengeVerification();

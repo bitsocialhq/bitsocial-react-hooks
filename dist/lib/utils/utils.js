@@ -238,7 +238,7 @@ export const subplebbitPostsCacheExpired = (subplebbit) => {
     const oneHourAgo = Date.now() / 1000 - 60 * 60;
     return oneHourAgo > subplebbit.fetchedAt;
 };
-export const removeInvalidComments = (comments, { validateReplies, blockSubplebbit }, plebbit) => __awaiter(void 0, void 0, void 0, function* () {
+export const removeInvalidComments = (comments_1, _a, plebbit_1) => __awaiter(void 0, [comments_1, _a, plebbit_1], void 0, function* (comments, { validateReplies, blockSubplebbit }, plebbit) {
     if (!comments.length) {
         return [];
     }
@@ -247,7 +247,7 @@ export const removeInvalidComments = (comments, { validateReplies, blockSubplebb
     return validComments;
 });
 const subplebbitsWithInvalidComments = {};
-export const commentIsValid = (comment, { validateReplies, blockSubplebbit } = {}, plebbit) => __awaiter(void 0, void 0, void 0, function* () {
+export const commentIsValid = (comment_1, ...args_1) => __awaiter(void 0, [comment_1, ...args_1], void 0, function* (comment, { validateReplies, blockSubplebbit } = {}, plebbit) {
     validateReplies = Boolean(validateReplies);
     if (blockSubplebbit === undefined || blockSubplebbit === null) {
         blockSubplebbit = true;
@@ -271,7 +271,7 @@ export const commentIsValid = (comment, { validateReplies, blockSubplebbit } = {
     }
     return true;
 });
-export const repliesAreValid = (comment, { validateReplies, blockSubplebbit } = {}, plebbit) => __awaiter(void 0, void 0, void 0, function* () {
+export const repliesAreValid = (comment_1, ...args_1) => __awaiter(void 0, [comment_1, ...args_1], void 0, function* (comment, { validateReplies, blockSubplebbit } = {}, plebbit) {
     var _a;
     validateReplies = Boolean(validateReplies);
     if (blockSubplebbit === undefined || blockSubplebbit === null) {

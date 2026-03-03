@@ -228,13 +228,13 @@ export function useAuthorAddress(options) {
             return resolveAuthorAddressPromises[(_f = comment === null || comment === void 0 ? void 0 : comment.author) === null || _f === void 0 ? void 0 : _f.address];
         };
         const resolveAuthorAddress = () => __awaiter(this, void 0, void 0, function* () {
-            var _b, _c;
-            const cached = resolvedAuthorAddressCache.get((_b = comment === null || comment === void 0 ? void 0 : comment.author) === null || _b === void 0 ? void 0 : _b.address);
+            var _a, _b;
+            const cached = resolvedAuthorAddressCache.get((_a = comment === null || comment === void 0 ? void 0 : comment.author) === null || _a === void 0 ? void 0 : _a.address);
             if (cached) {
                 return cached;
             }
             const res = yield resolveAuthorAddressNoCache();
-            resolvedAuthorAddressCache.set((_c = comment === null || comment === void 0 ? void 0 : comment.author) === null || _c === void 0 ? void 0 : _c.address, res);
+            resolvedAuthorAddressCache.set((_b = comment === null || comment === void 0 ? void 0 : comment.author) === null || _b === void 0 ? void 0 : _b.address, res);
             return res;
         });
         resolveAuthorAddress()

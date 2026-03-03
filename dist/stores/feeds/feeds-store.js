@@ -34,8 +34,8 @@ const feedsStore = createStore((setState, getState) => ({
     feedsHaveMore: {},
     feedsSubplebbitAddressesWithNewerPosts: {},
     addFeedToStore(feedName, subplebbitAddresses, sortType, account, isBufferedFeed, postsPerPage, filter, newerThan, accountComments, modQueue) {
-        var _a;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a;
             // init here because must be called after async accounts store finished initializing
             initializeFeedsStore();
             assert(feedName && typeof feedName === 'string', `feedsStore.addFeedToStore feedName '${feedName}' invalid`);

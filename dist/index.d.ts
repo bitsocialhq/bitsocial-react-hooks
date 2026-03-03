@@ -49,14 +49,14 @@ declare const hooks: {
     usePublishCommentModeration: typeof usePublishCommentModeration;
     usePublishSubplebbitEdit: typeof usePublishSubplebbitEdit;
     useCreateSubplebbit: typeof useCreateSubplebbit;
-    createAccount: (accountName?: string | undefined) => Promise<void>;
-    deleteAccount: (accountName?: string | undefined) => Promise<void>;
+    createAccount: (accountName?: string) => Promise<void>;
+    deleteAccount: (accountName?: string) => Promise<void>;
     setAccount: (account: import("./types").Account) => Promise<void>;
     setActiveAccount: (accountName: string) => Promise<void>;
     setAccountsOrder: (newOrderedAccountNames: string[]) => Promise<void>;
     importAccount: (serializedAccount: string) => Promise<void>;
-    exportAccount: (accountName?: string | undefined) => Promise<string>;
-    deleteSubplebbit: (subplebbitAddress: string, accountName?: string | undefined) => Promise<void>;
+    exportAccount: (accountName?: string) => Promise<string>;
+    deleteSubplebbit: (subplebbitAddress: string, accountName?: string) => Promise<void>;
     useClientsStates: typeof useClientsStates;
     useSubplebbitsStates: typeof useSubplebbitsStates;
     usePlebbitRpcSettings: typeof usePlebbitRpcSettings;

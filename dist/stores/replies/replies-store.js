@@ -89,8 +89,8 @@ const repliesStore = createStore((setState, getState) => ({
         return feedsChanged;
     },
     addFeedToStoreOrUpdateComment(comment, feedOptions) {
-        var _a, _b, _c, _d, _e;
         return __awaiter(this, void 0, void 0, function* () {
+            var _a, _b, _c, _d, _e;
             // init here because must be called after async accounts store finished initializing
             initializeRepliesStore();
             // validate options

@@ -266,7 +266,7 @@ export const getBufferedFeedsWithoutLoadedFeeds = (bufferedFeeds, loadedFeeds) =
     return newBufferedFeeds;
 };
 export const getUpdatedFeeds = (feedsOptions, filteredSortedFeeds, updatedFeeds, loadedFeeds, accounts) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b, _c, _d;
+    var _a, _b, _c;
     // contruct a list of replies already loaded to remove them from buffered feeds
     const updatedFeedsReplies = {};
     for (const feedName in updatedFeeds) {
@@ -277,7 +277,7 @@ export const getUpdatedFeeds = (feedsOptions, filteredSortedFeeds, updatedFeeds,
     }
     const newUpdatedFeeds = Object.assign({}, updatedFeeds);
     for (const feedName in filteredSortedFeeds) {
-        const plebbit = (_c = accounts[(_b = feedsOptions[feedName]) === null || _b === void 0 ? void 0 : _b.accountId]) === null || _c === void 0 ? void 0 : _c.plebbit;
+        const plebbit = (_b = accounts[(_a = feedsOptions[feedName]) === null || _a === void 0 ? void 0 : _a.accountId]) === null || _b === void 0 ? void 0 : _b.plebbit;
         const updatedFeed = [...(updatedFeeds[feedName] || [])];
         const onlyHasNewReplies = updatedFeed.length === 0;
         let updatedFeedChanged = false;
@@ -290,7 +290,7 @@ export const getUpdatedFeeds = (feedsOptions, filteredSortedFeeds, updatedFeeds,
         if (!onlyHasNewReplies) {
             const promises = [];
             for (const reply of filteredSortedFeeds[feedName]) {
-                if ((_d = updatedFeedsReplies[feedName]) === null || _d === void 0 ? void 0 : _d[reply.cid]) {
+                if ((_c = updatedFeedsReplies[feedName]) === null || _c === void 0 ? void 0 : _c[reply.cid]) {
                     const { index, updatedReply } = updatedFeedsReplies[feedName][reply.cid];
                     promises.push((() => __awaiter(void 0, void 0, void 0, function* () {
                         if ((reply.updatedAt || 0) > (updatedReply.updatedAt || 0) && (yield commentIsValid(reply, { validateReplies: false }, plebbit))) {

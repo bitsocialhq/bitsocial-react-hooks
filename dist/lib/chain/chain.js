@@ -202,14 +202,14 @@ export const validateEthWallet = (wallet, authorAddress) => __awaiter(void 0, vo
     }
 });
 export const validateEthWalletViem = (wallet, authorAddress) => __awaiter(void 0, void 0, void 0, function* () {
-    var _d, _e, _f;
+    var _a, _b, _c;
     // sanity checks
     assert(wallet && typeof wallet === 'object', `validateEthWallet invalid wallet argument '${wallet}'`);
     assert(wallet === null || wallet === void 0 ? void 0 : wallet.address, `validateEthWallet invalid wallet.address '${wallet === null || wallet === void 0 ? void 0 : wallet.address}'`);
     assert(typeof (wallet === null || wallet === void 0 ? void 0 : wallet.timestamp) === 'number', `validateEthWallet invalid wallet.timestamp '${wallet === null || wallet === void 0 ? void 0 : wallet.timestamp}' not a number`);
     assert(wallet === null || wallet === void 0 ? void 0 : wallet.signature, `validateEthWallet invalid wallet.signature '${wallet === null || wallet === void 0 ? void 0 : wallet.signature}'`);
-    assert((_d = wallet === null || wallet === void 0 ? void 0 : wallet.signature) === null || _d === void 0 ? void 0 : _d.signature, `validateEthWallet invalid wallet.signature.signature '${(_e = wallet === null || wallet === void 0 ? void 0 : wallet.signature) === null || _e === void 0 ? void 0 : _e.signature}'`);
-    assert(wallet.signature.type === 'eip191', `validateEthWallet invalid wallet.signature.type '${(_f = wallet === null || wallet === void 0 ? void 0 : wallet.signature) === null || _f === void 0 ? void 0 : _f.type}'`);
+    assert((_a = wallet === null || wallet === void 0 ? void 0 : wallet.signature) === null || _a === void 0 ? void 0 : _a.signature, `validateEthWallet invalid wallet.signature.signature '${(_b = wallet === null || wallet === void 0 ? void 0 : wallet.signature) === null || _b === void 0 ? void 0 : _b.signature}'`);
+    assert(wallet.signature.type === 'eip191', `validateEthWallet invalid wallet.signature.type '${(_c = wallet === null || wallet === void 0 ? void 0 : wallet.signature) === null || _c === void 0 ? void 0 : _c.type}'`);
     assert(authorAddress && typeof authorAddress === 'string', `validateEthWallet invalid authorAddress '${authorAddress}'`);
     assert((wallet === null || wallet === void 0 ? void 0 : wallet.timestamp) <= Date.now() / 1000, `validateEthWallet invalid wallet.timestamp '${wallet === null || wallet === void 0 ? void 0 : wallet.timestamp}' greater than current Date.now() / 1000`);
     const valid = yield verifyMessage({
@@ -222,12 +222,12 @@ export const validateEthWalletViem = (wallet, authorAddress) => __awaiter(void 0
     }
 });
 export const validateSolWallet = (wallet, authorAddress) => __awaiter(void 0, void 0, void 0, function* () {
-    var _g, _h;
+    var _a, _b;
     assert(wallet && typeof wallet === 'object', `validateSolWallet invalid wallet argument '${wallet}'`);
     assert(wallet === null || wallet === void 0 ? void 0 : wallet.address, `validateSolWallet invalid wallet.address '${wallet === null || wallet === void 0 ? void 0 : wallet.address}'`);
     assert(typeof (wallet === null || wallet === void 0 ? void 0 : wallet.timestamp) === 'number', `validateSolWallet invalid wallet.timestamp '${wallet === null || wallet === void 0 ? void 0 : wallet.timestamp}' not a number`);
     assert(wallet === null || wallet === void 0 ? void 0 : wallet.signature, `validateSolWallet invalid wallet.signature '${wallet === null || wallet === void 0 ? void 0 : wallet.signature}'`);
-    assert((_g = wallet === null || wallet === void 0 ? void 0 : wallet.signature) === null || _g === void 0 ? void 0 : _g.signature, `validateSolWallet invalid wallet.signature.signature '${(_h = wallet === null || wallet === void 0 ? void 0 : wallet.signature) === null || _h === void 0 ? void 0 : _h.signature}'`);
+    assert((_a = wallet === null || wallet === void 0 ? void 0 : wallet.signature) === null || _a === void 0 ? void 0 : _a.signature, `validateSolWallet invalid wallet.signature.signature '${(_b = wallet === null || wallet === void 0 ? void 0 : wallet.signature) === null || _b === void 0 ? void 0 : _b.signature}'`);
     assert(authorAddress && typeof authorAddress === 'string', `validateSolWallet invalid authorAddress '${authorAddress}'`);
     assert((wallet === null || wallet === void 0 ? void 0 : wallet.timestamp) <= Date.now() / 1000, `validateSolWallet invalid wallet.timestamp '${wallet === null || wallet === void 0 ? void 0 : wallet.timestamp}' greater than current Date.now() / 1000`);
     const signatureBytes = uint8ArrayFromString(wallet.signature.signature, 'base58btc');

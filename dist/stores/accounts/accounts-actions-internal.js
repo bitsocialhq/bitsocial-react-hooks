@@ -91,10 +91,10 @@ export const startUpdatingAccountCommentOnCommentUpdateEvents = (comment, accoun
 // internal accounts action: the comment CID is not known at the time of publishing, so every time
 // we fetch a new comment, check if its our own, and attempt to add the CID
 export const addCidToAccountComment = (comment) => __awaiter(void 0, void 0, void 0, function* () {
-    var _b;
+    var _a;
     const { accounts } = accountsStore.getState();
     assert(accounts, `can't use accountsStore.accountActions before initialized`);
-    const accountCommentsWithoutCids = getAccountsCommentsWithoutCids()[(_b = comment === null || comment === void 0 ? void 0 : comment.author) === null || _b === void 0 ? void 0 : _b.address];
+    const accountCommentsWithoutCids = getAccountsCommentsWithoutCids()[(_a = comment === null || comment === void 0 ? void 0 : comment.author) === null || _a === void 0 ? void 0 : _a.address];
     if (!accountCommentsWithoutCids) {
         return;
     }
