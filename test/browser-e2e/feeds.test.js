@@ -151,10 +151,24 @@ for (const plebbitOptionsType in plebbitOptionsTypes) {
 
       await waitFor(() => !!rendered.result.current.feed[0].cid);
       expect(rendered.result.current.feed[0].subplebbitAddress).to.equal(subplebbitAddress);
-      console.log("after first render");
+      console.log("after first render", {
+        hasRaw: !!rendered.result.current.feed[0].raw,
+        invalidState: rendered.result.current.validateCommentInvalid?.state,
+        validState: rendered.result.current.validateComment?.state,
+        validWithoutRepliesState: rendered.result.current.validateCommentWithoutReplies?.state,
+      });
+
+      const diagInterval = setInterval(() => {
+        console.log("validate-diag", {
+          hasRaw: !!rendered.result.current.feed?.[0]?.raw,
+          invalidState: rendered.result.current.validateCommentInvalid?.state,
+          validState: rendered.result.current.validateComment?.state,
+        });
+      }, 10000);
 
       // do invalid first to make sure it doesn't block subplebbit
       await waitFor(() => rendered.result.current.validateCommentInvalid.state === "failed");
+      clearInterval(diagInterval);
       expect(rendered.result.current.validateCommentInvalid.state).to.equal("failed");
       expect(rendered.result.current.validateCommentInvalid.valid).to.equal(false);
       console.log("after validate invalid comment");
