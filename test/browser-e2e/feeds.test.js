@@ -128,6 +128,7 @@ for (const plebbitOptionsType in plebbitOptionsTypes) {
     it("validate comments", async () => {
       console.log(`starting validate comments tests (${plebbitOptionsType})`);
 
+      rendered.unmount();
       rendered = renderHook(() => {
         const feed = useFeed({ subplebbitAddresses: [subplebbitAddress], sortType: "hot" });
         const validateComment = useValidateComment({ comment: feed.feed[0] });
