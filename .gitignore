@@ -25,3 +25,6 @@ yarn-error.log
 .env
 
 .cursor
+
+# generated browser test screenshots
+test/**/__screenshots__/

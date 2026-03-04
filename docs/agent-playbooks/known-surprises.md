@@ -28,4 +28,12 @@ If uncertain, ask the developer before adding an entry.
 
 ## Entries
 
-No confirmed surprises logged yet.
+### Browser test screenshots are generated under `test/**/__screenshots__/`
+
+- **Date:** 2026-03-04
+- **Observed by:** Codex
+- **Context:** reviewing unexpected untracked PNG files after browser test runs
+- **What was surprising:** Vitest browser tests can generate screenshot artifacts under `test/browser-plebbit-js-mock/__screenshots__/`, but the repo did not ignore them.
+- **Impact:** agents may mistake generated screenshots for intended source files or leave noisy untracked changes behind.
+- **Mitigation:** treat `test/**/__screenshots__/` as generated output and keep it gitignored.
+- **Status:** confirmed
