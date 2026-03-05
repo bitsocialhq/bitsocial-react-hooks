@@ -1,7 +1,7 @@
 # bitsocial-react-hooks
 
 <p align="left">
-  <img src="./docs/assets/readme/react-hooks-banner.jpg" alt="React Hooks banner" width="640" />
+  <img src="./docs/assets/readme/react-hooks-banner.jpg" alt="React Hooks banner" width="340" />
 </p>
 
 React hooks for the Bitsocial protocol. Build decentralized, serverless social apps with React using a familiar hooks API — fetch feeds, comments, author profiles, manage accounts, publish content, and more, all without a central server.
