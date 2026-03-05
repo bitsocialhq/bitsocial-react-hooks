@@ -1,20 +1,81 @@
 # bitsocial-react-hooks
 
+<p align="left">
+  <img src="./docs/assets/readme/react-hooks-banner.jpg" alt="React Hooks banner" width="640" />
+</p>
+
 React hooks for the Bitsocial protocol. Build decentralized, serverless social apps with React using a familiar hooks API — fetch feeds, comments, author profiles, manage accounts, publish content, and more, all without a central server.
 
-This package is published as [`@bitsocialhq/bitsocial-react-hooks`](https://github.com/bitsocialhq/bitsocial-react-hooks) and is currently used by [5chan](https://github.com/bitsocialhq/5chan) and other Bitsocial clients.
+This package is currently consumed directly from [`bitsocialhq/bitsocial-react-hooks`](https://github.com/bitsocialhq/bitsocial-react-hooks) and is used by [5chan](https://github.com/bitsocialhq/5chan) and other Bitsocial clients.
 
 > **Note:** This repo is a temporary [Bitsocial](https://github.com/bitsocialhq) fork of [plebbit/plebbit-react-hooks](https://github.com/plebbit/plebbit-react-hooks) for AI-aided development. Bug fixes, new features, and improvements made here will be merged upstream when the original maintainer is ready. The codebase still uses legacy naming (`plebbit`, `subplebbit`, etc.) pending upstream rebranding of the protocol layer.
 
 ## Installation
 
 ```bash
-yarn add @bitsocialhq/bitsocial-react-hooks
+yarn add https://github.com/bitsocialhq/bitsocial-react-hooks.git#<commit-hash>
 ```
+
+Use a pinned commit hash (or tag) so installs are reproducible.
 
 ---
 
-### Docs:
+## Table of Contents
+
+- [Installation](#installation)
+- [Documentation Links](#documentation-links)
+- [API Reference](#api-reference)
+  - [Hooks](#hooks)
+  - [Accounts Hooks](#accounts-hooks)
+  - [Comments Hooks](#comments-hooks)
+  - [Subplebbits Hooks](#subplebbits-hooks)
+  - [Authors Hooks](#authors-hooks)
+  - [Feeds Hooks](#feeds-hooks)
+  - [Actions Hooks](#actions-hooks)
+  - [States Hooks](#states-hooks)
+  - [Plebbit RPC Hooks](#plebbit-rpc-hooks)
+  - [Actions with no hooks implementations yet](#actions-with-no-hooks-implementations-yet)
+  - [Utility functions](#utility-functions)
+- [Recipes](#recipes)
+  - [Getting started](#getting-started)
+  - [Get the active account, if none exist in browser database, a default account is generated](#get-the-active-account-if-none-exist-in-browser-database-a-default-account-is-generated)
+  - [Create accounts and change active account](#create-accounts-and-change-active-account)
+  - [Get a post](#get-a-post)
+  - [Get a comment](#get-a-comment)
+  - [Get author avatar](#get-author-avatar)
+  - [Get author profile page](#get-author-profile-page)
+  - [Get a subplebbit](#get-a-subplebbit)
+  - [Create a post or comment using callbacks](#create-a-post-or-comment-using-callbacks)
+  - [Create a post or comment using hooks](#create-a-post-or-comment-using-hooks)
+  - [Create a post or comment anonymously (without account.signer or account.author)](#create-a-post-or-comment-anonymously-without-accountsigner-or-accountauthor)
+  - [Create a vote](#create-a-vote)
+  - [Create a comment edit](#create-a-comment-edit)
+  - [Create a comment moderation](#create-a-comment-moderation)
+  - [Delete a comment](#delete-a-comment)
+  - [Subscribe to a subplebbit](#subscribe-to-a-subplebbit)
+  - [Get feed](#get-feed)
+  - [Get mod queue (pending approval)](#get-mod-queue-pending-approval)
+  - [Approve a pending approval comment](#approve-a-pending-approval-comment)
+  - [Edit an account](#edit-an-account)
+  - [Delete account](#delete-account)
+  - [Get your own comments and votes](#get-your-own-comments-and-votes)
+  - [Determine if a comment is your own](#determine-if-a-comment-is-your-own)
+  - [Get account notifications](#get-account-notifications)
+  - [Block an address (author, subplebbit or multisub)](#block-an-address-author-subplebbit-or-multisub)
+  - [Block a cid (hide a comment)](#block-a-cid-hide-a-comment)
+  - [(Desktop only) Create a subplebbit](#desktop-only-create-a-subplebbit)
+  - [(Desktop only) List the subplebbits you created](#desktop-only-list-the-subplebbits-you-created)
+  - [(Desktop only) Edit your subplebbit settings](#desktop-only-edit-your-subplebbit-settings)
+  - [Export and import account](#export-and-import-account)
+  - [View the status of a comment edit](#view-the-status-of-a-comment-edit)
+  - [View the status of a specific comment edit property](#view-the-status-of-a-specific-comment-edit-property)
+  - [List all comment and subplebbit edits the account has performed](#list-all-comment-and-subplebbit-edits-the-account-has-performed)
+  - [Get replies to a post (nested or flat)](#get-replies-to-a-post-nested-or-flat)
+  - [Get a shortCid or shortAddress (plebbit-js)](#get-a-shortcid-or-shortaddress-plebbit-js)
+  - [Get a shortCid or shortAddress (hooks)](#get-a-shortcid-or-shortaddress-hooks)
+  - [useBufferedFeeds with concurrency](#usebufferedfeeds-with-concurrency)
+
+## Documentation Links
 
 - [Hooks API](#hooks)
 - [Getting started](#getting-started)
@@ -23,6 +84,8 @@ yarn add @bitsocialhq/bitsocial-react-hooks
 - Algorithms: https://github.com/bitsocialhq/bitsocial-react-hooks/blob/master/docs/algorithms.md
 - Schema (Types, IndexedDb and state management): https://github.com/bitsocialhq/bitsocial-react-hooks/blob/master/docs/schema.md
 - Types: https://github.com/bitsocialhq/bitsocial-react-hooks/blob/master/src/types.ts
+
+## API Reference
 
 ### Hooks
 
@@ -98,12 +161,14 @@ importAccount(serializedAccount: string)
 exportAccount(accountName: string): string // don't allow undefined to prevent catastrophic bugs
 deleteSubplebbit(subplebbitAddress: string, accountName?: string)
 ```
-#### Util functions
+#### Utility functions
 ```
 setPlebbitJs(PlebbitJs) // set which plebbit-js version to use, e.g. to mock content for frontend dev or to use the node version in Electron
 deleteDatabases() // delete all databases, including all caches and accounts data
 deleteCaches() // delete the cached comments, cached subplebbits and cached pages only, no accounts data
 ```
+
+## Recipes
 
 #### Getting started
 
@@ -1024,7 +1089,7 @@ const {replies, updatedReplies, hasMore, loadMore} = useReplies({...useRepliesOp
 const repliesComponents = replies.map((reply, index) => <Reply key={reply?.index || reply?.cid} reply={reply} updatedReply={updatedReplies[index]}/>)
 ```
 
-#### Get a shortCid or shortAddress
+#### Get a shortCid or shortAddress (plebbit-js)
 
 ```jsx
 // NOTE: not possible to do from bitsocial-react-hooks, needs plebbit-js
@@ -1034,7 +1099,7 @@ const shortParentCid = getShortAddress(comment.parentCid)
 const shortAddress = getShortCid(address)
 ```
 
-#### Get a shortCid or shortAddress
+#### Get a shortCid or shortAddress (hooks)
 
 ```jsx
 import {useShortAddress, useShortCid} from '@bitsocialhq/bitsocial-react-hooks'
