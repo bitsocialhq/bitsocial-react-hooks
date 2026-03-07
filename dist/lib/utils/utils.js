@@ -98,7 +98,7 @@ export const flattenCommentsPages = (pageInstanceOrPagesInstance) => {
     }
     return uniqueFlattened;
 };
-export const memo = (functionToMemo, memoOptions) => {
+const memo = (functionToMemo, memoOptions) => {
     assert(typeof functionToMemo === "function", `memo first argument must be a function`);
     const pendingPromises = new Map();
     const cache = new QuickLru(memoOptions);
@@ -153,7 +153,7 @@ export const memo = (functionToMemo, memoOptions) => {
     };
     return obj[memoedFunctionName];
 };
-export const memoSync = (functionToMemo, memoOptions) => {
+const memoSync = (functionToMemo, memoOptions) => {
     assert(typeof functionToMemo === "function", `memo first argument must be a function`);
     const cache = new QuickLru(memoOptions);
     // preserve function name
@@ -190,7 +190,7 @@ export const memoSync = (functionToMemo, memoOptions) => {
     };
     return obj[memoedFunctionName];
 };
-export const clientsOnStateChange = (clients, onStateChange) => {
+const clientsOnStateChange = (clients, onStateChange) => {
     var _a, _b, _c, _d, _e, _f, _g, _h;
     for (const clientUrl in clients === null || clients === void 0 ? void 0 : clients.ipfsGateways) {
         (_a = clients === null || clients === void 0 ? void 0 : clients.ipfsGateways) === null || _a === void 0 ? void 0 : _a[clientUrl].on("statechange", (state) => onStateChange(state, "ipfsGateways", clientUrl));
@@ -213,7 +213,7 @@ export const clientsOnStateChange = (clients, onStateChange) => {
         }
     }
 };
-export const pageClientsOnStateChange = (clients, onStateChange) => {
+const pageClientsOnStateChange = (clients, onStateChange) => {
     var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m;
     for (const sortType in clients === null || clients === void 0 ? void 0 : clients.ipfsGateways) {
         for (const clientUrl in (_a = clients === null || clients === void 0 ? void 0 : clients.ipfsGateways) === null || _a === void 0 ? void 0 : _a[sortType]) {
@@ -278,7 +278,7 @@ export const commentIsValid = (comment_1, ...args_1) => __awaiter(void 0, [comme
     }
     return true;
 });
-export const repliesAreValid = (comment_1, ...args_1) => __awaiter(void 0, [comment_1, ...args_1], void 0, function* (comment, { validateReplies, blockSubplebbit } = {}, plebbit) {
+const repliesAreValid = (comment_1, ...args_1) => __awaiter(void 0, [comment_1, ...args_1], void 0, function* (comment, { validateReplies, blockSubplebbit } = {}, plebbit) {
     var _a;
     validateReplies = Boolean(validateReplies);
     if (blockSubplebbit === undefined || blockSubplebbit === null) {
@@ -339,7 +339,7 @@ const utils = {
     removeInvalidComments,
     repliesAreValid,
 };
-export const retryInfinity = (functionToRetry, options) => __awaiter(void 0, void 0, void 0, function* () {
+const retryInfinity = (functionToRetry, options) => __awaiter(void 0, void 0, void 0, function* () {
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
     let attempt = 0;
     while (true) {

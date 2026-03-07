@@ -75,8 +75,8 @@ export const getDefaultPlebbitOptions = () => {
 };
 // the gateway to use in <img src> for nft avatars
 // @ts-ignore
-export const defaultMediaIpfsGatewayUrl = window.defaultMediaIpfsGatewayUrl || "https://ipfs.io";
-export const generateDefaultAccount = () => __awaiter(void 0, void 0, void 0, function* () {
+const defaultMediaIpfsGatewayUrl = window.defaultMediaIpfsGatewayUrl || "https://ipfs.io";
+const generateDefaultAccount = () => __awaiter(void 0, void 0, void 0, function* () {
     const plebbitOptions = getDefaultPlebbitOptions();
     const plebbit = yield PlebbitJs.Plebbit(plebbitOptions);
     // handle errors or error events are uncaught

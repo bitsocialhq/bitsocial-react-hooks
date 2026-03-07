@@ -1,13 +1,8 @@
 import { Comment } from "../../types";
 export declare const flattenCommentsPages: (pageInstanceOrPagesInstance: any) => any[];
-export declare const memo: (functionToMemo: Function, memoOptions: any) => (...args: any) => Promise<any>;
-export declare const memoSync: (functionToMemo: Function, memoOptions: any) => (...args: any) => any;
-export declare const clientsOnStateChange: (clients: any, onStateChange: Function) => void;
-export declare const pageClientsOnStateChange: (clients: any, onStateChange: Function) => void;
 export declare const subplebbitPostsCacheExpired: (subplebbit: any) => boolean;
 export declare const removeInvalidComments: (comments: Comment[], { validateReplies, blockSubplebbit }: any, plebbit: any) => Promise<Comment[]>;
 export declare const commentIsValid: (comment: Comment, { validateReplies, blockSubplebbit }: any | undefined, plebbit: any) => Promise<boolean>;
-export declare const repliesAreValid: (comment: Comment, { validateReplies, blockSubplebbit }: any | undefined, plebbit: any) => Promise<boolean>;
 declare const utils: {
     merge: (...args: any) => any;
     clone: (obj: any) => any;
@@ -24,5 +19,4 @@ declare const utils: {
     removeInvalidComments: (comments: Comment[], { validateReplies, blockSubplebbit }: any, plebbit: any) => Promise<Comment[]>;
     repliesAreValid: (comment: Comment, { validateReplies, blockSubplebbit }: any | undefined, plebbit: any) => Promise<boolean>;
 };
-export declare const retryInfinity: (functionToRetry: any, options?: any) => Promise<any>;
 export default utils;

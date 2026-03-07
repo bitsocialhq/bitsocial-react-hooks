@@ -23,7 +23,7 @@ const subplebbitsPagesDatabase = localForageLru.createInstance({
 /** Freshness for comparison: max(updatedAt, timestamp, 0). Used to decide add vs replace per CID. Exported for coverage. */
 export const getCommentFreshness = (comment) => { var _a, _b; return Math.max((_a = comment === null || comment === void 0 ? void 0 : comment.updatedAt) !== null && _a !== void 0 ? _a : 0, (_b = comment === null || comment === void 0 ? void 0 : comment.timestamp) !== null && _b !== void 0 ? _b : 0, 0); };
 // reset all event listeners in between tests
-export const listeners = [];
+const listeners = [];
 const subplebbitsPagesStore = createStore((setState, getState) => ({
     // TODO: eventually clear old pages and comments from memory
     subplebbitsPages: {},

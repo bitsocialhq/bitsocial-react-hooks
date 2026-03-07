@@ -1,6 +1,5 @@
 import { Feed, Feeds, Comment, RepliesFeedOptions, RepliesFeedsOptions } from "../../types";
 export declare const defaultRepliesPerPage = 25;
-export declare const commentRepliesLeftBeforeNextPage = 50;
 export type RepliesState = {
     feedsOptions: RepliesFeedsOptions;
     bufferedFeeds: Feeds;

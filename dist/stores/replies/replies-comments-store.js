@@ -1,4 +1,4 @@
-import createStore from 'zustand';
+import createStore from "zustand";
 const repliesCommentsStore = createStore((setState, getState) => ({
     comments: {},
     addCommentsToStoreOrUpdateComments(comments) {
@@ -6,7 +6,8 @@ const repliesCommentsStore = createStore((setState, getState) => ({
             const newComments = {};
             for (const comment of comments) {
                 // updatedAt hasn't changed so no need to update the comment
-                if (state.comments[comment.cid] && comment.updatedAt <= state.comments[comment.cid].updatedAt) {
+                if (state.comments[comment.cid] &&
+                    comment.updatedAt <= state.comments[comment.cid].updatedAt) {
                     continue;
                 }
                 newComments[comment.cid] = comment;

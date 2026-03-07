@@ -21,7 +21,7 @@ import { getFeedsSubplebbitsFirstPageCids, getLoadedFeeds, getUpdatedFeeds, getB
 // while infinite scrolling
 export const defaultPostsPerPage = 25;
 // keep large buffer because fetching cids is slow
-export const subplebbitPostsLeftBeforeNextPage = 50;
+const subplebbitPostsLeftBeforeNextPage = 50;
 // don't updateFeeds more than once per updateFeedsMinIntervalTime
 let updateFeedsPending = false;
 const updateFeedsMinIntervalTime = 100;

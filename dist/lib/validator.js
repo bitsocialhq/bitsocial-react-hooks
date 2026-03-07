@@ -10,7 +10,7 @@ const toString = (value) => {
     catch (_a) { }
     return value;
 };
-export const validateAccountsActionsPublishCommentArguments = ({ publishCommentOptions, accountName, account, }) => {
+const validateAccountsActionsPublishCommentArguments = ({ publishCommentOptions, accountName, account, }) => {
     assert(!accountName || typeof accountName === "string", `publishComment accountName '${accountName}' not a string`);
     assert(accountName !== "", `publishComment accountName argument is empty string`);
     assert(!accountName || account, `publishComment no account with name '${accountName}' in accountsStore`);
@@ -29,7 +29,7 @@ export const validateAccountsActionsPublishCommentArguments = ({ publishCommentO
     assert(!publishCommentOptions.title || typeof publishCommentOptions.title === "string", "publishComment publishCommentOptions.title not a string");
     assert(publishCommentOptions.title !== "", "publishComment publishCommentOptions.title is an empty string");
 };
-export const validateAccountsActionsPublishVoteArguments = ({ publishVoteOptions, accountName, account, }) => {
+const validateAccountsActionsPublishVoteArguments = ({ publishVoteOptions, accountName, account, }) => {
     assert(!accountName || typeof accountName === "string", `publishVote accountName '${accountName}' not a string`);
     assert(accountName !== "", `publishVote accountName argument is empty string`);
     assert(!accountName || account, `publishVote no account with name '${accountName}' in accountsStore`);
@@ -44,7 +44,7 @@ export const validateAccountsActionsPublishVoteArguments = ({ publishVoteOptions
         publishVoteOptions.vote === -1, "publishVote publishVoteOptions.vote not 1, 0 or -1");
     assert(!publishVoteOptions.timestamp || typeof publishVoteOptions.timestamp === "number", "publishVote publishVoteOptions.timestamp is not a number");
 };
-export const validateAccountsActionsPublishCommentEditArguments = ({ publishCommentEditOptions, accountName, account, }) => {
+const validateAccountsActionsPublishCommentEditArguments = ({ publishCommentEditOptions, accountName, account, }) => {
     assert(!accountName || typeof accountName === "string", `publishCommentEdit accountName '${accountName}' not a string`);
     assert(accountName !== "", `publishCommentEdit accountName argument is empty string`);
     assert(!accountName || account, `publishCommentEdit no account with name '${accountName}' in accountsStore`);
@@ -56,7 +56,7 @@ export const validateAccountsActionsPublishCommentEditArguments = ({ publishComm
     assert(typeof publishCommentEditOptions.commentCid === "string", "publishCommentEdit publishCommentEditOptions.commentCid not a string");
     assert(!publishCommentEditOptions.timestamp || typeof publishCommentEditOptions.timestamp === "number", "publishCommentEdit publishCommentEditOptions.timestamp is not a number");
 };
-export const validateAccountsActionsPublishCommentModerationArguments = ({ publishCommentModerationOptions, accountName, account, }) => {
+const validateAccountsActionsPublishCommentModerationArguments = ({ publishCommentModerationOptions, accountName, account, }) => {
     assert(!accountName || typeof accountName === "string", `publishCommentModeration accountName '${accountName}' not a string`);
     assert(accountName !== "", `publishCommentModeration accountName argument is empty string`);
     assert(!accountName || account, `publishCommentModeration no account with name '${accountName}' in accountsStore`);
@@ -72,7 +72,7 @@ export const validateAccountsActionsPublishCommentModerationArguments = ({ publi
     assert(publishCommentModerationOptions.commentModeration &&
         typeof publishCommentModerationOptions.commentModeration === "object", "publishCommentModeration publishCommentModerationOptions.commentModeration is not an object");
 };
-export const validateAccountsActionsPublishSubplebbitEditArguments = ({ subplebbitAddress, publishSubplebbitEditOptions, accountName, account, }) => {
+const validateAccountsActionsPublishSubplebbitEditArguments = ({ subplebbitAddress, publishSubplebbitEditOptions, accountName, account, }) => {
     assert(!accountName || typeof accountName === "string", `publishSubplebbitEdit accountName '${accountName}' not a string`);
     assert(accountName !== "", `publishSubplebbitEdit accountName argument is empty string`);
     assert(!accountName || account, `publishSubplebbitEdit no account with name '${accountName}' in accountsStore`);
@@ -86,25 +86,25 @@ export const validateAccountsActionsPublishSubplebbitEditArguments = ({ subplebb
     assert(!publishSubplebbitEditOptions.timestamp ||
         typeof publishSubplebbitEditOptions.timestamp === "number", "publishSubplebbitEdit publishSubplebbitEditOptions.timestamp is not a number");
 };
-export const validateAccountsActionsExportAccountArguments = (accountName) => {
+const validateAccountsActionsExportAccountArguments = (accountName) => {
     assert(typeof accountName === "string", `exportAccount accountName '${accountName}' not a string`);
     assert(accountName !== "", `exportAccount accountName argument is empty string`);
 };
-export const validateAccountsActionsSetAccountsOrderArguments = (newOrderedAccountNames, accountNames) => {
+const validateAccountsActionsSetAccountsOrderArguments = (newOrderedAccountNames, accountNames) => {
     assert(JSON.stringify([...accountNames].sort()) === JSON.stringify([...newOrderedAccountNames].sort()), `previous account names '${accountNames} contain different account names than argument newOrderedAccountNames '${newOrderedAccountNames}'`);
 };
-export const validateAccountsActionsSetAccountArguments = (account) => {
+const validateAccountsActionsSetAccountArguments = (account) => {
     assert(account && typeof account === "object", `setAccount account '${account}' not an object`);
     assert(typeof account.name === "string", `setAccount account.name '${account.name}' not a string`);
     assert(account.name !== "", `setAccount account.name is empty string`);
     assert(typeof account.id === "string", `setAccount account.id '${account.id}' not a string`);
     assert(account.id !== "", `setAccount account.id is empty string`);
 };
-export const validateAccountsActionsSetActiveAccountArguments = (accountName) => {
+const validateAccountsActionsSetActiveAccountArguments = (accountName) => {
     assert(typeof accountName === "string", `setActiveAccountName accountName '${accountName}' not a string`);
     assert(accountName !== "", `setActiveAccountName accountName argument is empty string`);
 };
-export const validateAccountsDatabaseGetAccountsArguments = (accountIds) => {
+const validateAccountsDatabaseGetAccountsArguments = (accountIds) => {
     assert(Array.isArray(accountIds), `accountsDatabase.getAccounts accountIds '${accountIds}' not an array`);
     assert(accountIds.length > 0, `accountsDatabase.getAccounts accountIds array is empty`);
     for (const accountId of accountIds) {
@@ -112,35 +112,35 @@ export const validateAccountsDatabaseGetAccountsArguments = (accountIds) => {
         assert(accountId !== "", `accountsDatabase.getAccounts accountIds '${accountIds}' an accountId argument is empty string`);
     }
 };
-export const validateAccountsDatabaseAccountNames = (accountNames) => {
+const validateAccountsDatabaseAccountNames = (accountNames) => {
     assert(Array.isArray(accountNames), `accountsDatabase accountNames '${accountNames}' not an array`);
     for (const accountName of accountNames) {
         assert(typeof accountName === "string", `accountsDatabase accountNames '${accountNames}' accountName '${accountName}' not a string`);
     }
 };
-export const validateAccountsDatabaseAddAccountArguments = (account) => {
+const validateAccountsDatabaseAddAccountArguments = (account) => {
     assert(account && typeof account === "object", `accountsDatabase.addAccount '${account}' not an object`);
     assert(typeof account.name === "string", `accountsDatabase.addAccount account.name '${account.name}' not a string`);
     assert(account.name !== "", `accountsDatabase.addAccount account.name is empty string`);
     assert(typeof account.id === "string", `accountsDatabase.addAccount account.id '${account.id}' not a string`);
     assert(account.id !== "", `accountsDatabase.addAccount account.id is empty string`);
 };
-export const validateUseCommentArguments = (commentCid, account) => {
+const validateUseCommentArguments = (commentCid, account) => {
     assert(typeof commentCid === "string", `useComment commentCid '${commentCid}' not a string`);
     assert((account === null || account === void 0 ? void 0 : account.plebbit) && typeof (account === null || account === void 0 ? void 0 : account.plebbit) === "object", `useComment account.plebbit '${account === null || account === void 0 ? void 0 : account.plebbit}' not an object`);
 };
-export const validateUseCommentsArguments = (commentCids, account) => {
+const validateUseCommentsArguments = (commentCids, account) => {
     assert(Array.isArray(commentCids), `useComment commentCids '${toString(commentCids)}' not an array`);
     for (const commentCid of commentCids) {
         assert(typeof commentCid === "string", `useComments commentCids '${toString(commentCids)}' commentCid '${toString(commentCid)}' not a string`);
     }
     assert((account === null || account === void 0 ? void 0 : account.plebbit) && typeof (account === null || account === void 0 ? void 0 : account.plebbit) === "object", `useComments account.plebbit '${account === null || account === void 0 ? void 0 : account.plebbit}' not an object`);
 };
-export const validateUseSubplebbitArguments = (subplebbitAddress, account) => {
+const validateUseSubplebbitArguments = (subplebbitAddress, account) => {
     assert(typeof subplebbitAddress === "string", `useSubplebbit subplebbitAddress '${subplebbitAddress}' not a string`);
     assert((account === null || account === void 0 ? void 0 : account.plebbit) && typeof (account === null || account === void 0 ? void 0 : account.plebbit) === "object", `useSubplebbit account.plebbit '${account === null || account === void 0 ? void 0 : account.plebbit}' not an object`);
 };
-export const validateUseSubplebbitsArguments = (subplebbitAddresses, account) => {
+const validateUseSubplebbitsArguments = (subplebbitAddresses, account) => {
     assert(Array.isArray(subplebbitAddresses), `useSubplebbit subplebbitAddresses '${toString(subplebbitAddresses)}' not an array`);
     for (const subplebbitAddress of subplebbitAddresses) {
         assert(typeof subplebbitAddress === "string", `useSubplebbits subplebbitAddresses '${toString(subplebbitAddresses)}' subplebbitAddress '${toString(subplebbitAddress)}' not a string`);
@@ -164,10 +164,10 @@ const feedSortTypes = new Set([
     "controversialYear",
     "controversialAll",
 ]);
-export const validateFeedSortType = (sortType) => {
+const validateFeedSortType = (sortType) => {
     assert(feedSortTypes.has(sortType), `invalid feed sort type '${sortType}'`);
 };
-export const validateUseFeedArguments = (subplebbitAddresses, sortType, accountName, postsPerPage, filter, newerThan, accountComments) => {
+const validateUseFeedArguments = (subplebbitAddresses, sortType, accountName, postsPerPage, filter, newerThan, accountComments) => {
     if (subplebbitAddresses) {
         assert(Array.isArray(subplebbitAddresses), `useFeed subplebbitAddresses argument '${toString(subplebbitAddresses)}' not an array`);
         for (const subplebbitAddress of subplebbitAddresses) {
@@ -193,7 +193,7 @@ export const validateUseFeedArguments = (subplebbitAddresses, sortType, accountN
         assert(typeof accountComments.newerThan === "number", `useFeed accountComments.newerThan argument '${accountComments}' not a number`);
     }
 };
-export const validateUseBufferedFeedsArguments = (feedsOptions, accountName) => {
+const validateUseBufferedFeedsArguments = (feedsOptions, accountName) => {
     assert(Array.isArray(feedsOptions), `useBufferedFeeds feedsOptions argument '${toString(feedsOptions)}' not an array`);
     for (const { subplebbitAddresses, sortType, postsPerPage, filter, newerThan } of feedsOptions) {
         if (subplebbitAddresses) {
@@ -233,10 +233,10 @@ const repliesSortTypes = new Set([
     "old",
     "oldFlat",
 ]);
-export const validateRepliesSortType = (sortType) => {
+const validateRepliesSortType = (sortType) => {
     assert(repliesSortTypes.has(sortType), `invalid replies sort type '${sortType}'`);
 };
-export const validateUseRepliesArguments = (comment, sortType, accountName, flat, accountComments, postsPerPage, filter) => {
+const validateUseRepliesArguments = (comment, sortType, accountName, flat, accountComments, postsPerPage, filter) => {
     assert(!comment || typeof comment === "object", `useReplies comment argument '${comment}' not an object`);
     assert(!(comment === null || comment === void 0 ? void 0 : comment.cid) || typeof comment.cid === "string", `useReplies comment.cid argument '${comment === null || comment === void 0 ? void 0 : comment.cid}' not a string`);
     assert(repliesSortTypes.has(sortType), `useReplies sortType argument '${sortType}' invalid`);

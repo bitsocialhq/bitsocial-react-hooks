@@ -15,6 +15,7 @@ const log = Logger("bitsocial-react-hooks:accounts:hooks");
 import assert from "assert";
 import { useListSubplebbits, useSubplebbits } from "../subplebbits";
 import { useAccountsWithCalculatedProperties, useAccountWithCalculatedProperties, useCalculatedNotifications, } from "./utils";
+import { getCanonicalSubplebbitAddress, getEquivalentSubplebbitAddressGroupKey, pickPreferredEquivalentSubplebbitAddress, } from "../../lib/subplebbit-address";
 import { addCommentModeration } from "../../lib/utils/comment-moderation";
 import useInterval from "../utils/use-interval";
 /**
@@ -83,49 +84,84 @@ export function useAccountSubplebbits(options) {
     const accountsStoreAccountSubplebbits = useAccountsStore((state) => { var _a; return (_a = state.accounts[accountIdKey]) === null || _a === void 0 ? void 0 : _a.subplebbits; });
     // get all unique account subplebbit addresses
     const ownerSubplebbitAddresses = useListSubplebbits();
-    const uniqueSubplebbitAddresses = useMemo(() => {
+    const groupedSubplebbitAddresses = useMemo(() => {
         const accountSubplebbitAddresses = [];
         if (accountsStoreAccountSubplebbits) {
             for (const subplebbitAddress in accountsStoreAccountSubplebbits) {
                 accountSubplebbitAddresses.push(subplebbitAddress);
             }
         }
-        const uniqueSubplebbitAddresses = [
+        const allSubplebbitAddresses = [
             ...new Set([...ownerSubplebbitAddresses, ...accountSubplebbitAddresses]),
         ].sort();
-        return uniqueSubplebbitAddresses;
+        const groupedAddresses = new Map();
+        for (const subplebbitAddress of allSubplebbitAddresses) {
+            const groupKey = getEquivalentSubplebbitAddressGroupKey(subplebbitAddress);
+            const addresses = groupedAddresses.get(groupKey);
+            if (addresses) {
+                addresses.push(subplebbitAddress);
+            }
+            else {
+                groupedAddresses.set(groupKey, [subplebbitAddress]);
+            }
+        }
+        return [...groupedAddresses.entries()].map(([groupKey, addresses]) => ({
+            groupKey,
+            addresses,
+            preferredAddress: pickPreferredEquivalentSubplebbitAddress(addresses),
+        }));
     }, [accountsStoreAccountSubplebbits, ownerSubplebbitAddresses]);
+    const uniqueSubplebbitAddresses = useMemo(() => groupedSubplebbitAddresses.map(({ preferredAddress }) => preferredAddress), [groupedSubplebbitAddresses]);
     // fetch all subplebbit data
     const { subplebbits: subplebbitsArray } = useSubplebbits({
         subplebbitAddresses: uniqueSubplebbitAddresses,
         accountName,
         onlyIfCached,
     });
+    const canonicalAddressByGroupKey = useMemo(() => {
+        var _a;
+        const canonicalAddresses = {};
+        for (const [i, { groupKey, preferredAddress }] of groupedSubplebbitAddresses.entries()) {
+            const fetchedAddress = (_a = subplebbitsArray[i]) === null || _a === void 0 ? void 0 : _a.address;
+            canonicalAddresses[groupKey] = getCanonicalSubplebbitAddress(fetchedAddress || preferredAddress);
+        }
+        return canonicalAddresses;
+    }, [groupedSubplebbitAddresses, subplebbitsArray]);
     const subplebbits = useMemo(() => {
         const subplebbits = {};
         for (const [i, subplebbit] of subplebbitsArray.entries()) {
-            subplebbits[uniqueSubplebbitAddresses[i]] = Object.assign(Object.assign({}, subplebbit), { 
-                // make sure the address is defined if the subplebbit hasn't fetched yet
-                address: uniqueSubplebbitAddresses[i] });
+            const { groupKey, preferredAddress } = groupedSubplebbitAddresses[i];
+            const canonicalAddress = canonicalAddressByGroupKey[groupKey] ||
+                getCanonicalSubplebbitAddress((subplebbit === null || subplebbit === void 0 ? void 0 : subplebbit.address) || preferredAddress);
+            subplebbits[canonicalAddress] = Object.assign(Object.assign(Object.assign({}, subplebbits[canonicalAddress]), subplebbit), { 
+                // make sure the canonical address is defined even if the subplebbit hasn't fetched yet
+                address: canonicalAddress });
         }
         return subplebbits;
-    }, [subplebbitsArray, uniqueSubplebbitAddresses]);
+    }, [subplebbitsArray, groupedSubplebbitAddresses, canonicalAddressByGroupKey]);
     // merged subplebbit data with account.subplebbits data
     const accountSubplebbits = useMemo(() => {
         const accountSubplebbits = Object.assign({}, subplebbits);
         if (accountsStoreAccountSubplebbits) {
             for (const subplebbitAddress in accountsStoreAccountSubplebbits) {
-                accountSubplebbits[subplebbitAddress] = Object.assign(Object.assign({}, accountSubplebbits[subplebbitAddress]), accountsStoreAccountSubplebbits[subplebbitAddress]);
+                const groupKey = getEquivalentSubplebbitAddressGroupKey(subplebbitAddress);
+                const canonicalAddress = canonicalAddressByGroupKey[groupKey] || getCanonicalSubplebbitAddress(subplebbitAddress);
+                accountSubplebbits[canonicalAddress] = Object.assign(Object.assign(Object.assign({}, accountSubplebbits[canonicalAddress]), accountsStoreAccountSubplebbits[subplebbitAddress]), { address: canonicalAddress });
             }
         }
         // add plebbit.subplebbits data
-        for (const subplebbitAddress in accountSubplebbits) {
-            if (ownerSubplebbitAddresses.includes(subplebbitAddress)) {
-                accountSubplebbits[subplebbitAddress].role = { role: "owner" };
-            }
+        for (const subplebbitAddress of ownerSubplebbitAddresses) {
+            const groupKey = getEquivalentSubplebbitAddressGroupKey(subplebbitAddress);
+            const canonicalAddress = canonicalAddressByGroupKey[groupKey] || getCanonicalSubplebbitAddress(subplebbitAddress);
+            accountSubplebbits[canonicalAddress] = Object.assign(Object.assign({}, accountSubplebbits[canonicalAddress]), { address: canonicalAddress, role: { role: "owner" } });
         }
         return accountSubplebbits;
-    }, [accountsStoreAccountSubplebbits, ownerSubplebbitAddresses, subplebbits]);
+    }, [
+        accountsStoreAccountSubplebbits,
+        ownerSubplebbitAddresses,
+        subplebbits,
+        canonicalAddressByGroupKey,
+    ]);
     if (accountId) {
         log("useAccountSubplebbits", { accountSubplebbits });
     }

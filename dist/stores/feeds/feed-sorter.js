@@ -103,7 +103,7 @@ const sortByBest = (feed) => {
         .sort((a, b) => n(a.timestamp) - n(b.timestamp))
         .sort((a, b) => n(postScores[b.cid]) - n(postScores[a.cid]));
 };
-export const sort = (sortType, feed) => {
+const sort = (sortType, feed) => {
     // NOTE: pinned posts are not sorted, maybe in a future version we can sort them based on something
     // NOTE: with useReplies({flat: true}), nested pins are at the top, unclear yet what we should do with them
     const pinnedPosts = feed.filter((post) => post.pinned);

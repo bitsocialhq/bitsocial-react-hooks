@@ -1,5 +1,5 @@
-import { Comments } from '../../types';
-export type RepliesCommentsState = {
+import { Comments } from "../../types";
+type RepliesCommentsState = {
     comments: Comments;
     addCommentsToStoreOrUpdateComments: Function;
 };

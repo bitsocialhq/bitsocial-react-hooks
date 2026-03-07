@@ -1,7 +1,6 @@
 import { Feeds, FeedsOptions, FeedsSubplebbitsPostCounts } from "../../types";
 export declare const defaultPostsPerPage = 25;
-export declare const subplebbitPostsLeftBeforeNextPage = 50;
-export type FeedsState = {
+type FeedsState = {
     feedsOptions: FeedsOptions;
     bufferedFeeds: Feeds;
     loadedFeeds: Feeds;

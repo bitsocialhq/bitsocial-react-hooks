@@ -1,24 +1,3 @@
-export declare const validateAccountsActionsPublishCommentArguments: ({ publishCommentOptions, accountName, account, }: any) => void;
-export declare const validateAccountsActionsPublishVoteArguments: ({ publishVoteOptions, accountName, account, }: any) => void;
-export declare const validateAccountsActionsPublishCommentEditArguments: ({ publishCommentEditOptions, accountName, account, }: any) => void;
-export declare const validateAccountsActionsPublishCommentModerationArguments: ({ publishCommentModerationOptions, accountName, account, }: any) => void;
-export declare const validateAccountsActionsPublishSubplebbitEditArguments: ({ subplebbitAddress, publishSubplebbitEditOptions, accountName, account, }: any) => void;
-export declare const validateAccountsActionsExportAccountArguments: (accountName: any) => void;
-export declare const validateAccountsActionsSetAccountsOrderArguments: (newOrderedAccountNames: any, accountNames: any) => void;
-export declare const validateAccountsActionsSetAccountArguments: (account: any) => void;
-export declare const validateAccountsActionsSetActiveAccountArguments: (accountName: any) => void;
-export declare const validateAccountsDatabaseGetAccountsArguments: (accountIds: any) => void;
-export declare const validateAccountsDatabaseAccountNames: (accountNames: any) => void;
-export declare const validateAccountsDatabaseAddAccountArguments: (account: any) => void;
-export declare const validateUseCommentArguments: (commentCid: any, account: any) => void;
-export declare const validateUseCommentsArguments: (commentCids: any, account: any) => void;
-export declare const validateUseSubplebbitArguments: (subplebbitAddress: any, account: any) => void;
-export declare const validateUseSubplebbitsArguments: (subplebbitAddresses: any, account: any) => void;
-export declare const validateFeedSortType: (sortType: any) => void;
-export declare const validateUseFeedArguments: (subplebbitAddresses?: any, sortType?: any, accountName?: any, postsPerPage?: any, filter?: any, newerThan?: any, accountComments?: any) => void;
-export declare const validateUseBufferedFeedsArguments: (feedsOptions?: any, accountName?: any) => void;
-export declare const validateRepliesSortType: (sortType: any) => void;
-export declare const validateUseRepliesArguments: (comment?: any, sortType?: any, accountName?: any, flat?: any, accountComments?: any, postsPerPage?: any, filter?: any) => void;
 declare const validator: {
     validateAccountsActionsPublishCommentArguments: ({ publishCommentOptions, accountName, account, }: any) => void;
     validateAccountsActionsPublishCommentEditArguments: ({ publishCommentEditOptions, accountName, account, }: any) => void;

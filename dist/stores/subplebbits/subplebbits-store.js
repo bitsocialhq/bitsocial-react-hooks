@@ -21,7 +21,7 @@ import accountsStore from "../accounts";
 import subplebbitsPagesStore from "../subplebbits-pages";
 let plebbitGetSubplebbitPending = {};
 // reset all event listeners in between tests
-export const listeners = [];
+const listeners = [];
 const subplebbitsStore = createStore((setState, getState) => ({
     subplebbits: {},
     errors: {},

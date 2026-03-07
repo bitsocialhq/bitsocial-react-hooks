@@ -8,7 +8,7 @@ useInterval(
 
 */
 import { useEffect, useRef } from "react";
-export function useInterval(callback, delay, immediate, dependencies = []) {
+function useInterval(callback, delay, immediate, dependencies = []) {
     const savedCallback = useRef(undefined);
     // Remember the latest callback.
     useEffect(() => {

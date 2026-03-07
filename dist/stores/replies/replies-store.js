@@ -20,7 +20,7 @@ import { getFeedsCommentsFirstPageCids, getLoadedFeeds, getBufferedFeedsWithoutL
 // while infinite scrolling
 export const defaultRepliesPerPage = 25;
 // keep large buffer because fetching cids is slow
-export const commentRepliesLeftBeforeNextPage = 50;
+const commentRepliesLeftBeforeNextPage = 50;
 const defaultAccountComments = { newerThan: Infinity, append: false };
 const addDefaultFeedOptions = (feedOptions) => {
     feedOptions = Object.assign({}, feedOptions);

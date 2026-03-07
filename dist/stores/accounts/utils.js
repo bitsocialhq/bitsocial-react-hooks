@@ -52,7 +52,7 @@ export const getCommentCidsToAccountsComments = (accountsComments) => {
     return commentCidsToAccountsComments;
 };
 // polyfill Promise.any, exported for test coverage of empty-array branch
-export const promiseAny = (promises) => new Promise((res, rej) => {
+const promiseAny = (promises) => new Promise((res, rej) => {
     let count = promises.length;
     if (count === 0)
         return rej(Error("all promises rejected"));

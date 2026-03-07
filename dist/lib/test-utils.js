@@ -48,7 +48,7 @@ function renderHook(callback, options) {
     return { result, rerender, unmount };
 }
 const restorables = [];
-export const silenceUpdateUnmountedComponentWarning = () => {
+const silenceUpdateUnmountedComponentWarning = () => {
     const originalError = console.error;
     console.error = (...args) => {
         if (/Can't perform a React state update on an unmounted component/.test(args[0])) {
@@ -62,7 +62,7 @@ export const silenceUpdateUnmountedComponentWarning = () => {
     restorables.push(restore);
     return restore;
 };
-export const silenceTestWasNotWrappedInActWarning = () => {
+const silenceTestWasNotWrappedInActWarning = () => {
     const originalError = console.error;
     console.error = (...args) => {
         if (/inside a test was not wrapped in act/.test(args[0])) {
@@ -77,7 +77,7 @@ export const silenceTestWasNotWrappedInActWarning = () => {
     return restore;
 };
 // this warning is usually good to have, so don't include it in silenceReactWarnings
-export const silenceOverlappingActWarning = () => {
+const silenceOverlappingActWarning = () => {
     const originalError = console.error;
     console.error = (...args) => {
         if (/overlapping act\(\) calls/.test(args[0])) {
@@ -91,7 +91,7 @@ export const silenceOverlappingActWarning = () => {
     restorables.push(restore);
     return restore;
 };
-export const silenceReactWarnings = () => {
+const silenceReactWarnings = () => {
     silenceUpdateUnmountedComponentWarning();
     silenceTestWasNotWrappedInActWarning();
 };
@@ -141,7 +141,7 @@ const createWaitFor = (rendered, waitForOptions) => {
     return waitFor;
 };
 // always reset the least important store first, because a store even can affect another store
-export const resetStores = () => __awaiter(void 0, void 0, void 0, function* () {
+const resetStores = () => __awaiter(void 0, void 0, void 0, function* () {
     yield resetRepliesPagesStore();
     yield resetRepliesStore();
     yield resetAuthorsCommentsStore();
@@ -152,7 +152,7 @@ export const resetStores = () => __awaiter(void 0, void 0, void 0, function* () 
     // always accounts last because it has async initialization
     yield resetAccountsStore();
 });
-export const resetDatabasesAndStores = () => __awaiter(void 0, void 0, void 0, function* () {
+const resetDatabasesAndStores = () => __awaiter(void 0, void 0, void 0, function* () {
     yield resetRepliesPagesDatabaseAndStore();
     yield resetRepliesDatabaseAndStore();
     yield resetAuthorsCommentsDatabaseAndStore();

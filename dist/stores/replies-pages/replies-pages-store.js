@@ -22,7 +22,7 @@ const repliesPagesDatabase = localForageLru.createInstance({
     size: 500,
 });
 // reset all event listeners in between tests
-export const listeners = [];
+const listeners = [];
 const repliesPagesStore = createStore((setState, getState) => ({
     // TODO: eventually clear old pages and comments from memory
     repliesPages: {},
