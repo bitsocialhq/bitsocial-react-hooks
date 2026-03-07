@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import assert from "assert";
 import QuickLru from "quick-lru";
 import Logger from "@plebbit/plebbit-logger";
+import { areEquivalentSubplebbitAddresses } from "../subplebbit-address";
 const log = Logger("bitsocial-react-hooks:utils");
 const merge = (...args) => {
     // @ts-ignore
@@ -294,7 +295,7 @@ export const repliesAreValid = (comment_1, ...args_1) => __awaiter(void 0, [comm
     const replies = replyPageArray.flatMap(({ comments }) => comments);
     // manual validation
     for (const reply of replies) {
-        if (reply.subplebbitAddress !== comment.subplebbitAddress ||
+        if (!areEquivalentSubplebbitAddresses(reply.subplebbitAddress, comment.subplebbitAddress) ||
             reply.depth !== comment.depth + 1 ||
             reply.parentCid !== comment.cid) {
             if (blockSubplebbit) {
@@ -302,7 +303,7 @@ export const repliesAreValid = (comment_1, ...args_1) => __awaiter(void 0, [comm
             }
             console.log("invalid comment", {
                 comment: reply,
-                error: "reply.subplebbitAddress !== comment.subplebbitAddress || reply.depth !== comment.depth + 1 || reply.parentCid !== comment.cid",
+                error: "!areEquivalentSubplebbitAddresses(reply.subplebbitAddress, comment.subplebbitAddress) || reply.depth !== comment.depth + 1 || reply.parentCid !== comment.cid",
             });
             return false;
         }
