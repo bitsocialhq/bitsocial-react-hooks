@@ -104,6 +104,7 @@ src/
 - Never mark work complete without verification.
 - After code changes, run: `yarn build`.
 - After test changes, run: `yarn test`.
+- Do not commit local `dist/` rebuild output. `dist/` is CI-managed in this repo; if verification dirties tracked files there, run `git restore --worktree -- dist` before committing.
 - Maintain mandatory 100% test coverage for hooks and stores (`src/hooks/`, `src/stores/`); every feature or bug fix in these areas must include/adjust tests to keep coverage at 100%, verified via coverage run + `node scripts/verify-hooks-stores-coverage.mjs`.
 - Before committing, run: `yarn prettier` to format.
 - If verification fails, fix and re-run until passing.
