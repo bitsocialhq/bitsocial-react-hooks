@@ -1,5 +1,5 @@
-[![CI](https://github.com/bitsocialhq/bitsocial-react-hooks/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/bitsocialhq/bitsocial-react-hooks/actions/workflows/CI.yml)
-[![License](https://img.shields.io/badge/license-GPL--2.0--only-red.svg)](https://github.com/bitsocialhq/bitsocial-react-hooks/blob/master/LICENSE)
+[![CI](https://github.com/bitsocialnet/bitsocial-react-hooks/actions/workflows/CI.yml/badge.svg?branch=master)](https://github.com/bitsocialnet/bitsocial-react-hooks/actions/workflows/CI.yml)
+[![License](https://img.shields.io/badge/license-GPL--2.0--only-red.svg)](https://github.com/bitsocialnet/bitsocial-react-hooks/blob/master/LICENSE)
 [![Commitizen friendly](https://img.shields.io/badge/commitizen-friendly-brightgreen.svg)](http://commitizen.github.io/cz-cli/)
 
 <p align="left">
@@ -10,14 +10,14 @@
 
 React hooks for the Bitsocial protocol. Build decentralized, serverless social apps with React using a familiar hooks API — fetch feeds, comments, author profiles, manage accounts, publish content, and more, all without a central server.
 
-This package is currently consumed directly from [`bitsocialhq/bitsocial-react-hooks`](https://github.com/bitsocialhq/bitsocial-react-hooks) and is used by [5chan](https://github.com/bitsocialhq/5chan) and other Bitsocial clients.
+This package is currently consumed directly from [`bitsocialnet/bitsocial-react-hooks`](https://github.com/bitsocialnet/bitsocial-react-hooks) and is used by [5chan](https://github.com/bitsocialnet/5chan) and other Bitsocial clients.
 
-> **Note:** This repo is a temporary [Bitsocial](https://github.com/bitsocialhq) fork of [plebbit/plebbit-react-hooks](https://github.com/plebbit/plebbit-react-hooks) for AI-aided development. Bug fixes, new features, and improvements made here will be merged upstream when the original maintainer is ready. The codebase still uses legacy naming (`plebbit`, `subplebbit`, etc.) pending upstream rebranding of the protocol layer.
+> **Note:** This repo is a temporary [Bitsocial](https://github.com/bitsocialnet) fork of [plebbit/plebbit-react-hooks](https://github.com/plebbit/plebbit-react-hooks) for AI-aided development. Bug fixes, new features, and improvements made here will be merged upstream when the original maintainer is ready. The codebase still uses legacy naming (`plebbit`, `subplebbit`, etc.) pending upstream rebranding of the protocol layer.
 
 ## Installation
 
 ```bash
-yarn add https://github.com/bitsocialhq/bitsocial-react-hooks.git#<commit-hash>
+yarn add https://github.com/bitsocialnet/bitsocial-react-hooks.git#<commit-hash>
 ```
 
 Use a pinned commit hash (or tag) so installs are reproducible.
@@ -83,11 +83,11 @@ Use a pinned commit hash (or tag) so installs are reproducible.
 
 - [Hooks API](#hooks)
 - [Getting started](#getting-started)
-- Install, testing and building: https://github.com/bitsocialhq/bitsocial-react-hooks/blob/master/docs/testing.md
-- Mock content (for UI development): https://github.com/bitsocialhq/bitsocial-react-hooks/blob/master/docs/mock-content.md
-- Algorithms: https://github.com/bitsocialhq/bitsocial-react-hooks/blob/master/docs/algorithms.md
-- Schema (Types, IndexedDb and state management): https://github.com/bitsocialhq/bitsocial-react-hooks/blob/master/docs/schema.md
-- Types: https://github.com/bitsocialhq/bitsocial-react-hooks/blob/master/src/types.ts
+- Install, testing and building: https://github.com/bitsocialnet/bitsocial-react-hooks/blob/master/docs/testing.md
+- Mock content (for UI development): https://github.com/bitsocialnet/bitsocial-react-hooks/blob/master/docs/mock-content.md
+- Algorithms: https://github.com/bitsocialnet/bitsocial-react-hooks/blob/master/docs/algorithms.md
+- Schema (Types, IndexedDb and state management): https://github.com/bitsocialnet/bitsocial-react-hooks/blob/master/docs/schema.md
+- Types: https://github.com/bitsocialnet/bitsocial-react-hooks/blob/master/src/types.ts
 
 ## API Reference
 
@@ -178,7 +178,7 @@ deleteCaches() // delete the cached comments, cached subplebbits and cached page
 #### Getting started
 
 ```jsx
-import {useComment, useAccount} from '@bitsocialhq/bitsocial-react-hooks'
+import {useComment, useAccount} from '@bitsocialnet/bitsocial-react-hooks'
 
 const account = useAccount()
 const comment = useComment({commentCid})
@@ -193,7 +193,7 @@ const account = useAccount()
 #### Create accounts and change active account
 
 ```jsx
-import {useAccount, useAccounts, createAccount, setActiveAccount} from '@bitsocialhq/bitsocial-react-hooks'
+import {useAccount, useAccounts, createAccount, setActiveAccount} from '@bitsocialnet/bitsocial-react-hooks'
 
 const account = useAccount()
 const {accounts} = useAccounts()
@@ -433,8 +433,8 @@ const {publishComment} = usePublishComment(publishReplyOptions)
 await publishComment()
 
 // when displaying replies, it is recommended to include the user's pending replies
-// https://github.com/bitsocialhq/bitsocial-react-hooks/#get-replies-to-a-post-nested (nested)
-// https://github.com/bitsocialhq/bitsocial-react-hooks/#get-replies-to-a-post-flattened-not-nested (not nested)
+// https://github.com/bitsocialnet/bitsocial-react-hooks/#get-replies-to-a-post-nested (nested)
+// https://github.com/bitsocialnet/bitsocial-react-hooks/#get-replies-to-a-post-flattened-not-nested (not nested)
 ```
 
 #### Create a post or comment using hooks
@@ -630,7 +630,7 @@ await abandonPublish()
 **2. Delete by index or CID** — remove any of your comments (pending or published):
 
 ```jsx
-import {deleteComment, useAccountComments} from '@bitsocialhq/bitsocial-react-hooks'
+import {deleteComment, useAccountComments} from '@bitsocialnet/bitsocial-react-hooks'
 
 // By account comment index (from usePublishComment or useAccountComment)
 const {index, publishComment} = usePublishComment(publishCommentOptions)
@@ -648,7 +648,7 @@ await deleteComment(accountComment.cid)
 **Common cleanup pattern (remove failed UI clutter):**
 
 ```jsx
-import {deleteComment, useAccountComments} from '@bitsocialhq/bitsocial-react-hooks'
+import {deleteComment, useAccountComments} from '@bitsocialnet/bitsocial-react-hooks'
 
 const {accountComments} = useAccountComments()
 const failedComments = accountComments.filter((comment) => comment.state === 'failed')
@@ -764,7 +764,7 @@ console.log(error)
 #### Edit an account
 
 ```jsx
-import {useAccount, setAccount, useResolvedAuthorAddress} from '@bitsocialhq/bitsocial-react-hooks'
+import {useAccount, setAccount, useResolvedAuthorAddress} from '@bitsocialnet/bitsocial-react-hooks'
 const account = useAccount() // or useAccount('Account 2') to use an account other than the active one
 
 const author: {...account.author, displayName: 'John'}
@@ -796,7 +796,7 @@ if (state === 'resolving') {
 > Note: deleting account is unrecoverable, warn the user to export/backup his account before deleting
 
 ```jsx
-import {deleteAccount} from '@bitsocialhq/bitsocial-react-hooks'
+import {deleteAccount} from '@bitsocialnet/bitsocial-react-hooks'
 
 // delete active account
 await deleteAccount()
@@ -1009,7 +1009,7 @@ if (state === 'resolving') {
 #### Export and import account
 
 ```jsx
-import {exportAccount, importAccount, setActiveAccount, setAccountsOrder} from '@bitsocialhq/bitsocial-react-hooks'
+import {exportAccount, importAccount, setActiveAccount, setAccountsOrder} from '@bitsocialnet/bitsocial-react-hooks'
 
 // get active account 'Account 1'
 const activeAccount = useAccount()
@@ -1101,7 +1101,7 @@ const {accountEdits} = useAccountEdits({filter})
 #### Get replies to a post (nested or flat)
 
 ```jsx
-import {useReplies, useComment, useAccountComment} from '@bitsocialhq/bitsocial-react-hooks'
+import {useReplies, useComment, useAccountComment} from '@bitsocialnet/bitsocial-react-hooks'
 
 // NOTE: recommended to use the same replies options for all depths, or will load slower
 const useRepliesOptions = {sortType: 'best', flat: false, repliesPerPage: 20, accountComments: {newerThan: Infinity, append: false}}
@@ -1151,7 +1151,7 @@ const shortAddress = getShortCid(address)
 #### Get a shortCid or shortAddress (hooks)
 
 ```jsx
-import {useShortAddress, useShortCid} from '@bitsocialhq/bitsocial-react-hooks'
+import {useShortAddress, useShortCid} from '@bitsocialnet/bitsocial-react-hooks'
 
 const shortParentCid = useShortCid(comment.parentCid)
 const shortAddress = useShortAddress(address)

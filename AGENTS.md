@@ -14,9 +14,9 @@ Only record items that are repo-specific, likely to recur, and have a concrete m
 
 ## Project Overview
 
-bitsocial-react-hooks (`@bitsocialhq/bitsocial-react-hooks`) is a React hooks library for the Bitsocial protocol. It provides React hooks and Zustand stores for interacting with decentralized communities — fetching comments, feeds, author data, publishing, account management, and more.
+bitsocial-react-hooks (`@bitsocialnet/bitsocial-react-hooks`) is a React hooks library for the Bitsocial protocol. It provides React hooks and Zustand stores for interacting with decentralized communities — fetching comments, feeds, author data, publishing, account management, and more.
 
-This repo is a temporary fork of [plebbit/plebbit-react-hooks](https://github.com/plebbit/plebbit-react-hooks) under the bitsocialhq org for AI-aided development. Changes made here will be merged upstream when the original maintainer is ready. The codebase still uses "plebbit" naming (e.g. `subplebbit`, `plebbit-js`) — do not rename these yet; rebranding depends on the upstream `plebbit-js` dependency rebranding first.
+This repo is a temporary fork of [plebbit/plebbit-react-hooks](https://github.com/plebbit/plebbit-react-hooks) under the bitsocialnet org for AI-aided development. Changes made here will be merged upstream when the original maintainer is ready. The codebase still uses "plebbit" naming (e.g. `subplebbit`, `plebbit-js`) — do not rename these yet; rebranding depends on the upstream `plebbit-js` dependency rebranding first.
 
 ## Instruction Priority
 
@@ -90,7 +90,7 @@ src/
 ### Naming and Branding Rules
 
 - Do **not** rename `plebbit`, `subplebbit`, or related terms in source code yet. The upstream dependency `plebbit-js` has not rebranded, and this repo must stay compatible.
-- Package name and import path is `@bitsocialhq/bitsocial-react-hooks`. Use this in README examples and docs.
+- Package name and import path is `@bitsocialnet/bitsocial-react-hooks`. Use this in README examples and docs.
 - The future rebrand: `plebbit` → `pkc`, `subplebbit` → `community`. But not yet.
 
 ### Bug Investigation Rules

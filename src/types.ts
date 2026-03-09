@@ -519,7 +519,7 @@ export interface UsePlebbitRpcSettingsResult extends Result {
 /**
  * TODO: define these types more in depth, most are already defined in:
  * https://github.com/plebbit/plebbit-js or
- * https://github.com/bitsocialhq/bitsocial-react-hooks/blob/master/docs/schema.md
+ * https://github.com/bitsocialnet/bitsocial-react-hooks/blob/master/docs/schema.md
  */
 export type Account = { [key: string]: any };
 export type AccountsActions = { [key: string]: any };
