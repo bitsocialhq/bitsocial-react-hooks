@@ -97,7 +97,6 @@ const generateDefaultAccount = async () => {
     address: signer.address,
     wallets: {
       eth: await chain.getEthWalletFromPlebbitPrivateKey(signer.privateKey, signer.address),
-      sol: await chain.getSolWalletFromPlebbitPrivateKey(signer.privateKey, signer.address),
     },
   };
 

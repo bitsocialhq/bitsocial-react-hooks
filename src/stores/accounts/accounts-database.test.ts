@@ -19,7 +19,7 @@ describe("accounts-database", () => {
     version: 4,
     author: {
       address: "address",
-      wallets: { eth: undefined, sol: undefined },
+      wallets: { eth: undefined },
     },
     signer: { privateKey: "private key", address: "address" },
     plebbitOptions: getDefaultPlebbitOptions(),
@@ -253,10 +253,11 @@ describe("accounts-database", () => {
       });
       const accounts = await accountsDatabase.getAccounts(["v2-acc"]);
       expect(accounts["v2-acc"].author.wallets).toBeDefined();
+      expect(accounts["v2-acc"].author.wallets.sol).toBeUndefined();
       expect(accounts["v2-acc"].version).toBe(4);
     });
 
-    test("v3 regenerates wallets when timestamp in ms", async () => {
+    test("v3 regenerates only eth wallet when timestamp is in ms", async () => {
       const v3Account = {
         id: "v3-acc",
         name: "V3",
@@ -279,7 +280,7 @@ describe("accounts-database", () => {
       });
       const accounts = await accountsDatabase.getAccounts(["v3-acc"]);
       expect(accounts["v3-acc"].author.wallets.eth).toBeUndefined();
-      expect(accounts["v3-acc"].author.wallets.sol).toBeUndefined();
+      expect(accounts["v3-acc"].author.wallets.sol.timestamp).toBe(1e13);
       expect(accounts["v3-acc"].version).toBe(4);
     });
 

@@ -229,19 +229,6 @@ export const setAccount = async (account: Account) => {
         };
       }
     }
-    if (account.author.wallets?.sol) {
-      const plebbitSignerWalletWithNewAuthorAddress = await chain.getSolWalletFromPlebbitPrivateKey(
-        account.signer.privateKey,
-        account.author.address,
-      );
-      // wallet is using plebbit signer, redo signature with new author.address
-      if (account.author.wallets.sol.address === plebbitSignerWalletWithNewAuthorAddress?.address) {
-        account.author.wallets = {
-          ...account.author.wallets,
-          sol: plebbitSignerWalletWithNewAuthorAddress,
-        };
-      }
-    }
   }
 
   // use this function to serialize and update all databases

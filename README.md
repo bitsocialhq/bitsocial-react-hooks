@@ -768,6 +768,9 @@ console.log(error)
 import {useAccount, setAccount, useResolvedAuthorAddress} from '@bitsocialnet/bitsocial-react-hooks'
 const account = useAccount() // or useAccount('Account 2') to use an account other than the active one
 
+// `account.author.wallets` only auto-generates an `eth` wallet by default
+console.log(account.author.wallets.eth)
+
 const author: {...account.author, displayName: 'John'}
 const editedAccount = {...account, author}
 

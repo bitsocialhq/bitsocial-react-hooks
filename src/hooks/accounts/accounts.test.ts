@@ -505,6 +505,7 @@ describe("accounts", () => {
         expect(typeof exportedJson).toBe("string");
         expect(typeof exported?.account?.id).toBe("string");
         expect(typeof exported?.account?.signer?.privateKey).toBe("string");
+        expect(exported?.account?.author?.wallets?.sol).toBeUndefined();
 
         // account.plebbit has been removed
         expect(exported?.account.plebbit).toBe(undefined);
@@ -3388,7 +3389,7 @@ describe("accounts", () => {
       await testUtils.resetDatabasesAndStores();
     });
 
-    test("author has wallets", async () => {
+    test("author has only an eth wallet", async () => {
       // on first render, the account is undefined because it's not yet loaded from database
       const rendered = renderHook(() => useAccount());
       const waitFor = testUtils.createWaitFor(rendered);
@@ -3402,12 +3403,8 @@ describe("accounts", () => {
       expect(author.wallets.eth.timestamp).toBeLessThan(Date.now() / 1000 + 1);
       expect(typeof author.wallets.eth.signature.signature).toBe("string");
       expect(author.wallets.eth.signature.type).toBe("eip191");
-      expect(author.wallets.sol.address).toBe("AzAfDLMxbptaq5Ppy4BK5aEsEzvTYNFAub5ffewbSdn9");
-      expect(typeof author.wallets.sol.timestamp).toBe("number");
-      expect(typeof author.wallets.sol.signature.signature).toBe("string");
-      expect(author.wallets.sol.signature.type).toBe("sol");
+      expect(author.wallets.sol).toBeUndefined();
       await chain.validateEthWallet(author.wallets.eth, author.address);
-      await chain.validateSolWallet(author.wallets.sol, author.address);
     });
 
     test("changing author address changes wallet signature", async () => {
@@ -3425,12 +3422,8 @@ describe("accounts", () => {
       expect(typeof previousWallets.eth.timestamp).toBe("number");
       expect(typeof previousWallets.eth.signature.signature).toBe("string");
       expect(previousWallets.eth.signature.type).toBe("eip191");
-      expect(previousWallets.sol.address).toBe("AzAfDLMxbptaq5Ppy4BK5aEsEzvTYNFAub5ffewbSdn9");
-      expect(typeof previousWallets.sol.timestamp).toBe("number");
-      expect(typeof previousWallets.sol.signature.signature).toBe("string");
-      expect(previousWallets.sol.signature.type).toBe("sol");
+      expect(previousWallets.sol).toBeUndefined();
       await chain.validateEthWallet(previousWallets.eth, rendered.result.current.author.address);
-      await chain.validateSolWallet(previousWallets.sol, rendered.result.current.author.address);
 
       // change author address, wallets should update
       await act(async () => {
@@ -3448,18 +3441,11 @@ describe("accounts", () => {
       expect(typeof wallets.eth.signature.signature).toBe("string");
       expect(wallets.eth.signature.signature).not.toBe(previousWallets.eth.signature.signature);
       expect(wallets.eth.signature.type).toBe("eip191");
-      expect(wallets.sol.address).toBe("AzAfDLMxbptaq5Ppy4BK5aEsEzvTYNFAub5ffewbSdn9");
-      expect(typeof wallets.sol.timestamp).toBe("number");
-      expect(wallets.sol.timestamp).toBeGreaterThanOrEqual(previousWallets.sol.timestamp);
-      expect(typeof wallets.sol.signature.signature).toBe("string");
-      expect(wallets.sol.signature.signature).not.toBe(previousWallets.sol.signature.signature);
-      expect(wallets.sol.signature.type).toBe("sol");
+      expect(wallets.sol).toBeUndefined();
       await chain.validateEthWallet(wallets.eth, rendered.result.current.author.address);
-      await chain.validateSolWallet(wallets.sol, rendered.result.current.author.address);
 
       // change author display name, wallets should not update
       const previousEthSignature = wallets.eth.signature.signature;
-      const previousSolSignature = wallets.sol.signature.signature;
       await act(async () => {
         const author = { ...rendered.result.current.author, displayName: "John" };
         const account = { ...rendered.result.current, author };
@@ -3470,9 +3456,6 @@ describe("accounts", () => {
       expect(rendered.result.current.author.displayName).toBe("John");
       expect(rendered.result.current.author.wallets.eth.signature.signature).toBe(
         previousEthSignature,
-      );
-      expect(rendered.result.current.author.wallets.sol.signature.signature).toBe(
-        previousSolSignature,
       );
     });
   });

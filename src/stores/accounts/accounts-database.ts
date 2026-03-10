@@ -136,12 +136,6 @@ const migrateAccount = async (account: any) => {
         account.address,
       );
     }
-    if (!account.author.wallets.sol) {
-      account.author.wallets.sol = await chain.getSolWalletFromPlebbitPrivateKey(
-        account.signer.privateKey,
-        account.address,
-      );
-    }
   }
 
   if (version === 3) {
@@ -149,12 +143,6 @@ const migrateAccount = async (account: any) => {
     // in version 3, wallets had timestamps in ms, should be seconds
     if (account.author?.wallets?.eth?.timestamp > 1e12) {
       account.author.wallets.eth = await chain.getEthWalletFromPlebbitPrivateKey(
-        account.signer.privateKey,
-        account.address,
-      );
-    }
-    if (account.author?.wallets?.sol?.timestamp > 1e12) {
-      account.author.wallets.sol = await chain.getSolWalletFromPlebbitPrivateKey(
         account.signer.privateKey,
         account.address,
       );

@@ -562,26 +562,20 @@ describe("accounts-actions", () => {
       ).rejects.toThrow("can't edit address of a remote subplebbit");
     });
 
-    test("setAccount with author.address change updates eth and sol wallets when using plebbit signer (branches 212, 225)", async () => {
+    test("setAccount with author.address change updates only the eth wallet when using plebbit signer", async () => {
       await act(async () => {
         await accountsActions.createAccount();
       });
 
       const account = Object.values(accountsStore.getState().accounts)[0];
       const ethAddr = account.author.wallets?.eth?.address;
-      const solAddr = account.author.wallets?.sol?.address;
-      if (!ethAddr || !solAddr) {
+      if (!ethAddr) {
         return;
       }
 
       const chainMod = await import("../../lib/chain");
       vi.spyOn(chainMod, "getEthWalletFromPlebbitPrivateKey").mockResolvedValue({
         address: ethAddr,
-        timestamp: 1,
-        signature: {},
-      } as any);
-      vi.spyOn(chainMod, "getSolWalletFromPlebbitPrivateKey").mockResolvedValue({
-        address: solAddr,
         timestamp: 1,
         signature: {},
       } as any);
@@ -594,7 +588,6 @@ describe("accounts-actions", () => {
           wallets: {
             ...account.author.wallets,
             eth: { ...account.author.wallets?.eth, address: ethAddr },
-            sol: { ...account.author.wallets?.sol, address: solAddr },
           },
         },
       };
@@ -605,28 +598,23 @@ describe("accounts-actions", () => {
 
       const stored = accountsStore.getState().accounts[account.id];
       expect(stored?.author?.wallets?.eth).toBeDefined();
-      expect(stored?.author?.wallets?.sol).toBeDefined();
+      expect(stored?.author?.wallets?.sol).toBeUndefined();
       vi.restoreAllMocks();
     });
 
-    test("setAccount with author.address change skips wallet update when address mismatch (branch 212, 225 false)", async () => {
+    test("setAccount with author.address change skips eth wallet update when address mismatch", async () => {
       await act(async () => {
         await accountsActions.createAccount();
       });
 
       const account = Object.values(accountsStore.getState().accounts)[0];
-      if (!account.author.wallets?.eth || !account.author.wallets?.sol) {
+      if (!account.author.wallets?.eth) {
         return;
       }
 
       const chainMod = await import("../../lib/chain");
       vi.spyOn(chainMod, "getEthWalletFromPlebbitPrivateKey").mockResolvedValue({
         address: "0xOtherEth",
-        timestamp: 1,
-        signature: {},
-      } as any);
-      vi.spyOn(chainMod, "getSolWalletFromPlebbitPrivateKey").mockResolvedValue({
-        address: "OtherSol",
         timestamp: 1,
         signature: {},
       } as any);

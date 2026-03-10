@@ -80,11 +80,12 @@ describe("account-generator", () => {
       await accountsDatabase.accountsDatabase.clear();
     });
 
-    test("creates account with plebbit, signer, author, wallets", async () => {
+    test("creates account with plebbit, signer, author, and only an eth wallet", async () => {
       const account = await accountGenerator.generateDefaultAccount();
       expect(account.id).toBeDefined();
       expect(account.name).toBe("Account 1");
       expect(account.author.address).toBeDefined();
+      expect(account.author.wallets?.sol).toBeUndefined();
       expect(account.signer).toBeDefined();
       expect(account.plebbit).toBeDefined();
       expect(account.plebbitOptions).toBeDefined();
