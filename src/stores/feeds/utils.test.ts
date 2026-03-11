@@ -239,7 +239,7 @@ describe("feeds utils", () => {
         },
       };
       const communitiesPages = {
-        "mod-queue-page-cid": {
+        [`${mockAccountId}:mod-queue-page-cid`]: {
           comments: [
             {
               cid: "public-cid",
@@ -949,7 +949,9 @@ describe("feeds utils", () => {
           modQueue: { pageCids: { approved: "mq1" }, pages: {} },
         },
       };
-      const communitiesPages = { mq1: { comments: [], nextCid: undefined } };
+      const communitiesPages = {
+        [`${mockAccountId}:mq1`]: { comments: [], nextCid: undefined },
+      };
       const result = getFeedsHaveMore(
         feedsOptions,
         {},

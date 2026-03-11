@@ -22,6 +22,7 @@ import createStore from "zustand";
 import { resolveEnsTxtRecord } from "../lib/chain";
 import useCommunitiesStore from "../stores/communities";
 import shallow from "zustand/shallow";
+import { getPlebbitCommunityAddresses } from "../lib/plebbit-compat";
 
 /**
  * @param communityAddress - The address of the community, e.g. 'memes.eth', '12D3KooW...', etc
@@ -191,6 +192,10 @@ export function useCommunities(options?: UseCommunitiesOptions): UseCommunitiesR
     (state: any) => addrs.map((communityAddress) => state.communities[communityAddress || ""]),
     shallow,
   );
+  const communitiesErrors: (Error[] | undefined)[] = useCommunitiesStore(
+    (state: any) => addrs.map((communityAddress) => state.errors[communityAddress || ""]),
+    shallow,
+  );
   const addCommunityToStore = useCommunitiesStore((state: any) => state.addCommunityToStore);
 
   useEffect(() => {
@@ -213,17 +218,27 @@ export function useCommunities(options?: UseCommunitiesOptions): UseCommunitiesR
     log("useCommunities", { communityAddresses: addrs, communities, account });
   }
 
-  // succeed if no communities are undefined
-  const state = communities.indexOf(undefined) === -1 ? "succeeded" : "fetching-ipns";
+  const errors = useMemo(
+    () => communitiesErrors.flatMap((communityErrors) => communityErrors || []),
+    [communitiesErrors],
+  );
+  const hasFailedCommunity = communities.some(
+    (community, index) => !community && Boolean(communitiesErrors[index]?.length),
+  );
+  const state = hasFailedCommunity
+    ? "failed"
+    : communities.indexOf(undefined) === -1
+      ? "succeeded"
+      : "fetching-ipns";
 
   return useMemo(
     () => ({
       communities,
       state,
-      error: undefined,
-      errors: [],
+      error: errors[errors.length - 1],
+      errors,
     }),
-    [communities, addrs.toString()],
+    [communities, state, errors, addrs.toString()],
   );
 }
 
@@ -241,7 +256,7 @@ export function useListCommunities(accountName?: string) {
     () => {
       const plebbit = account?.plebbit;
       if (!plebbit) return;
-      const newAddrs = Array.isArray(plebbit.communities) ? plebbit.communities : [];
+      const newAddrs = getPlebbitCommunityAddresses(plebbit);
       if (newAddrs.toString() !== communityAddresses.toString()) {
         log("useListCommunities", { communityAddresses });
         setCommunityAddresses(newAddrs);

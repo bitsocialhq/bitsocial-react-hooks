@@ -11,6 +11,9 @@ const toString = (value: any) => {
   return value;
 };
 
+const getPublicationCommunityAddress = (options: any) =>
+  options?.communityAddress || options?.subplebbitAddress;
+
 const validateAccountsActionsPublishCommentArguments = ({
   publishCommentOptions,
   accountName,
@@ -42,8 +45,8 @@ const validateAccountsActionsPublishCommentArguments = ({
     "publishComment publishCommentOptions.onError not a function",
   );
   assert(
-    typeof publishCommentOptions.communityAddress === "string",
-    "publishComment publishCommentOptions.communityAddress not a string",
+    typeof getPublicationCommunityAddress(publishCommentOptions) === "string",
+    "publishComment publishCommentOptions.communityAddress/subplebbitAddress not a string",
   );
   assert(
     !publishCommentOptions.parentCid || typeof publishCommentOptions.parentCid === "string",
@@ -112,8 +115,8 @@ const validateAccountsActionsPublishVoteArguments = ({
     "publishVote publishVoteOptions.onError not a function",
   );
   assert(
-    typeof publishVoteOptions.communityAddress === "string",
-    "publishVote publishVoteOptions.communityAddress not a string",
+    typeof getPublicationCommunityAddress(publishVoteOptions) === "string",
+    "publishVote publishVoteOptions.communityAddress/subplebbitAddress not a string",
   );
   assert(
     typeof publishVoteOptions.commentCid === "string",
@@ -162,8 +165,8 @@ const validateAccountsActionsPublishCommentEditArguments = ({
     "publishCommentEditOptions publishCommentEditOptions.onError not a function",
   );
   assert(
-    typeof publishCommentEditOptions.communityAddress === "string",
-    "publishCommentEdit publishCommentEditOptions.communityAddress not a string",
+    typeof getPublicationCommunityAddress(publishCommentEditOptions) === "string",
+    "publishCommentEdit publishCommentEditOptions.communityAddress/subplebbitAddress not a string",
   );
   assert(
     typeof publishCommentEditOptions.commentCid === "string",
@@ -207,8 +210,8 @@ const validateAccountsActionsPublishCommentModerationArguments = ({
     "publishCommentModerationOptions publishCommentModerationOptions.onError not a function",
   );
   assert(
-    typeof publishCommentModerationOptions.communityAddress === "string",
-    "publishCommentModeration publishCommentModerationOptions.communityAddress not a string",
+    typeof getPublicationCommunityAddress(publishCommentModerationOptions) === "string",
+    "publishCommentModeration publishCommentModerationOptions.communityAddress/subplebbitAddress not a string",
   );
   assert(
     typeof publishCommentModerationOptions.commentCid === "string",

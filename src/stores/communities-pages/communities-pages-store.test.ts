@@ -251,6 +251,67 @@ describe("communities pages store", () => {
     expect(createCommunityB).toHaveBeenCalledTimes(1);
   });
 
+  test("addNextCommunityPageToStore scopes modQueue pages per account and skips global comment caching", async () => {
+    const sharedPageCid = "shared pendingApproval page cid";
+    const makeModQueueCommunity = (accountId: string) => ({
+      address: "shared-community-address",
+      modQueue: {
+        pageCids: { pendingApproval: sharedPageCid },
+        clients: {},
+        getPage: vi.fn(async ({ cid }: any) => ({
+          nextCid: undefined,
+          comments: [
+            {
+              cid: `${accountId}-${cid}-comment`,
+              communityAddress: "shared-community-address",
+              pendingApproval: true,
+              timestamp: 1,
+              updatedAt: 1,
+            },
+          ],
+        })),
+      },
+      removeAllListeners() {},
+    });
+    const createCommunityA = vi.fn(async () => makeModQueueCommunity("account-a"));
+    const createCommunityB = vi.fn(async () => makeModQueueCommunity("account-b"));
+    const accountA = { id: "account-a", plebbit: { createCommunity: createCommunityA } };
+    const accountB = { id: "account-b", plebbit: { createCommunity: createCommunityB } };
+    const community = {
+      address: "shared-community-address",
+      modQueue: {
+        pageCids: { pendingApproval: sharedPageCid },
+      },
+    };
+
+    await rendered.result.current.addNextCommunityPageToStore(
+      community as any,
+      "new",
+      accountA as any,
+      ["pendingApproval"],
+    );
+    await waitFor(
+      () =>
+        rendered.result.current.communitiesPages[`account-a:${sharedPageCid}`]?.comments?.length,
+    );
+
+    await rendered.result.current.addNextCommunityPageToStore(
+      community as any,
+      "new",
+      accountB as any,
+      ["pendingApproval"],
+    );
+    await waitFor(
+      () =>
+        rendered.result.current.communitiesPages[`account-b:${sharedPageCid}`]?.comments?.length,
+    );
+
+    expect(rendered.result.current.communitiesPages[sharedPageCid]).toBeUndefined();
+    expect(rendered.result.current.comments).toEqual({});
+    expect(createCommunityA).toHaveBeenCalledTimes(1);
+    expect(createCommunityB).toHaveBeenCalledTimes(1);
+  });
+
   test("invalidateCommunityPages clears stored page chains for posts", async () => {
     const firstPageCid = "invalidate-posts-page-1";
     const secondPageCid = "invalidate-posts-page-2";

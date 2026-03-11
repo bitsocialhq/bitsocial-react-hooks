@@ -17,6 +17,7 @@ import {
 import createStore from "zustand";
 import localForageLru from "../../lib/localforage-lru";
 import { communityPostsCacheExpired } from "../../lib/utils";
+import { getPlebbitGetCommunity } from "../../lib/plebbit-compat";
 import accountsStore from "../accounts";
 import communitiesStore from "../communities";
 import communitiesPagesStore from "../communities-pages";
@@ -103,7 +104,7 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
       `addFeedToStore.addFeedToStore sortType '${sortType}' invalid`,
     );
     assert(
-      typeof account?.plebbit?.getCommunity === "function",
+      typeof getPlebbitGetCommunity(account?.plebbit) === "function",
       `addFeedToStore.addFeedToStore account '${account}' invalid`,
     );
     assert(
@@ -235,7 +236,7 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
         .filter((community: Community | undefined): community is Community => Boolean(community));
       await Promise.all(
         loadedCommunities.map((community: Community) =>
-          invalidateCommunityPages(community, sortType, modQueue),
+          invalidateCommunityPages(community, sortType, modQueue, account.id),
         ),
       );
     }
