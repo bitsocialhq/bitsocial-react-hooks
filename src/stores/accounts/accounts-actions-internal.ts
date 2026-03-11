@@ -331,7 +331,7 @@ export const addCommunityRoleToAccountsCommunities = async (community: Community
   const getRole = (community: any, authorAddress: string) =>
     community.roles && community.roles[authorAddress];
   const getChange = (accounts: any, community: any) => {
-    const toAdd: string[] = [];
+    const toUpsert: string[] = [];
     const toRemove: string[] = [];
     for (const accountId in accounts) {
       const account = accounts[accountId];
@@ -341,12 +341,17 @@ export const addCommunityRoleToAccountsCommunities = async (community: Community
           toRemove.push(accountId);
         }
       } else {
-        if (!account.communities[community.address]) {
-          toAdd.push(accountId);
+        const currentRole = account.communities[community.address]?.role;
+        if (!currentRole || currentRole.role !== role.role) {
+          toUpsert.push(accountId);
         }
       }
     }
-    return { toAdd, toRemove, hasChange: toAdd.length !== 0 || toRemove.length !== 0 };
+    return {
+      toUpsert,
+      toRemove,
+      hasChange: toUpsert.length !== 0 || toRemove.length !== 0,
+    };
   };
 
   const { hasChange } = getChange(accounts, community);
@@ -355,16 +360,16 @@ export const addCommunityRoleToAccountsCommunities = async (community: Community
   }
 
   accountsStore.setState(({ accounts }) => {
-    const { toAdd, toRemove, hasChange } = getChange(accounts, community);
+    const { toUpsert, toRemove } = getChange(accounts, community);
     const nextAccounts = { ...accounts };
 
-    // edit databases and build next accounts (toAdd implies role exists from getChange)
-    for (const accountId of toAdd) {
+    // edit databases and build next accounts (toUpsert implies role exists from getChange)
+    for (const accountId of toUpsert) {
       const account = { ...nextAccounts[accountId] };
       const role = community.roles![account.author.address];
       account.communities = {
         ...account.communities,
-        [community.address]: { role },
+        [community.address]: { ...account.communities[community.address], role },
       };
       nextAccounts[accountId] = account;
       accountsDatabase.addAccount(account);
@@ -377,7 +382,11 @@ export const addCommunityRoleToAccountsCommunities = async (community: Community
       accountsDatabase.addAccount(account);
     }
 
-    log("accountsActions.addCommunityRoleToAccountsCommunities", { community, toAdd, toRemove });
+    log("accountsActions.addCommunityRoleToAccountsCommunities", {
+      community,
+      toUpsert,
+      toRemove,
+    });
     return { accounts: nextAccounts };
   });
 };

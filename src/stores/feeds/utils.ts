@@ -18,6 +18,10 @@ import accountsStore from "../accounts";
 import feedSorter from "./feed-sorter";
 import { communityPostsCacheExpired, commentIsValid, removeInvalidComments } from "../../lib/utils";
 import { areEquivalentCommunityAddresses } from "../../lib/community-address";
+import {
+  getCommentCommunityAddress,
+  normalizeCommentCommunityAddress,
+} from "../../lib/plebbit-compat";
 import Logger from "@plebbit/plebbit-logger";
 const log = Logger("bitsocial-react-hooks:feeds:stores");
 
@@ -41,20 +45,29 @@ const getFeedPost = (
   modQueue?: string[],
   freshestComments?: { [commentCid: string]: Comment },
 ) => {
-  const freshestComment = post.cid ? freshestComments?.[post.cid] : undefined;
-  if (!areEquivalentCommunityAddresses(post.communityAddress, communityAddress)) {
+  const normalizedPost = normalizeCommentCommunityAddress(post) as Comment;
+  const freshestComment = post.cid
+    ? normalizeCommentCommunityAddress(freshestComments?.[post.cid])
+    : undefined;
+  const postCommunityAddress = getCommentCommunityAddress(normalizedPost);
+  if (!areEquivalentCommunityAddresses(postCommunityAddress, communityAddress)) {
     return;
   }
-  if (!commentMatchesModQueue(post, modQueue)) {
+  if (!commentMatchesModQueue(normalizedPost, modQueue)) {
     return;
   }
-  if (!freshestComment || getCommentFreshness(freshestComment) <= getCommentFreshness(post)) {
-    return post;
+  if (
+    !freshestComment ||
+    getCommentFreshness(freshestComment) <= getCommentFreshness(normalizedPost)
+  ) {
+    return normalizedPost;
   }
   if (!commentMatchesModQueue(freshestComment, modQueue)) {
     return;
   }
-  if (!areEquivalentCommunityAddresses(freshestComment.communityAddress, communityAddress)) {
+  if (
+    !areEquivalentCommunityAddresses(getCommentCommunityAddress(freshestComment), communityAddress)
+  ) {
     return;
   }
   return freshestComment;
@@ -146,7 +159,9 @@ export const getFilteredSortedFeeds = (
       if (preloadedPosts) {
         for (const post of preloadedPosts) {
           // posts are manually validated, could have fake communityAddress
-          if (!areEquivalentCommunityAddresses(post.communityAddress, communityAddress)) {
+          if (
+            !areEquivalentCommunityAddresses(getCommentCommunityAddress(post), communityAddress)
+          ) {
             break;
           }
           const nextPost = getFeedPost(post, communityAddress, modQueue, freshestComments);
@@ -162,12 +177,15 @@ export const getFilteredSortedFeeds = (
         sortType,
         communitiesPages,
         pageType,
+        accountId,
       );
       for (const communityPage of communityPages) {
         if (communityPage?.comments) {
           for (const post of communityPage.comments) {
             // posts are manually validated, could have fake communityAddress
-            if (!areEquivalentCommunityAddresses(post.communityAddress, communityAddress)) {
+            if (
+              !areEquivalentCommunityAddresses(getCommentCommunityAddress(post), communityAddress)
+            ) {
               break;
             }
             const nextPost = getFeedPost(post, communityAddress, modQueue, freshestComments);
@@ -188,7 +206,7 @@ export const getFilteredSortedFeeds = (
     for (const post of sortedBufferedFeedPosts) {
       // address is blocked
       if (
-        accounts[accountId]?.blockedAddresses[post.communityAddress] ||
+        accounts[accountId]?.blockedAddresses[getCommentCommunityAddress(post) || ""] ||
         (post.author?.address && accounts[accountId]?.blockedAddresses[post.author.address])
       ) {
         continue;
@@ -350,7 +368,7 @@ export const addAccountsComments = (feedsOptions: FeedsOptions, loadedFeeds: Fee
       if (!isNewerThan(comment)) {
         return false;
       }
-      return communityAddressesSet.has(comment.communityAddress);
+      return communityAddressesSet.has(getCommentCommunityAddress(comment) || "");
     });
     const validAccountIndices = new Set(accountPosts.map((p) => p.index));
     const accountCidToPost = new Map<string, Comment>();
@@ -542,7 +560,10 @@ export const getFeedsCommunityAddressesWithNewerPosts = (
       }
       // if any post in filteredSortedFeeds ranks higher than the loaded feed count, it's a newer post
       if (!cidsInLoadedFeed.has(post.cid)) {
-        communityAddressesWithNewerPostsSet.add(post.communityAddress);
+        const postCommunityAddress = getCommentCommunityAddress(post);
+        if (postCommunityAddress) {
+          communityAddressesWithNewerPostsSet.add(postCommunityAddress);
+        }
       }
     }
     const communityAddressesWithNewerPosts = [...communityAddressesWithNewerPostsSet];
@@ -573,7 +594,10 @@ export const getFeedsCommunitiesPostCounts = (feedsOptions: FeedsOptions, feeds:
       feedsCommunitiesPostCounts[feedName][communityAddress] = 0;
     }
     for (const comment of feeds[feedName] || []) {
-      feedsCommunitiesPostCounts[feedName][comment.communityAddress]++;
+      const commentCommunityAddress = getCommentCommunityAddress(comment);
+      if (commentCommunityAddress) {
+        feedsCommunitiesPostCounts[feedName][commentCommunityAddress]++;
+      }
     }
   }
   return feedsCommunitiesPostCounts;
@@ -632,7 +656,7 @@ export const getFeedsHaveMore = (
       if (!firstPageCid) {
         continue communityAddressesLoop;
       }
-      const pages = getCommunityPages(community, sortType, communitiesPages, pageType);
+      const pages = getCommunityPages(community, sortType, communitiesPages, pageType, accountId);
       // if first page isn't loaded yet, then the feed still has more
       if (!pages.length) {
         feedsHaveMore[feedName] = true;

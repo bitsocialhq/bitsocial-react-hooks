@@ -2234,6 +2234,48 @@ describe("accounts", () => {
       expect(rendered.result.current.state).toBe("succeeded");
     });
 
+    test("useAccountCommunities keeps owner communities scoped to the requested account", async () => {
+      await act(async () => {
+        await accountsActions.createAccount("Account 2");
+        await accountsActions.setActiveAccount("Account 1");
+      });
+
+      const state = accountsStore.getState();
+      const activeAccount = state.accounts[state.activeAccountId];
+      const account2 = state.accounts[state.accountNamesToAccountIds["Account 2"]];
+
+      Object.defineProperty(activeAccount.plebbit, "communities", {
+        configurable: true,
+        get: () => ["active owner community"],
+      });
+      Object.defineProperty(account2.plebbit, "communities", {
+        configurable: true,
+        get: () => ["account 2 owner community"],
+      });
+
+      try {
+        const rendered = renderHook<any, any>(() =>
+          useAccountCommunities({ accountName: "Account 2" }),
+        );
+        const waitFor = testUtils.createWaitFor(rendered, { timeout: 4000 });
+
+        await waitFor(
+          () =>
+            rendered.result.current.accountCommunities["account 2 owner community"]?.role?.role ===
+            "owner",
+        );
+        expect(
+          rendered.result.current.accountCommunities["account 2 owner community"]?.role?.role,
+        ).toBe("owner");
+        expect(
+          rendered.result.current.accountCommunities["active owner community"],
+        ).toBeUndefined();
+      } finally {
+        delete (activeAccount.plebbit as any).communities;
+        delete (account2.plebbit as any).communities;
+      }
+    });
+
     describe("with setup", () => {
       beforeAll(() => {
         testUtils.silenceWaitForWarning = true;
@@ -2335,6 +2377,81 @@ describe("accounts", () => {
         // after a render
         await waitFor(() => !rendered.result.current.accountCommunities["community address 1"]);
         expect(rendered.result.current.accountCommunities["community address 1"]).toBe(undefined);
+      });
+
+      test("useAccountCommunities reflects in-flight community fetches", async () => {
+        await waitFor(() => rendered.result.current.accountCommunities["community address 1"]);
+        const { account, setAccount } = rendered.result.current;
+        const createCommunityOrig = account.plebbit.createCommunity;
+        const slowCommunity = await createCommunityOrig.call(account.plebbit, {
+          address: "slow community address",
+        });
+        let resolveSlowCommunity: ((community: any) => void) | undefined;
+        const slowCommunityPromise = new Promise((resolve) => {
+          resolveSlowCommunity = resolve;
+        });
+        account.plebbit.createCommunity = vi.fn(async (options: any) => {
+          if (options.address === "slow community address") {
+            return slowCommunityPromise;
+          }
+          return createCommunityOrig.call(account.plebbit, options);
+        });
+
+        try {
+          await act(async () => {
+            await setAccount({
+              ...account,
+              communities: {
+                ...account.communities,
+                "slow community address": { role: { role: "moderator" } },
+              },
+            });
+          });
+
+          await waitFor(
+            () =>
+              rendered.result.current.accountCommunities["slow community address"] &&
+              rendered.result.current.state === "fetching-ipns",
+          );
+          expect(rendered.result.current.state).toBe("fetching-ipns");
+
+          resolveSlowCommunity?.(slowCommunity);
+          await waitFor(() => rendered.result.current.state === "succeeded");
+        } finally {
+          account.plebbit.createCommunity = createCommunityOrig;
+        }
+      });
+
+      test("useAccountCommunities propagates failed community fetches", async () => {
+        await waitFor(() => rendered.result.current.accountCommunities["community address 1"]);
+        const { account, setAccount } = rendered.result.current;
+        const createCommunityOrig = account.plebbit.createCommunity;
+        account.plebbit.createCommunity = vi.fn(async (options: any) => {
+          if (options.address === "failing community address") {
+            throw new Error("community fetch failed");
+          }
+          return createCommunityOrig.call(account.plebbit, options);
+        });
+
+        try {
+          await act(async () => {
+            await setAccount({
+              ...account,
+              communities: {
+                ...account.communities,
+                "failing community address": { role: { role: "moderator" } },
+              },
+            });
+          });
+
+          await waitFor(() => rendered.result.current.state === "failed");
+          expect(rendered.result.current.error?.message).toBe("community fetch failed");
+          expect(rendered.result.current.errors.map((error: Error) => error.message)).toContain(
+            "community fetch failed",
+          );
+        } finally {
+          account.plebbit.createCommunity = createCommunityOrig;
+        }
       });
     });
 

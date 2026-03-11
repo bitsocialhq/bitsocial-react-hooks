@@ -142,7 +142,7 @@ export function useAccountCommunities(
   );
 
   // get all unique account community addresses
-  const ownerCommunityAddresses = useListCommunities();
+  const ownerCommunityAddresses = useListCommunities(accountName);
   const groupedCommunityAddresses = useMemo(() => {
     const accountCommunityAddresses = [];
     if (accountsStoreAccountCommunities) {
@@ -175,7 +175,12 @@ export function useAccountCommunities(
   );
 
   // fetch all community data
-  const { communities: communitiesArray } = useCommunities({
+  const {
+    communities: communitiesArray,
+    state: communitiesState,
+    error: communitiesError,
+    errors: communitiesErrors,
+  } = useCommunities({
     communityAddresses: uniqueCommunityAddresses,
     accountName,
     onlyIfCached,
@@ -245,16 +250,16 @@ export function useAccountCommunities(
     log("useAccountCommunities", { accountCommunities });
   }
 
-  const state = accountId ? "succeeded" : "initializing";
+  const state = accountId ? communitiesState : "initializing";
 
   return useMemo(
     () => ({
       accountCommunities,
       state,
-      error: undefined,
-      errors: [],
+      error: communitiesError,
+      errors: communitiesErrors,
     }),
-    [accountCommunities, state],
+    [accountCommunities, state, communitiesError, communitiesErrors],
   );
 }
 

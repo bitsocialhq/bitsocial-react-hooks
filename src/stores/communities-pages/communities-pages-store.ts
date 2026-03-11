@@ -15,11 +15,27 @@ import communitiesStore, { CommunitiesState } from "../communities";
 import localForageLru from "../../lib/localforage-lru";
 import createStore from "zustand";
 import assert from "assert";
+import {
+  createPlebbitCommunity,
+  getPlebbitCreateCommunity,
+  normalizeCommentCommunityAddress,
+} from "../../lib/plebbit-compat";
 
 const communitiesPagesDatabase = localForageLru.createInstance({
   name: "plebbitReactHooks-communitiesPages",
   size: 500,
 });
+
+const getCommunityPageStoreKey = (pageCid: string, pageType: string, accountId?: string) => {
+  if (pageType === "modQueue") {
+    assert(
+      accountId && typeof accountId === "string",
+      `getCommunityPageStoreKey accountId '${accountId}' invalid for modQueue`,
+    );
+    return `${accountId}:${pageCid}`;
+  }
+  return pageCid;
+};
 
 /** Freshness for comparison: max(updatedAt, timestamp, 0). Used to decide add vs replace per CID. Exported for coverage. */
 export const getCommentFreshness = (comment: Comment | undefined): number =>
@@ -57,7 +73,7 @@ const communitiesPagesStore = createStore<CommunitiesPagesState>(
         `communitiesPagesStore.addNextCommunityPageToStore sortType '${sortType}' invalid`,
       );
       assert(
-        typeof account?.plebbit?.createCommunity === "function",
+        typeof getPlebbitCreateCommunity(account?.plebbit) === "function",
         `communitiesPagesStore.addNextCommunityPageToStore account '${account}' invalid`,
       );
       assert(
@@ -85,7 +101,13 @@ const communitiesPagesStore = createStore<CommunitiesPagesState>(
       // all communities pages in store
       const { communitiesPages } = getState();
       // only specific pages of the community+sortType
-      const communityPages = getCommunityPages(community, sortType, communitiesPages, pageType);
+      const communityPages = getCommunityPages(
+        community,
+        sortType,
+        communitiesPages,
+        pageType,
+        account.id,
+      );
 
       // if no pages exist yet, add the first page
       let pageCidToAdd: string;
@@ -107,11 +129,12 @@ const communitiesPagesStore = createStore<CommunitiesPagesState>(
       }
 
       // page is already added or pending
-      if (communitiesPages[pageCidToAdd] || fetchPagePending[account.id + pageCidToAdd]) {
+      const pageStoreKeyToAdd = getCommunityPageStoreKey(pageCidToAdd, pageType, account.id);
+      if (communitiesPages[pageStoreKeyToAdd] || fetchPagePending[pageStoreKeyToAdd]) {
         return;
       }
 
-      fetchPagePending[account.id + pageCidToAdd] = true;
+      fetchPagePending[pageStoreKeyToAdd] = true;
       let page: CommunityPage;
       try {
         page = await fetchPage(pageCidToAdd, community.address, account, pageType);
@@ -123,7 +146,7 @@ const communitiesPagesStore = createStore<CommunitiesPagesState>(
       } catch (e) {
         throw e;
       } finally {
-        fetchPagePending[account.id + pageCidToAdd] = false;
+        fetchPagePending[pageStoreKeyToAdd] = false;
       }
 
       // find new comments in the page
@@ -131,20 +154,25 @@ const communitiesPagesStore = createStore<CommunitiesPagesState>(
       const { comments } = getState();
       let hasNewComments = false;
       const newComments: Comments = {};
-      for (const comment of flattenedComments) {
-        const existing = comments[comment.cid];
-        if (
-          comment.cid &&
-          (!existing || getCommentFreshness(comment) > getCommentFreshness(existing))
-        ) {
-          // don't clone the comment to save memory, comments remain a pointer to the page object
-          newComments[comment.cid] = comment;
-          hasNewComments = true;
+      if (pageType !== "modQueue") {
+        for (const comment of flattenedComments) {
+          const normalizedComment = normalizeCommentCommunityAddress(comment) as Comment;
+          const existing = comments[normalizedComment.cid];
+          if (
+            normalizedComment.cid &&
+            (!existing || getCommentFreshness(normalizedComment) > getCommentFreshness(existing))
+          ) {
+            // don't clone the comment to save memory, comments remain a pointer to the page object
+            newComments[normalizedComment.cid] = normalizedComment;
+            hasNewComments = true;
+          }
         }
       }
 
       setState(({ communitiesPages, comments }: any) => {
-        const newState: any = { communitiesPages: { ...communitiesPages, [pageCidToAdd]: page } };
+        const newState: any = {
+          communitiesPages: { ...communitiesPages, [pageStoreKeyToAdd]: page },
+        };
         if (hasNewComments) {
           newState.comments = { ...comments, ...newComments };
         }
@@ -164,7 +192,9 @@ const communitiesPagesStore = createStore<CommunitiesPagesState>(
       for (const comment of flattenedComments) {
         accountsStore
           .getState()
-          .accountsActionsInternal.addCidToAccountComment(comment)
+          .accountsActionsInternal.addCidToAccountComment(
+            normalizeCommentCommunityAddress(comment) as Comment,
+          )
           .catch((error: unknown) =>
             log.error(
               "communitiesPagesStore.addNextCommunityPageToStore addCidToAccountComment error",
@@ -178,6 +208,7 @@ const communitiesPagesStore = createStore<CommunitiesPagesState>(
       community: Community,
       sortType: string,
       modQueue?: string[],
+      accountId?: string,
     ) => {
       assert(
         community?.address && typeof community?.address === "string",
@@ -206,21 +237,23 @@ const communitiesPagesStore = createStore<CommunitiesPagesState>(
       }
 
       const { communitiesPages } = getState();
-      const pageCidsToInvalidate = new Set<string>([firstPageCid]);
-      let nextPageCid = communitiesPages[firstPageCid]?.nextCid;
+      const firstPageKey = getCommunityPageStoreKey(firstPageCid, pageType, accountId);
+      const pageKeysToInvalidate = new Set<string>([firstPageKey]);
+      let nextPageCid = communitiesPages[firstPageKey]?.nextCid;
       while (nextPageCid) {
-        pageCidsToInvalidate.add(nextPageCid);
-        nextPageCid = communitiesPages[nextPageCid]?.nextCid;
+        const nextPageKey = getCommunityPageStoreKey(nextPageCid, pageType, accountId);
+        pageKeysToInvalidate.add(nextPageKey);
+        nextPageCid = communitiesPages[nextPageKey]?.nextCid;
       }
 
       await Promise.all(
-        [...pageCidsToInvalidate].map((pageCid) => communitiesPagesDatabase.removeItem(pageCid)),
+        [...pageKeysToInvalidate].map((pageKey) => communitiesPagesDatabase.removeItem(pageKey)),
       );
 
       setState(({ communitiesPages }: any) => {
         const nextCommunitiesPages = { ...communitiesPages };
-        for (const pageCid of pageCidsToInvalidate) {
-          delete nextCommunitiesPages[pageCid];
+        for (const pageKey of pageKeysToInvalidate) {
+          delete nextCommunitiesPages[pageKey];
         }
         return { communitiesPages: nextCommunitiesPages };
       });
@@ -283,7 +316,9 @@ const onCommunityPostsClientsStateChange =
     });
   };
 
-const fetchPageCommunities: { [communityAddress: string]: any } = {}; // cache plebbit.createCommunities because sometimes it's slow
+const fetchPageCommunities: {
+  [accountId: string]: { plebbit: any; communities: { [communityAddress: string]: any } };
+} = {}; // cache created community clients per account because creating them can be slow
 let fetchPagePending: { [key: string]: boolean } = {};
 const fetchPage = async (
   pageCid: string,
@@ -292,19 +327,27 @@ const fetchPage = async (
   pageType: string,
 ) => {
   // community page is cached
-  const cachedCommunityPage = await communitiesPagesDatabase.getItem(pageCid);
+  const pageStoreKey = getCommunityPageStoreKey(pageCid, pageType, account.id);
+  const cachedCommunityPage = await communitiesPagesDatabase.getItem(pageStoreKey);
   if (cachedCommunityPage) {
     return cachedCommunityPage;
   }
-  if (!fetchPageCommunities[communityAddress]) {
-    fetchPageCommunities[communityAddress] = await account.plebbit.createCommunity({
+  if (
+    !fetchPageCommunities[account.id] ||
+    fetchPageCommunities[account.id].plebbit !== account.plebbit
+  ) {
+    fetchPageCommunities[account.id] = { plebbit: account.plebbit, communities: {} };
+  }
+  const accountCommunities = fetchPageCommunities[account.id].communities;
+  if (!accountCommunities[communityAddress]) {
+    accountCommunities[communityAddress] = await createPlebbitCommunity(account.plebbit, {
       address: communityAddress,
     });
-    listeners.push(fetchPageCommunities[communityAddress]);
+    listeners.push(accountCommunities[communityAddress]);
 
     // set clients states on communities store so the frontend can display it
     utils.pageClientsOnStateChange(
-      fetchPageCommunities[communityAddress][pageType]?.clients,
+      accountCommunities[communityAddress][pageType]?.clients,
       onCommunityPostsClientsStateChange(communityAddress),
     );
   }
@@ -315,10 +358,10 @@ const fetchPage = async (
       error,
     );
   const fetchedCommunityPage = await utils.retryInfinity(
-    () => fetchPageCommunities[communityAddress][pageType].getPage({ cid: pageCid }),
+    () => accountCommunities[communityAddress][pageType].getPage({ cid: pageCid }),
     { onError },
   );
-  await communitiesPagesDatabase.setItem(pageCid, utils.clone(fetchedCommunityPage));
+  await communitiesPagesDatabase.setItem(pageStoreKey, utils.clone(fetchedCommunityPage));
   return fetchedCommunityPage;
 };
 
@@ -331,6 +374,7 @@ export const getCommunityPages = (
   sortType: string,
   communitiesPages: CommunitiesPages,
   pageType: string,
+  accountId?: string,
 ) => {
   assert(
     communitiesPages && typeof communitiesPages === "object",
@@ -345,14 +389,15 @@ export const getCommunityPages = (
   if (!firstPageCid) {
     return pages;
   }
-  const firstPage = communitiesPages[firstPageCid];
+  const firstPage = communitiesPages[getCommunityPageStoreKey(firstPageCid, pageType, accountId)];
   if (!firstPage) {
     return pages;
   }
   pages.push(firstPage);
   while (true) {
     const nextCid = pages[pages.length - 1]?.nextCid;
-    const communityPage = nextCid && communitiesPages[nextCid];
+    const nextPageKey = nextCid && getCommunityPageStoreKey(nextCid, pageType, accountId);
+    const communityPage = nextPageKey && communitiesPages[nextPageKey];
     if (!communityPage) {
       return pages;
     }
@@ -385,8 +430,12 @@ const originalState = communitiesPagesStore.getState();
 // async function because some stores have async init
 export const resetCommunitiesPagesStore = async () => {
   fetchPagePending = {};
+  for (const accountId in fetchPageCommunities) {
+    delete fetchPageCommunities[accountId];
+  }
   // remove all event listeners
   listeners.forEach((listener: any) => listener.removeAllListeners());
+  listeners.length = 0;
   // destroy all component subscriptions to the store
   communitiesPagesStore.destroy();
   // restore original state

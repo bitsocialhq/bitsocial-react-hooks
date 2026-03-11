@@ -11,6 +11,13 @@ import utils from "../../lib/utils";
 import createStore from "zustand";
 import accountsStore from "../accounts";
 import communitiesPagesStore from "../communities-pages";
+import {
+  createPlebbitCommunity,
+  getPlebbitCommunity,
+  getPlebbitCommunityAddresses,
+  getPlebbitCreateCommunity,
+  getPlebbitGetCommunity,
+} from "../../lib/plebbit-compat";
 
 let plebbitGetCommunityPending: { [key: string]: boolean } = {};
 
@@ -38,163 +45,172 @@ const communitiesStore = createStore<CommunitiesState>(
         `communitiesStore.addCommunityToStore invalid communityAddress argument '${communityAddress}'`,
       );
       assert(
-        typeof account?.plebbit?.getCommunity === "function",
+        typeof getPlebbitCreateCommunity(account?.plebbit) === "function",
         `communitiesStore.addCommunityToStore invalid account argument '${account}'`,
       );
 
       // community is in store already, do nothing
       const { communities } = getState();
       let community: Community | undefined = communities[communityAddress];
-      if (community || plebbitGetCommunityPending[communityAddress + account.id]) {
+      const pendingKey = communityAddress + account.id;
+      if (community || plebbitGetCommunityPending[pendingKey]) {
         return;
       }
 
       // start trying to get community
-      plebbitGetCommunityPending[communityAddress + account.id] = true;
+      plebbitGetCommunityPending[pendingKey] = true;
       let errorGettingCommunity: any;
-
-      // try to find community in owner communities
-      if (account.plebbit.communities.includes(communityAddress)) {
-        community = await account.plebbit.createCommunity({ address: communityAddress });
-      }
-
-      // try to find community in database
-      let fetchedAt: number | undefined;
-      if (!community) {
-        const communityData: any = await communitiesDatabase.getItem(communityAddress);
-        if (communityData) {
-          fetchedAt = communityData.fetchedAt;
-          delete communityData.fetchedAt; // not part of plebbit-js schema
+      try {
+        // try to find community in owner communities
+        if (getPlebbitCommunityAddresses(account.plebbit).includes(communityAddress)) {
           try {
-            community = await account.plebbit.createCommunity(communityData);
-          } catch (e) {
-            fetchedAt = undefined;
-            // need to log this always or it could silently fail in production and cache never be used
-            console.error("failed plebbit.createCommunity(cachedCommunity)", {
-              cachedCommunity: communityData,
-              error: e,
+            community = await createPlebbitCommunity(account.plebbit, {
+              address: communityAddress,
             });
+          } catch (e) {
+            errorGettingCommunity = e;
           }
         }
-        if (community) {
+
+        // try to find community in database
+        let fetchedAt: number | undefined;
+        if (!community) {
+          const communityData: any = await communitiesDatabase.getItem(communityAddress);
+          if (communityData) {
+            fetchedAt = communityData.fetchedAt;
+            delete communityData.fetchedAt; // not part of plebbit-js schema
+            try {
+              community = await createPlebbitCommunity(account.plebbit, communityData);
+            } catch (e) {
+              fetchedAt = undefined;
+              // need to log this always or it could silently fail in production and cache never be used
+              console.error("failed plebbit.createCommunity(cachedCommunity)", {
+                cachedCommunity: communityData,
+                error: e,
+              });
+            }
+          }
+          if (community) {
+            // add page comments to communitiesPagesStore so they can be used in useComment
+            communitiesPagesStore.getState().addCommunityPageCommentsToStore(community);
+          }
+        }
+
+        // community not in database, try to fetch from plebbit-js
+        if (!community) {
+          try {
+            community = await createPlebbitCommunity(account.plebbit, {
+              address: communityAddress,
+            });
+          } catch (e) {
+            errorGettingCommunity = e;
+          }
+        }
+
+        // failure getting community
+        if (!community) {
+          if (errorGettingCommunity) {
+            setState((state: CommunitiesState) => {
+              let communityErrors = state.errors[communityAddress] || [];
+              communityErrors = [...communityErrors, errorGettingCommunity];
+              return { ...state, errors: { ...state.errors, [communityAddress]: communityErrors } };
+            });
+          }
+
+          throw (
+            errorGettingCommunity ||
+            Error(
+              `communitiesStore.addCommunityToStore failed getting community '${communityAddress}'`,
+            )
+          );
+        }
+
+        // success getting community
+        const firstCommunityState = utils.clone({ ...community, fetchedAt });
+        await communitiesDatabase.setItem(communityAddress, firstCommunityState);
+        log("communitiesStore.addCommunityToStore", { communityAddress, community, account });
+        setState((state: any) => ({
+          communities: { ...state.communities, [communityAddress]: firstCommunityState },
+        }));
+
+        // the community has published new posts
+        community.on("update", async (updatedCommunity: Community) => {
+          updatedCommunity = utils.clone(updatedCommunity);
+
+          // add fetchedAt to be able to expire the cache
+          // NOTE: fetchedAt is undefined on owner communities because never stale
+          updatedCommunity.fetchedAt = Math.floor(Date.now() / 1000);
+
+          await communitiesDatabase.setItem(communityAddress, updatedCommunity);
+          log("communitiesStore community update", {
+            communityAddress,
+            updatedCommunity,
+            account,
+          });
+          setState((state: any) => ({
+            communities: { ...state.communities, [communityAddress]: updatedCommunity },
+          }));
+
+          // if a community has a role with an account's address add it to the account.communities
+          accountsStore
+            .getState()
+            .accountsActionsInternal.addCommunityRoleToAccountsCommunities(updatedCommunity);
+
           // add page comments to communitiesPagesStore so they can be used in useComment
-          communitiesPagesStore.getState().addCommunityPageCommentsToStore(community);
-        }
-      }
+          communitiesPagesStore.getState().addCommunityPageCommentsToStore(updatedCommunity);
+        });
 
-      // community not in database, try to fetch from plebbit-js
-      if (!community) {
-        try {
-          community = await account.plebbit.createCommunity({ address: communityAddress });
-        } catch (e) {
-          errorGettingCommunity = e;
-        }
-      }
+        community.on("updatingstatechange", (updatingState: string) => {
+          setState((state: CommunitiesState) => ({
+            communities: {
+              ...state.communities,
+              [communityAddress]: { ...state.communities[communityAddress], updatingState },
+            },
+          }));
+        });
 
-      // finished trying to get community
-      plebbitGetCommunityPending[communityAddress + account.id] = false;
-
-      // failure getting community
-      if (!community) {
-        if (errorGettingCommunity) {
+        community.on("error", (error: Error) => {
           setState((state: CommunitiesState) => {
             let communityErrors = state.errors[communityAddress] || [];
-            communityErrors = [...communityErrors, errorGettingCommunity];
+            communityErrors = [...communityErrors, error];
             return { ...state, errors: { ...state.errors, [communityAddress]: communityErrors } };
           });
-        }
-
-        throw (
-          errorGettingCommunity ||
-          Error(
-            `communitiesStore.addCommunityToStore failed getting community '${communityAddress}'`,
-          )
-        );
-      }
-
-      // success getting community
-      const firstCommunityState = utils.clone({ ...community, fetchedAt });
-      await communitiesDatabase.setItem(communityAddress, firstCommunityState);
-      log("communitiesStore.addCommunityToStore", { communityAddress, community, account });
-      setState((state: any) => ({
-        communities: { ...state.communities, [communityAddress]: firstCommunityState },
-      }));
-
-      // the community has published new posts
-      community.on("update", async (updatedCommunity: Community) => {
-        updatedCommunity = utils.clone(updatedCommunity);
-
-        // add fetchedAt to be able to expire the cache
-        // NOTE: fetchedAt is undefined on owner communities because never stale
-        updatedCommunity.fetchedAt = Math.floor(Date.now() / 1000);
-
-        await communitiesDatabase.setItem(communityAddress, updatedCommunity);
-        log("communitiesStore community update", {
-          communityAddress,
-          updatedCommunity,
-          account,
         });
-        setState((state: any) => ({
-          communities: { ...state.communities, [communityAddress]: updatedCommunity },
-        }));
 
-        // if a community has a role with an account's address add it to the account.communities
-        accountsStore
-          .getState()
-          .accountsActionsInternal.addCommunityRoleToAccountsCommunities(updatedCommunity);
-
-        // add page comments to communitiesPagesStore so they can be used in useComment
-        communitiesPagesStore.getState().addCommunityPageCommentsToStore(updatedCommunity);
-      });
-
-      community.on("updatingstatechange", (updatingState: string) => {
-        setState((state: CommunitiesState) => ({
-          communities: {
-            ...state.communities,
-            [communityAddress]: { ...state.communities[communityAddress], updatingState },
+        // set clients on community so the frontend can display it, dont persist in db because a reload cancels updating
+        utils.clientsOnStateChange(
+          community?.clients,
+          (clientState: string, clientType: string, clientUrl: string, chainTicker?: string) => {
+            setState((state: CommunitiesState) => {
+              // make sure not undefined, sometimes happens in e2e tests
+              if (!state.communities[communityAddress]) {
+                return {};
+              }
+              const clients = { ...state.communities[communityAddress]?.clients };
+              const client = { state: clientState };
+              if (chainTicker) {
+                const chainProviders = { ...clients[clientType][chainTicker], [clientUrl]: client };
+                clients[clientType] = { ...clients[clientType], [chainTicker]: chainProviders };
+              } else {
+                clients[clientType] = { ...clients[clientType], [clientUrl]: client };
+              }
+              return {
+                communities: {
+                  ...state.communities,
+                  [communityAddress]: { ...state.communities[communityAddress], clients },
+                },
+              };
+            });
           },
-        }));
-      });
+        );
 
-      community.on("error", (error: Error) => {
-        setState((state: CommunitiesState) => {
-          let communityErrors = state.errors[communityAddress] || [];
-          communityErrors = [...communityErrors, error];
-          return { ...state, errors: { ...state.errors, [communityAddress]: communityErrors } };
-        });
-      });
-
-      // set clients on community so the frontend can display it, dont persist in db because a reload cancels updating
-      utils.clientsOnStateChange(
-        community?.clients,
-        (clientState: string, clientType: string, clientUrl: string, chainTicker?: string) => {
-          setState((state: CommunitiesState) => {
-            // make sure not undefined, sometimes happens in e2e tests
-            if (!state.communities[communityAddress]) {
-              return {};
-            }
-            const clients = { ...state.communities[communityAddress]?.clients };
-            const client = { state: clientState };
-            if (chainTicker) {
-              const chainProviders = { ...clients[clientType][chainTicker], [clientUrl]: client };
-              clients[clientType] = { ...clients[clientType], [chainTicker]: chainProviders };
-            } else {
-              clients[clientType] = { ...clients[clientType], [clientUrl]: client };
-            }
-            return {
-              communities: {
-                ...state.communities,
-                [communityAddress]: { ...state.communities[communityAddress], clients },
-              },
-            };
-          });
-        },
-      );
-
-      listeners.push(community);
-      community
-        .update()
-        .catch((error: unknown) => log.trace("community.update error", { community, error }));
+        listeners.push(community);
+        community
+          .update()
+          .catch((error: unknown) => log.trace("community.update error", { community, error }));
+      } finally {
+        plebbitGetCommunityPending[pendingKey] = false;
+      }
     },
 
     async refreshCommunity(communityAddress: string, account: Account) {
@@ -203,12 +219,12 @@ const communitiesStore = createStore<CommunitiesState>(
         `communitiesStore.refreshCommunity invalid communityAddress argument '${communityAddress}'`,
       );
       assert(
-        typeof account?.plebbit?.getCommunity === "function",
+        typeof getPlebbitGetCommunity(account?.plebbit) === "function",
         `communitiesStore.refreshCommunity invalid account argument '${account}'`,
       );
 
       const refreshedCommunity = utils.clone(
-        await account.plebbit.getCommunity({ address: communityAddress }),
+        await getPlebbitCommunity(account.plebbit, { address: communityAddress }),
       );
       refreshedCommunity.fetchedAt = Math.floor(Date.now() / 1000);
 
@@ -246,7 +262,9 @@ const communitiesStore = createStore<CommunitiesState>(
       await getState().addCommunityToStore(communityAddress, account);
 
       // `communityAddress` is different from  `communityEditOptions.address` when editing the community address
-      const community = await account.plebbit.createCommunity({ address: communityAddress });
+      const community = await createPlebbitCommunity(account.plebbit, {
+        address: communityAddress,
+      });
 
       // could fix some test issues
       community.on("error", console.log);
@@ -290,7 +308,7 @@ const communitiesStore = createStore<CommunitiesState>(
         `communitiesStore.createCommunity invalid account argument '${account}'`,
       );
 
-      const community = await account.plebbit.createCommunity(createCommunityOptions);
+      const community = await createPlebbitCommunity(account.plebbit, createCommunityOptions);
 
       // could fix some test issues
       community.on("error", console.log);
@@ -317,7 +335,9 @@ const communitiesStore = createStore<CommunitiesState>(
         `communitiesStore.deleteCommunity invalid account argument '${account}'`,
       );
 
-      const community = await account.plebbit.createCommunity({ address: communityAddress });
+      const community = await createPlebbitCommunity(account.plebbit, {
+        address: communityAddress,
+      });
 
       // could fix some test issues
       community.on("error", console.log);

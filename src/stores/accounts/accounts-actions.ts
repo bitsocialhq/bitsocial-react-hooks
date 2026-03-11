@@ -25,6 +25,11 @@ import {
 } from "../../types";
 import * as accountsActionsInternal from "./accounts-actions-internal";
 import {
+  createPlebbitCommunityEdit,
+  getPlebbitCommunityAddresses,
+  withLegacySubplebbitAddress,
+} from "../../lib/plebbit-compat";
+import {
   getAccountCommunities,
   getCommentCidsToAccountsComments,
   fetchCommentLinkDimensions,
@@ -630,12 +635,12 @@ export const publishComment = async (
     author.previousCommentCid = previousCommentCid;
   }
 
-  let createCommentOptions: any = {
+  let createCommentOptions: any = withLegacySubplebbitAddress({
     timestamp: Math.floor(Date.now() / 1000),
     author,
     signer: account.signer,
     ...publishCommentOptions,
-  };
+  });
   delete createCommentOptions.onChallenge;
   delete createCommentOptions.onChallengeVerification;
   delete createCommentOptions.onError;
@@ -901,12 +906,12 @@ export const publishVote = async (publishVoteOptions: PublishVoteOptions, accoun
     account,
   });
 
-  let createVoteOptions: any = {
+  let createVoteOptions: any = withLegacySubplebbitAddress({
     timestamp: Math.floor(Date.now() / 1000),
     author: account.author,
     signer: account.signer,
     ...publishVoteOptions,
-  };
+  });
   delete createVoteOptions.onChallenge;
   delete createVoteOptions.onChallengeVerification;
   delete createVoteOptions.onError;
@@ -980,12 +985,12 @@ export const publishCommentEdit = async (
     account,
   });
 
-  let createCommentEditOptions: any = {
+  let createCommentEditOptions: any = withLegacySubplebbitAddress({
     timestamp: Math.floor(Date.now() / 1000),
     author: account.author,
     signer: account.signer,
     ...publishCommentEditOptions,
-  };
+  });
   delete createCommentEditOptions.onChallenge;
   delete createCommentEditOptions.onChallengeVerification;
   delete createCommentEditOptions.onError;
@@ -1072,12 +1077,12 @@ export const publishCommentModeration = async (
     account,
   });
 
-  let createCommentModerationOptions: any = {
+  let createCommentModerationOptions: any = withLegacySubplebbitAddress({
     timestamp: Math.floor(Date.now() / 1000),
     author: account.author,
     signer: account.signer,
     ...publishCommentModerationOptions,
-  };
+  });
   delete createCommentModerationOptions.onChallenge;
   delete createCommentModerationOptions.onChallengeVerification;
   delete createCommentModerationOptions.onError;
@@ -1185,7 +1190,7 @@ export const publishCommunityEdit = async (
   delete communityEditOptions.onPublishingStateChange;
 
   // account is the owner of the community and can edit it locally, no need to publish
-  const localCommunityAddresses = account.plebbit.communities;
+  const localCommunityAddresses = getPlebbitCommunityAddresses(account.plebbit);
   if (localCommunityAddresses.includes(communityAddress)) {
     await communitiesStore
       .getState()
@@ -1201,16 +1206,18 @@ export const publishCommunityEdit = async (
       publishCommunityEditOptions.address === communityAddress,
     `accountsActions.publishCommunityEdit can't edit address of a remote community`,
   );
-  let createCommunityEditOptions: any = {
+  let createCommunityEditOptions: any = withLegacySubplebbitAddress({
     timestamp: Math.floor(Date.now() / 1000),
     author: account.author,
     signer: account.signer,
     // not possible to edit community.address over pubsub, only locally
     communityAddress,
+    subplebbitAddress: communityAddress,
     communityEdit: communityEditOptions,
-  };
+    subplebbitEdit: communityEditOptions,
+  });
 
-  let communityEdit = await account.plebbit.createCommunityEdit(createCommunityEditOptions);
+  let communityEdit = await createPlebbitCommunityEdit(account.plebbit, createCommunityEditOptions);
   let lastChallenge: Challenge | undefined;
   const publishAndRetryFailedChallengeVerification = async () => {
     communityEdit.once("challenge", async (challenge: Challenge) => {
@@ -1227,7 +1234,10 @@ export const publishCommunityEdit = async (
             ...createCommunityEditOptions,
             timestamp: Math.floor(Date.now() / 1000),
           };
-          communityEdit = await account.plebbit.createCommunityEdit(createCommunityEditOptions);
+          communityEdit = await createPlebbitCommunityEdit(
+            account.plebbit,
+            createCommunityEditOptions,
+          );
           lastChallenge = undefined;
           publishAndRetryFailedChallengeVerification();
         }

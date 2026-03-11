@@ -28,25 +28,29 @@ packages/example/.next/
 yarn-error.log
 .env
 
-# agent files
-.cursor
-.codex
-!.cursor/
+# Repo-managed AI tooling
+.cursor/*
+.cursor/.DS_Store
+!.cursor/agents/
+!.cursor/agents/**
+!.cursor/hooks/
+!.cursor/hooks/**
+!.cursor/hooks.json
 !.cursor/skills/
-!.cursor/skills/make-closed-issue/
-!.cursor/skills/make-closed-issue/SKILL.md
-!.cursor/skills/review-and-merge-pr/
-!.cursor/skills/review-and-merge-pr/SKILL.md
-!.cursor/skills/review-and-merge-pr/agents/
-!.cursor/skills/review-and-merge-pr/agents/openai.yaml
-!.codex/
+!.cursor/skills/**
+.cursor/**/.DS_Store
+
+.codex/*
+.codex/.DS_Store
+!.codex/agents/
+!.codex/agents/**
+!.codex/config.toml
+!.codex/hooks/
+!.codex/hooks/**
+!.codex/hooks.json
 !.codex/skills/
-!.codex/skills/make-closed-issue/
-!.codex/skills/make-closed-issue/SKILL.md
-!.codex/skills/review-and-merge-pr/
-!.codex/skills/review-and-merge-pr/SKILL.md
-!.codex/skills/review-and-merge-pr/agents/
-!.codex/skills/review-and-merge-pr/agents/openai.yaml
+!.codex/skills/**
+.codex/**/.DS_Store
 
 # generated browser test screenshots
 test/**/__screenshots__/

@@ -133,6 +133,28 @@ describe("communities store", () => {
     mockAccount.plebbit.createCommunity = createOrig;
   });
 
+  test("addCommunityToStore retries after owner-path failures clear the pending flag", async () => {
+    const address = "owner-retry-address";
+    const createOrig = mockAccount.plebbit.createCommunity;
+    const communitiesOrig = mockAccount.plebbit.communities;
+    const resolvedCommunity = await createOrig.call(mockAccount.plebbit, { address });
+    mockAccount.plebbit.createCommunity = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("owner create failed"))
+      .mockRejectedValueOnce(new Error("fetch create failed"))
+      .mockResolvedValueOnce(resolvedCommunity);
+    mockAccount.plebbit.communities = [...communitiesOrig, address];
+
+    await expect(
+      communitiesStore.getState().addCommunityToStore(address, mockAccount),
+    ).rejects.toThrow("fetch create failed");
+    await communitiesStore.getState().addCommunityToStore(address, mockAccount);
+
+    expect(communitiesStore.getState().communities[address]).toBeDefined();
+    mockAccount.plebbit.createCommunity = createOrig;
+    mockAccount.plebbit.communities = communitiesOrig;
+  });
+
   test("addCommunityToStore throws generic Error when community is undefined without thrown error", async () => {
     const address = "resolve-undefined-address";
     const createOrig = mockAccount.plebbit.createCommunity;

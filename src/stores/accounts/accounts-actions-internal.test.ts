@@ -1180,6 +1180,28 @@ describe("accounts-actions-internal", () => {
       expect(acc?.communities?.["new-sub.eth"]).toEqual({ role: { role: "moderator" } });
     });
 
+    test("updates stored role when the community role changes", async () => {
+      const account = Object.values(accountsStore.getState().accounts)[0];
+      const community = {
+        address: "updated-role.eth",
+        roles: { [account.author.address]: { role: "admin" } },
+      };
+      accountsStore.setState((s) => ({
+        accounts: {
+          ...s.accounts,
+          [account.id]: {
+            ...account,
+            communities: { "updated-role.eth": { role: { role: "moderator" } } },
+          },
+        },
+      }));
+
+      await accountsActionsInternal.addCommunityRoleToAccountsCommunities(community as any);
+
+      const acc = accountsStore.getState().accounts[account.id];
+      expect(acc?.communities?.["updated-role.eth"]).toEqual({ role: { role: "admin" } });
+    });
+
     test("remove: removes role when community no longer has role", async () => {
       const account = Object.values(accountsStore.getState().accounts)[0];
       const community = {

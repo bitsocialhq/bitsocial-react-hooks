@@ -37,6 +37,7 @@ import {
   useCommunity,
   useCommunities,
   useCommunityStats,
+  useListCommunities,
   useResolvedCommunityAddress,
 } from "./hooks/communities";
 
@@ -126,6 +127,7 @@ export {
   useCommunity,
   useCommunities,
   useCommunityStats,
+  useListCommunities,
   useResolvedCommunityAddress,
   // authors
   useAuthor,
@@ -200,6 +202,7 @@ const hooks = {
   useCommunity,
   useCommunities,
   useCommunityStats,
+  useListCommunities,
   useResolvedCommunityAddress,
   // authors
   useAuthor,

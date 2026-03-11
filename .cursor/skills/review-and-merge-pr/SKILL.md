@@ -1,6 +1,6 @@
 ---
 name: review-and-merge-pr
-description: Review an open GitHub pull request, inspect feedback from Cursor Bugbot, CodeRabbit, CI, and human reviewers, decide which findings are valid, implement fixes on the PR branch, merge the PR into master when it is ready, and finalize any linked GitHub issue so it matches the make-closed-issue workflow after merge. Use when the user says "check the PR", "address bugbot comments", "handle CodeRabbit feedback", "review PR feedback", or "merge this PR".
+description: Review an open GitHub pull request, inspect feedback from CI, review bots, and human reviewers, decide which findings are valid, implement fixes on the PR branch, merge the PR into master when it is ready, and finalize the linked GitHub issue and project status after merge. Use when the user says "check the PR", "address review comments", "review PR feedback", or "merge this PR".
 ---
 
 # Review And Merge Pr
@@ -43,8 +43,7 @@ gh api "repos/bitsocialnet/bitsocial-react-hooks/pulls/<pr-number>/comments?per_
 
 Focus on comments from:
 
-- Cursor Bugbot
-- CodeRabbit
+- CodeRabbit or other review bots
 - human reviewers
 - failing CI checks
 
@@ -83,7 +82,9 @@ After code changes, follow repo verification rules from `AGENTS.md`:
 
 - run `yarn build`
 - run `yarn test` after adding or changing tests
-- run `yarn prettier` before finishing
+- if hooks or stores changed, run the coverage command and `node scripts/verify-hooks-stores-coverage.mjs`
+- run `yarn prettier` before the final review-driven commit
+- if local verification dirties tracked `dist/` output, restore it before committing
 
 ### 5. Report back on the PR before merging
 
@@ -93,7 +94,7 @@ Use `gh pr comment` for a concise PR update when the branch changed because of r
 Example:
 
 ```bash
-gh pr comment <pr-number> --repo bitsocialnet/bitsocial-react-hooks --body "Addressed the valid review findings in the latest commit. Remaining bot comments are stale or not applicable for the reasons checked locally."
+gh pr comment <pr-number> --repo bitsocialnet/bitsocial-react-hooks --body "Addressed the valid review findings in the latest commit. Remaining comments are stale or not applicable for the reasons checked locally."
 ```
 
 ### 6. Merge only when the PR is actually ready
@@ -112,55 +113,34 @@ Preferred merge command:
 gh pr merge <pr-number> --repo bitsocialnet/bitsocial-react-hooks --squash --delete-branch
 ```
 
-### 7. Finalize linked issues to match `make-closed-issue`
+### 7. Finalize the linked issue and project item
 
-After merge, inspect the PR's linked closing issues.
-For every linked issue, bring it into the same final state expected from `make-closed-issue`:
-
-- closed
-- assigned to the current GitHub user
-- added to the bitsocialnet project if missing
-- project status `Done`
-
-Before editing issue assignees, determine the current contributor's GitHub username from the authenticated `gh` session.
-If `gh` is not signed in or cannot resolve the login, stop and ask the contributor for their GitHub username before proceeding.
-If the PR has no linked issue, explicitly tell the user that there was no associated issue to finalize.
+After merge, inspect the PR's linked closing issue.
+If the merge did not close the issue automatically, close it manually.
+Then ensure the linked issue is on the `bitsocial-react-hooks` project and its status is `Done`.
 
 Useful commands:
 
 ```bash
-GH_LOGIN=$(gh api user --jq '.login' 2>/dev/null || true)
+ISSUE_NUMBER=$(gh pr view <pr-number> --repo bitsocialnet/bitsocial-react-hooks --json closingIssuesReferences --jq '.closingIssuesReferences[0].number // empty')
 
-if [ -z "$GH_LOGIN" ]; then
-  echo "GitHub username could not be determined from gh auth. Ask the contributor for their GitHub username before proceeding."
-  exit 1
-fi
+if [ -n "$ISSUE_NUMBER" ]; then
+  ISSUE_STATE=$(gh issue view "$ISSUE_NUMBER" --repo bitsocialnet/bitsocial-react-hooks --json state --jq '.state')
+  if [ "$ISSUE_STATE" != "CLOSED" ]; then
+    gh issue close "$ISSUE_NUMBER" --repo bitsocialnet/bitsocial-react-hooks
+  fi
 
-ISSUE_NUMBERS=$(gh pr view <pr-number> --repo bitsocialnet/bitsocial-react-hooks --json closingIssuesReferences --jq '.closingIssuesReferences[].number')
+  ITEM_ID=$(gh project item-list 6 --owner bitsocialnet --limit 1000 --format json --jq ".items[] | select(.content.number == $ISSUE_NUMBER) | .id" | head -n1)
+  if [ -z "$ITEM_ID" ]; then
+    ITEM_JSON=$(gh project item-add 6 --owner bitsocialnet --url "https://github.com/bitsocialnet/bitsocial-react-hooks/issues/$ISSUE_NUMBER" --format json)
+    ITEM_ID=$(echo "$ITEM_JSON" | jq -r '.id')
+  fi
 
-if [ -n "$ISSUE_NUMBERS" ]; then
-  FIELD_JSON=$(gh project field-list 1 --owner bitsocialnet --format json)
+  FIELD_JSON=$(gh project field-list 6 --owner bitsocialnet --format json)
   STATUS_FIELD_ID=$(echo "$FIELD_JSON" | jq -r '.fields[] | select(.name=="Status") | .id')
   DONE_OPTION_ID=$(echo "$FIELD_JSON" | jq -r '.fields[] | select(.name=="Status") | .options[] | select(.name=="Done") | .id')
 
-  for ISSUE_NUMBER in $ISSUE_NUMBERS; do
-    ISSUE_STATE=$(gh issue view "$ISSUE_NUMBER" --repo bitsocialnet/bitsocial-react-hooks --json state --jq '.state')
-    if [ "$ISSUE_STATE" != "CLOSED" ]; then
-      gh issue close "$ISSUE_NUMBER" --repo bitsocialnet/bitsocial-react-hooks
-    fi
-
-    if ! gh issue view "$ISSUE_NUMBER" --repo bitsocialnet/bitsocial-react-hooks --json assignees --jq '.assignees[].login' | grep -qx "$GH_LOGIN"; then
-      gh issue edit "$ISSUE_NUMBER" --repo bitsocialnet/bitsocial-react-hooks --add-assignee "$GH_LOGIN"
-    fi
-
-    ITEM_ID=$(gh project item-list 1 --owner bitsocialnet --limit 1000 --format json --jq ".items[] | select(.content.number == $ISSUE_NUMBER) | .id" | head -n1)
-    if [ -z "$ITEM_ID" ]; then
-      ITEM_JSON=$(gh project item-add 1 --owner bitsocialnet --url "https://github.com/bitsocialnet/bitsocial-react-hooks/issues/$ISSUE_NUMBER" --format json)
-      ITEM_ID=$(echo "$ITEM_JSON" | jq -r '.id')
-    fi
-
-    gh project item-edit --id "$ITEM_ID" --project-id PVT_kwDODohK7M4BM4wg --field-id "$STATUS_FIELD_ID" --single-select-option-id "$DONE_OPTION_ID"
-  done
+  gh project item-edit --id "$ITEM_ID" --project-id PVT_kwDODohK7M4BQoZJ --field-id "$STATUS_FIELD_ID" --single-select-option-id "$DONE_OPTION_ID"
 fi
 ```
 
@@ -190,7 +170,6 @@ Tell the user:
 - which findings were declined and why
 - which verification commands ran
 - whether the PR was merged
-- whether linked issues were confirmed closed
-- whether linked issues were assigned to the current GitHub user
-- whether linked project items were confirmed `Done`
+- whether the linked issue was confirmed closed
+- whether the linked project item was confirmed `Done`
 - whether the feature branch, local `pr/<number>` alias, and any worktree were cleaned up

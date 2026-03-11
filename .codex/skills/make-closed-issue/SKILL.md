@@ -25,25 +25,11 @@ Ask the user using AskQuestion (multi-select):
 | `bug` + `enhancement` | New feature that also fixes a bug |
 | `documentation` | README, AGENTS.md, docs-only changes |
 
-### 2. Resolve the current GitHub assignee
-
-Before creating or editing any issue assignee, determine the current contributor's GitHub username from the authenticated `gh` session.
-If `gh` is not signed in or cannot resolve the login, stop and ask the contributor for their GitHub username before proceeding.
-
-```bash
-GH_LOGIN=$(gh api user --jq '.login' 2>/dev/null || true)
-
-if [ -z "$GH_LOGIN" ]; then
-  echo "GitHub username could not be determined from gh auth. Ask the contributor for their GitHub username before proceeding."
-  exit 1
-fi
-```
-
-### 3. Ensure branch workflow is reviewable
+### 2. Ensure branch workflow is reviewable
 
 - If already on a short-lived task branch such as `feature/*`, `fix/*`, `docs/*`, or `chore/*`, stay on it.
 - If on `master`, create a task branch before staging or committing.
-- Do **not** commit the work directly on `master` when PR review bots are expected.
+- Do **not** commit the work directly on `master` when PR review bots or human review are expected.
 
 Suggested naming:
 
@@ -55,10 +41,10 @@ Suggested naming:
 Example:
 
 ```bash
-git switch -c fix/reply-editor-stuck
+git switch -c fix/replies-cache-reset
 ```
 
-### 4. Review diffs for relevance
+### 3. Review diffs for relevance
 
 ```bash
 git status
@@ -70,14 +56,14 @@ Identify which files relate to the work done in this conversation. Only relevant
 
 **Important**: `git add -p` and `git add -i` are not available (interactive mode unsupported). If a file has mixed relevant/irrelevant changes, include the entire file and note the caveat to the user.
 
-### 5. Generate issue title and description
+### 4. Generate issue title and description
 
 From the conversation context:
 
-- **Title**: Short, present-tense, describes the **problem** (not the solution). Use backticks for UI elements, code, or literal strings.
-- **Description**: 2-3 sentences about the problem. Use backticks for code references and literal strings. Write as if the issue hasn't been fixed yet.
+- **Title**: Short, present-tense, describes the **problem** (not the solution). Use backticks for hooks, stores, commands, or literal strings when helpful.
+- **Description**: 2-3 sentences about the problem. Use backticks for code references or literal names. Write as if the issue hasn't been fixed yet.
 
-### 6. Create the issue
+### 5. Create the issue
 
 ```bash
 gh issue create \
@@ -85,17 +71,17 @@ gh issue create \
   --title "ISSUE_TITLE" \
   --body "ISSUE_DESCRIPTION" \
   --label "LABEL1,LABEL2" \
-  --assignee "$GH_LOGIN"
+  --assignee plebe1us
 ```
 
 Capture the issue number from the output.
 
-### 7. Commit relevant changes
+### 6. Commit relevant changes
 
 Stage only the relevant files:
 
 ```bash
-git add file1.ts file2.tsx ...
+git add file1.ts file2.ts ...
 ```
 
 Commit using Conventional Commits with scope:
@@ -110,10 +96,10 @@ EOF
 ```
 
 - **Types**: `fix`, `feat`, `perf`, `refactor`, `docs`, `chore`
-- **Scope**: area of the codebase (e.g. `accounts`, `comments`, `replies`, `stores`)
-- Prefer title-only commits - skip description when the title is exhaustive
+- **Scope**: area of the codebase (for example `feeds`, `replies`, `accounts`, `agent-workflow`)
+- Prefer title-only commits when the title already says enough
 
-### 8. Push branch and open PR
+### 7. Push branch and open PR
 
 Push the current task branch to origin and open a PR into `master`.
 
@@ -137,7 +123,7 @@ EOF
 )"
 ```
 
-Do **not** merge the PR locally as part of this skill. Review bots must be allowed to inspect the PR first.
+Do **not** merge the PR locally as part of this skill. Review bots and humans must be allowed to inspect the PR first.
 
 If the user later explicitly asks to merge after reviews pass, a separate merge step can be run, for example:
 
@@ -145,30 +131,30 @@ If the user later explicitly asks to merge after reviews pass, a separate merge 
 gh pr merge --squash --delete-branch
 ```
 
-### 9. Add to project board
+### 8. Add to project board
 
 Use **gh CLI** for project operations (never GitHub MCP).
 
-Add the issue to the project when the PR is opened, but do **not** force it to `Done` yet.
+Add the issue to the `bitsocial-react-hooks` project when the PR is opened, but do **not** force it to `Done` yet.
 
 ```bash
-ITEM_JSON=$(gh project item-add 1 --owner bitsocialnet --url "https://github.com/bitsocialnet/bitsocial-react-hooks/issues/ISSUE_NUMBER" --format json)
+ITEM_JSON=$(gh project item-add 6 --owner bitsocialnet --url "https://github.com/bitsocialnet/bitsocial-react-hooks/issues/ISSUE_NUMBER" --format json)
 ITEM_ID=$(echo "$ITEM_JSON" | jq -r '.id')
 ```
 
 If the user later explicitly asks to merge the reviewed PR in the same run, reuse `ITEM_ID` and then set the project item to `Done`:
 
 ```bash
-FIELD_JSON=$(gh project field-list 1 --owner bitsocialnet --format json)
+FIELD_JSON=$(gh project field-list 6 --owner bitsocialnet --format json)
 STATUS_FIELD_ID=$(echo "$FIELD_JSON" | jq -r '.fields[] | select(.name=="Status") | .id')
 DONE_OPTION_ID=$(echo "$FIELD_JSON" | jq -r '.fields[] | select(.name=="Status") | .options[] | select(.name=="Done") | .id')
 
-gh project item-edit --id "$ITEM_ID" --project-id PVT_kwDODohK7M4BM4wg --field-id "$STATUS_FIELD_ID" --single-select-option-id "$DONE_OPTION_ID"
+gh project item-edit --id "$ITEM_ID" --project-id PVT_kwDODohK7M4BQoZJ --field-id "$STATUS_FIELD_ID" --single-select-option-id "$DONE_OPTION_ID"
 ```
 
-Assignees and labels are inherited from the issue (set in step 6) - no separate project update needed.
+Assignees and labels are inherited from the issue created in step 5, so no separate project update is needed.
 
-### 10. Report summary
+### 9. Report summary
 
 Print a summary to the user:
 
@@ -178,10 +164,10 @@ Issue #NUMBER created, committed, pushed, and linked to a PR into master.
   Commit: HASH
   Labels: label1, label2
   PR: PR_URL
-  Project: bitsocialnet project
+  Project: bitsocial-react-hooks
   URL: https://github.com/bitsocialnet/bitsocial-react-hooks/issues/NUMBER
 ```
 
 If the PR has not been merged yet, explicitly tell the user that the issue will close on PR merge and that the branch should not be deleted yet.
 
-After the PR is open, use `review-and-merge-pr` to inspect Bugbot, CodeRabbit, CI, and human feedback before merging.
+After the PR is open, use `review-and-merge-pr` to inspect CI, bot, and human feedback before merging.
