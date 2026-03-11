@@ -40,6 +40,7 @@ This repo is a temporary fork of [plebbit/plebbit-react-hooks](https://github.co
 | Repo AI workflow files changed (`.codex/**`, `.cursor/**`) | Keep the Codex and Cursor copies aligned when they represent the same workflow; update `AGENTS.md` if the default agent policy changes |
 | GitHub operation needed | Use `gh` CLI, not GitHub MCP |
 | User asks for commit/issue phrasing | Use `docs/agent-playbooks/commit-issue-format.md` |
+| Repo AI workflow files changed (`.codex/**`, `.cursor/**`) | Keep the Codex and Cursor copies aligned when they represent the same workflow |
 | Surprising/ambiguous repo behavior encountered | Alert developer and, once confirmed, document in `docs/agent-playbooks/known-surprises.md` |
 
 ## Stack
