@@ -186,7 +186,9 @@ function createLegacyOnlyPlebbitMock() {
       if ("communityEdit" in opts) {
         throw new Error("legacy createSubplebbitEdit received communityEdit");
       }
-      return BasePlebbit.prototype.createCommunityEdit.call(this, opts);
+      const communityEdit: any = await BasePlebbit.prototype.createCommunityEdit.call(this, opts);
+      communityEdit.subplebbitAddress = opts.subplebbitAddress;
+      return communityEdit;
     }
   }
 
@@ -238,7 +240,21 @@ function createLegacyPublicationSchemaPlebbitMock() {
       if ("communityEdit" in opts) {
         throw new Error("createCommunityEdit received communityEdit");
       }
-      return super.createCommunityEdit(opts);
+      const communityEdit: any = await super.createCommunityEdit(opts);
+      communityEdit.subplebbitAddress = opts.subplebbitAddress;
+      return communityEdit;
+    }
+
+    async createSubplebbitEdit(opts: any) {
+      if ("communityAddress" in opts) {
+        throw new Error("createSubplebbitEdit received communityAddress");
+      }
+      if ("communityEdit" in opts) {
+        throw new Error("createSubplebbitEdit received communityEdit");
+      }
+      const communityEdit: any = await BasePlebbit.prototype.createCommunityEdit.call(this, opts);
+      communityEdit.subplebbitAddress = opts.subplebbitAddress;
+      return communityEdit;
     }
   }
 
@@ -941,6 +957,18 @@ describe("accounts-actions", () => {
     });
 
     test("publication actions still use subplebbit payloads when createCommunity methods exist", async () => {
+      const waitForStore = async (condition: () => boolean) => {
+        const start = Date.now();
+        while (Date.now() - start < 2000) {
+          await act(async () => {});
+          if (condition()) {
+            return;
+          }
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+        throw new Error("timed out waiting for store update");
+      };
+
       await act(async () => {
         await accountsActions.publishComment({
           communityAddress: "sub.eth",
@@ -949,6 +977,12 @@ describe("accounts-actions", () => {
           onChallengeVerification: () => {},
         });
       });
+      await waitForStore(
+        () =>
+          !!accountsStore.getState().accountsComments[
+            accountsStore.getState().activeAccountId!
+          ]?.[0]?.cid,
+      );
 
       await act(async () => {
         await accountsActions.publishVote({
@@ -980,13 +1014,22 @@ describe("accounts-actions", () => {
         });
       });
 
+      let remoteCommunityEditPublication: any;
       await act(async () => {
         await accountsActions.publishCommunityEdit("remote-sub.eth", {
           title: "mixed edit",
-          onChallenge: (ch: any, e: any) => e.publishChallengeAnswers(["4"]),
-          onChallengeVerification: () => {},
+          onChallenge: (ch: any, e: any) => {
+            remoteCommunityEditPublication = e;
+            e.publishChallengeAnswers(["4"]);
+          },
+          onChallengeVerification: (_verification: any, e: any) => {
+            remoteCommunityEditPublication = e;
+          },
         });
       });
+      await waitForStore(
+        () => remoteCommunityEditPublication?.communityAddress === "remote-sub.eth",
+      );
 
       const { accountsComments, accountsVotes, accountsEdits, activeAccountId } =
         accountsStore.getState();
@@ -1005,6 +1048,7 @@ describe("accounts-actions", () => {
         expect(storedEdit.communityAddress).toBe("sub.eth");
         expect(storedEdit.subplebbitAddress).toBeUndefined();
       }
+      expect(remoteCommunityEditPublication.communityAddress).toBe("remote-sub.eth");
     });
   });
 

@@ -79,10 +79,11 @@ export const backfillPublicationCommunityAddress = <
   publication: T,
   options: O,
 ): T => {
-  const communityAddress = options?.communityAddress ?? options?.subplebbitAddress;
   if (!publication || publication.communityAddress) {
     return publication;
   }
+  const communityAddress =
+    publication.subplebbitAddress ?? options?.communityAddress ?? options?.subplebbitAddress;
   if (!communityAddress) {
     return publication;
   }

@@ -28,7 +28,6 @@ import {
   backfillPublicationCommunityAddress,
   createPlebbitCommunityEdit,
   getPlebbitCommunityAddresses,
-  normalizeCommentCommunityAddress,
   normalizeCommunityEditOptionsForPlebbit,
   normalizePublicationOptionsForStore,
   normalizePublicationOptionsForPlebbit,
@@ -743,7 +742,7 @@ export const publishComment = async (
           if (!sessionInfo || abandonedPublishKeys.has(sessionInfo.sessionKey)) return;
           cleanupPublishSessionOnTerminal(account.id, sessionInfo.keyIndex);
           const commentWithCid = addShortAddressesToAccountComment(
-            normalizeCommentCommunityAddress(comment) as any,
+            normalizePublicationOptionsForStore(comment as any),
           );
           await accountsDatabase.addAccountComment(account.id, commentWithCid, currentIndex);
           accountsStore.setState(({ accountsComments, commentCidsToAccountsComments }) => {
@@ -1244,7 +1243,10 @@ export const publishCommunityEdit = async (
     subplebbitEdit: communityEditOptions,
   });
 
-  let communityEdit = await createPlebbitCommunityEdit(account.plebbit, createCommunityEditOptions);
+  let communityEdit = backfillPublicationCommunityAddress(
+    await createPlebbitCommunityEdit(account.plebbit, createCommunityEditOptions),
+    createCommunityEditOptions,
+  );
   let lastChallenge: Challenge | undefined;
   const publishAndRetryFailedChallengeVerification = async () => {
     communityEdit.once("challenge", async (challenge: Challenge) => {
@@ -1261,8 +1263,8 @@ export const publishCommunityEdit = async (
             ...createCommunityEditOptions,
             timestamp: Math.floor(Date.now() / 1000),
           };
-          communityEdit = await createPlebbitCommunityEdit(
-            account.plebbit,
+          communityEdit = backfillPublicationCommunityAddress(
+            await createPlebbitCommunityEdit(account.plebbit, createCommunityEditOptions),
             createCommunityEditOptions,
           );
           lastChallenge = undefined;

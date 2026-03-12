@@ -17,7 +17,7 @@ import {
 import utils from "../../lib/utils";
 import {
   backfillPublicationCommunityAddress,
-  normalizeCommentCommunityAddress,
+  normalizePublicationOptionsForStore,
   normalizePublicationOptionsForPlebbit,
 } from "../../lib/plebbit-compat";
 import { addShortAddressesToAccountComment } from "./utils";
@@ -89,7 +89,7 @@ export const startUpdatingAccountCommentOnCommentUpdateEvents = async (
     // merge should not be needed if plebbit-js is implemented properly, but no harm in fixing potential errors
     updatedComment = utils.merge(commentArgument, comment, updatedComment);
     updatedComment = addShortAddressesToAccountComment(
-      normalizeCommentCommunityAddress(updatedComment) as Comment,
+      normalizePublicationOptionsForStore(updatedComment) as Comment,
     ) as Comment;
     await accountsDatabase.addAccountComment(account.id, updatedComment, currentIndex);
     log("startUpdatingAccountCommentOnCommentUpdateEvents comment update", {
