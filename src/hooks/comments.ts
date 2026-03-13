@@ -107,8 +107,10 @@ export function useComment(options?: UseCommentOptions): UseCommentResult {
       ],
   );
   const autoUpdateSubscriptionId = useRef(`useComment-${++commentAutoUpdateSubscriptionCount}`);
+  const currentCommentCidRef = useRef<string | undefined>(commentCid);
+  currentCommentCidRef.current = commentCid;
   const [frozenComment, setFrozenComment] = useState<Comment | undefined>();
-  const [freezeSettled, setFreezeSettled] = useState(true);
+  const [freezeSettledCid, setFreezeSettledCid] = useState<string>();
 
   useEffect(() => {
     if (!commentCid || !account) {
@@ -157,16 +159,17 @@ export function useComment(options?: UseCommentOptions): UseCommentResult {
   }
 
   const selectedCommentState = getCommentStateAndReplyCount(selectedComment).state;
+  const freezeSettledForCurrentCid = freezeSettledCid === commentCid;
 
   useEffect(() => {
     if (autoUpdate) {
       setFrozenComment(undefined);
-      setFreezeSettled(true);
+      setFreezeSettledCid(undefined);
       return;
     }
 
     setFrozenComment(undefined);
-    setFreezeSettled(false);
+    setFreezeSettledCid(undefined);
   }, [commentCid, autoUpdate]);
 
   useEffect(() => {
@@ -175,21 +178,25 @@ export function useComment(options?: UseCommentOptions): UseCommentResult {
     }
     if (!commentCid) {
       setFrozenComment(undefined);
-      setFreezeSettled(true);
+      setFreezeSettledCid(undefined);
       return;
     }
-    if (freezeSettled || !selectedComment) {
+    if (freezeSettledForCurrentCid || !selectedComment) {
       return;
     }
 
     setFrozenComment(selectedComment);
     if (selectedCommentState === "succeeded") {
-      setFreezeSettled(true);
+      setFreezeSettledCid(commentCid);
     }
-  }, [autoUpdate, commentCid, selectedComment, selectedCommentState, freezeSettled]);
+  }, [autoUpdate, commentCid, selectedComment, selectedCommentState, freezeSettledForCurrentCid]);
 
   const frozenCommentForCurrentCid = frozenComment?.cid === commentCid ? frozenComment : undefined;
-  let comment = autoUpdate ? selectedComment : frozenCommentForCurrentCid || selectedComment;
+  let comment = autoUpdate
+    ? selectedComment
+    : freezeSettledForCurrentCid
+      ? frozenCommentForCurrentCid
+      : frozenCommentForCurrentCid || selectedComment;
   comment = addCommentModeration(comment);
 
   const { state, replyCount } = getCommentStateAndReplyCount(comment);
@@ -212,23 +219,15 @@ export function useComment(options?: UseCommentOptions): UseCommentResult {
   }
 
   const refresh = useCallback(async () => {
-    try {
-      if (!commentCid || !account) {
-        throw Error("useComment cannot refresh comment not initialized yet");
-      }
-      if (!autoUpdate) {
-        setFreezeSettled(false);
-      }
-      const refreshedComment = await refreshCommentInStore(commentCid, account);
-      if (!autoUpdate) {
-        setFrozenComment(refreshedComment);
-        setFreezeSettled(true);
-      }
-    } catch (error) {
-      if (!autoUpdate) {
-        setFreezeSettled(true);
-      }
-      throw error;
+    if (!commentCid || !account) {
+      throw Error("useComment cannot refresh comment not initialized yet");
+    }
+
+    const refreshCommentCid = commentCid;
+    const refreshedComment = await refreshCommentInStore(refreshCommentCid, account);
+    if (!autoUpdate && refreshedComment && currentCommentCidRef.current === refreshCommentCid) {
+      setFrozenComment(refreshedComment);
+      setFreezeSettledCid(refreshCommentCid);
     }
   }, [account, autoUpdate, commentCid, refreshCommentInStore]);
 
@@ -273,9 +272,11 @@ export function useComments(options?: UseCommentsOptions): UseCommentsResult {
   const autoUpdateSubscriptionId = useRef(`useComments-${++commentsAutoUpdateSubscriptionCount}`);
   const commentCidsKey = commentCids?.toString() || "";
   const commentsKey = `${account?.id || ""}:${commentCidsKey}`;
+  const currentCommentsKeyRef = useRef(commentsKey);
+  currentCommentsKeyRef.current = commentsKey;
   const [frozenComments, setFrozenComments] = useState<(Comment | undefined)[]>([]);
   const [frozenCommentsKey, setFrozenCommentsKey] = useState<string>();
-  const [freezeSettled, setFreezeSettled] = useState(true);
+  const [freezeSettledKey, setFreezeSettledKey] = useState<string>();
 
   useEffect(() => {
     if (!commentCids || !account) {
@@ -338,31 +339,32 @@ export function useComments(options?: UseCommentsOptions): UseCommentsResult {
   const liveCommentsSettled = liveComments.every(
     (comment) => getCommentStateAndReplyCount(comment).state === "succeeded",
   );
+  const freezeSettledForCurrentKey = freezeSettledKey === commentsKey;
 
   useEffect(() => {
     if (autoUpdate) {
       setFrozenComments([]);
       setFrozenCommentsKey(undefined);
-      setFreezeSettled(true);
+      setFreezeSettledKey(undefined);
       return;
     }
 
     setFrozenComments([]);
     setFrozenCommentsKey(undefined);
-    setFreezeSettled(false);
+    setFreezeSettledKey(undefined);
   }, [commentsKey, autoUpdate]);
 
   useEffect(() => {
-    if (autoUpdate || freezeSettled) {
+    if (autoUpdate || freezeSettledForCurrentKey) {
       return;
     }
 
     setFrozenComments(liveComments);
     setFrozenCommentsKey(commentsKey);
     if (liveCommentsSettled) {
-      setFreezeSettled(true);
+      setFreezeSettledKey(commentsKey);
     }
-  }, [autoUpdate, commentsKey, freezeSettled, liveComments, liveCommentsSettled]);
+  }, [autoUpdate, commentsKey, freezeSettledForCurrentKey, liveComments, liveCommentsSettled]);
 
   const frozenCommentsForCurrentSelection =
     frozenCommentsKey === commentsKey ? frozenComments : undefined;
@@ -381,7 +383,7 @@ export function useComments(options?: UseCommentsOptions): UseCommentsResult {
       uniqueCommentCids.map((commentCid) => refreshCommentInStore(commentCid, account)),
     );
 
-    if (!autoUpdate) {
+    if (!autoUpdate && currentCommentsKeyRef.current === commentsKey) {
       const latestCommunitiesPagesComments = useCommunitiesPagesStore.getState().comments;
       const refreshedCommentsByCid = uniqueCommentCids.reduce(
         (
@@ -403,7 +405,7 @@ export function useComments(options?: UseCommentsOptions): UseCommentsResult {
         ),
       );
       setFrozenCommentsKey(commentsKey);
-      setFreezeSettled(true);
+      setFreezeSettledKey(commentsKey);
     }
   }, [account, autoUpdate, commentCids, commentsKey, refreshCommentInStore]);
 

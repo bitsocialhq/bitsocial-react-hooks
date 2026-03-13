@@ -63,6 +63,16 @@ const releaseLiveComment = (commentCid: string, comment?: Comment) => {
   }
 };
 
+const maybeReleaseStoppedLiveComment = (commentCid: string, comment?: Comment) => {
+  if (!comment || hasCommentAutoUpdateSubscribers(commentCid)) {
+    return;
+  }
+  if (liveComments[commentCid] !== comment) {
+    return;
+  }
+  releaseLiveComment(commentCid, comment);
+};
+
 const commentsStore = createStore<CommentsState>((setState: Function, getState: Function) => {
   const addCommentError = (commentCid: string, error: Error) => {
     setState((state: CommentsState) => {
@@ -107,7 +117,7 @@ const commentsStore = createStore<CommentsState>((setState: Function, getState: 
       return;
     }
     void stopLiveComment(commentCid, comment).finally(() => {
-      releaseLiveComment(commentCid, comment);
+      maybeReleaseStoppedLiveComment(commentCid, comment);
     });
   };
 
@@ -198,7 +208,7 @@ const commentsStore = createStore<CommentsState>((setState: Function, getState: 
       return liveCommentPromises[commentCid] as Promise<Comment>;
     }
 
-    liveCommentPromises[commentCid] = (async () => {
+    const liveCommentPromise = (async () => {
       const initialComment =
         normalizeCommentCommunityAddress(utils.clone(commentData || { cid: commentCid })) ||
         ({ cid: commentCid } as Comment);
@@ -208,11 +218,14 @@ const commentsStore = createStore<CommentsState>((setState: Function, getState: 
       initializeComment(commentCid, liveComment, account);
       return liveComment;
     })();
+    liveCommentPromises[commentCid] = liveCommentPromise;
 
     try {
-      return await liveCommentPromises[commentCid];
+      return await liveCommentPromise;
     } finally {
-      delete liveCommentPromises[commentCid];
+      if (liveCommentPromises[commentCid] === liveCommentPromise) {
+        delete liveCommentPromises[commentCid];
+      }
     }
   };
 
@@ -331,6 +344,12 @@ const commentsStore = createStore<CommentsState>((setState: Function, getState: 
         }));
       }
 
+      if (!hasCommentAutoUpdateSubscribers(commentCid)) {
+        await stopLiveComment(commentCid, liveComment);
+        maybeReleaseStoppedLiveComment(commentCid, liveComment);
+        return;
+      }
+
       requestCommentUpdate(commentCid, liveComment);
     },
 
@@ -347,8 +366,9 @@ const commentsStore = createStore<CommentsState>((setState: Function, getState: 
       }
 
       delete stopCommentAfterNextUpdate[commentCid];
-      await stopLiveComment(commentCid);
-      releaseLiveComment(commentCid);
+      const liveComment = liveComments[commentCid];
+      await stopLiveComment(commentCid, liveComment);
+      maybeReleaseStoppedLiveComment(commentCid, liveComment);
     },
 
     async refreshComment(commentCid: string, account: Account) {

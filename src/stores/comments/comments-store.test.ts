@@ -488,6 +488,94 @@ describe("comments store", () => {
     mockAccount.plebbit.createComment = createCommentOrig;
   });
 
+  test("startCommentAutoUpdate stops a late live comment when its subscriber already unsubscribed", async () => {
+    const commentCid = "late-start-stop-cid";
+    let resolveCreate!: (comment: any) => void;
+    const liveComment: any = new EventEmitter();
+    liveComment.cid = commentCid;
+    liveComment.timestamp = 1;
+    liveComment.clients = {};
+    liveComment.off = liveComment.off.bind(liveComment);
+    liveComment.removeAllListeners = liveComment.removeAllListeners.bind(liveComment);
+    liveComment.once = liveComment.once.bind(liveComment);
+    liveComment.stop = vi.fn().mockResolvedValue(undefined);
+    liveComment.update = vi.fn().mockResolvedValue(undefined);
+
+    const createCommentOrig = mockAccount.plebbit.createComment;
+    mockAccount.plebbit.createComment = vi.fn().mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveCreate = resolve;
+        }),
+    );
+
+    const startPromise = commentsStore
+      .getState()
+      .startCommentAutoUpdate(commentCid, "sub-1", mockAccount);
+    await new Promise((r) => setTimeout(r, 0));
+
+    const stopPromise = commentsStore.getState().stopCommentAutoUpdate(commentCid, "sub-1");
+    await new Promise((r) => setTimeout(r, 0));
+
+    resolveCreate(liveComment);
+    await act(async () => {
+      await Promise.all([startPromise, stopPromise]);
+    });
+
+    expect(liveComment.stop).toHaveBeenCalledTimes(1);
+    expect(liveComment.update).not.toHaveBeenCalled();
+    expect(listeners).not.toContain(liveComment);
+    mockAccount.plebbit.createComment = createCommentOrig;
+  });
+
+  test("stopCommentAutoUpdate keeps a re-subscribed live comment until the new subscriber stops", async () => {
+    const commentCid = "stop-race-cid";
+    let resolveFirstStop!: () => void;
+    const liveComment: any = new EventEmitter();
+    liveComment.cid = commentCid;
+    liveComment.timestamp = 1;
+    liveComment.clients = {};
+    liveComment.off = liveComment.off.bind(liveComment);
+    liveComment.removeAllListeners = liveComment.removeAllListeners.bind(liveComment);
+    liveComment.once = liveComment.once.bind(liveComment);
+    liveComment.stop = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise<void>((resolve) => {
+            resolveFirstStop = resolve;
+          }),
+      )
+      .mockResolvedValue(undefined);
+    liveComment.update = vi.fn().mockResolvedValue(undefined);
+
+    const createCommentOrig = mockAccount.plebbit.createComment;
+    mockAccount.plebbit.createComment = vi.fn().mockResolvedValue(liveComment);
+
+    await act(async () => {
+      await commentsStore.getState().startCommentAutoUpdate(commentCid, "sub-1", mockAccount);
+    });
+
+    const firstStopPromise = commentsStore.getState().stopCommentAutoUpdate(commentCid, "sub-1");
+    await new Promise((r) => setTimeout(r, 0));
+
+    await act(async () => {
+      await commentsStore.getState().startCommentAutoUpdate(commentCid, "sub-2", mockAccount);
+    });
+
+    resolveFirstStop();
+    await act(async () => {
+      await firstStopPromise;
+    });
+
+    await act(async () => {
+      await commentsStore.getState().stopCommentAutoUpdate(commentCid, "sub-2");
+    });
+
+    expect(liveComment.stop).toHaveBeenCalledTimes(2);
+    mockAccount.plebbit.createComment = createCommentOrig;
+  });
+
   test("resetCommentsStore clears in-flight live comment promises", async () => {
     const commentCid = "reset-live-comment-promise-cid";
     const createCommentOrig = mockAccount.plebbit.createComment.bind(mockAccount.plebbit);
