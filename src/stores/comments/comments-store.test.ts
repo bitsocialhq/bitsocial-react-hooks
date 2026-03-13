@@ -1,4 +1,5 @@
 import { act } from "@testing-library/react";
+import EventEmitter from "events";
 import testUtils, { renderHook } from "../../lib/test-utils";
 import commentsStore, { resetCommentsDatabaseAndStore, listeners, log } from "./comments-store";
 import localForageLru from "../../lib/localforage-lru";
@@ -176,7 +177,10 @@ describe("comments store", () => {
       comment.update();
     });
     await new Promise((r) => setTimeout(r, 50));
-    expect(addRepliesSpy).toHaveBeenCalledWith(comment);
+    expect(addRepliesSpy).toHaveBeenCalled();
+    expect(addRepliesSpy.mock.calls[addRepliesSpy.mock.calls.length - 1][0]).toEqual(
+      expect.objectContaining({ cid: commentCid }),
+    );
 
     (repliesPagesStore as any).getState = repliesPagesGetState;
   });
@@ -268,5 +272,117 @@ describe("comments store", () => {
     expect(commentsStore.getState().comments[commentCid]?.clients?.type?.ETH).toBeDefined();
 
     (utils.default as any).clientsOnStateChange = origClientsOnStateChange;
+  });
+
+  test("addCommentToStore stops one-shot updates when there are no auto-update subscribers", async () => {
+    const commentCid = "one-shot-stop-cid";
+
+    await act(async () => {
+      await commentsStore.getState().addCommentToStore(commentCid, mockAccount);
+    });
+
+    const comment = listeners[listeners.length - 1];
+    expect(comment).toBeDefined();
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(comment.updatingState).toBe("stopped");
+  });
+
+  test("startCommentAutoUpdate keeps polling until the last subscriber stops", async () => {
+    const commentCid = "auto-update-subscribers-cid";
+
+    await act(async () => {
+      await commentsStore.getState().addCommentToStore(commentCid, mockAccount);
+    });
+
+    const comment = listeners[listeners.length - 1];
+    await new Promise((r) => setTimeout(r, 50));
+    expect(comment.updatingState).toBe("stopped");
+
+    await act(async () => {
+      await commentsStore.getState().startCommentAutoUpdate(commentCid, "sub-1", mockAccount);
+      await commentsStore.getState().startCommentAutoUpdate(commentCid, "sub-2", mockAccount);
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(comment.updateCalledTimes).toBeGreaterThanOrEqual(2);
+
+    await act(async () => {
+      await commentsStore.getState().stopCommentAutoUpdate(commentCid, "sub-1");
+    });
+    expect(comment.updatingState).not.toBe("stopped");
+
+    await act(async () => {
+      await commentsStore.getState().stopCommentAutoUpdate(commentCid, "sub-2");
+    });
+    expect(comment.updatingState).toBe("stopped");
+  });
+
+  test("refreshComment updates the store once and stops again when auto-update is disabled", async () => {
+    const commentCid = "refresh-comment-cid";
+
+    await act(async () => {
+      await commentsStore.getState().addCommentToStore(commentCid, mockAccount);
+    });
+
+    await new Promise((r) => setTimeout(r, 50));
+    expect(commentsStore.getState().comments[commentCid]?.upvoteCount).toBe(3);
+
+    await act(async () => {
+      await commentsStore.getState().refreshComment(commentCid, mockAccount);
+    });
+
+    expect(commentsStore.getState().comments[commentCid]?.upvoteCount).toBe(5);
+    expect(listeners[listeners.length - 1].updatingState).toBe("stopped");
+  });
+
+  test("refreshComment cleans up legacy listeners and rejects on comment error", async () => {
+    const commentCid = "legacy-refresh-error-cid";
+    const legacyComment: any = new EventEmitter();
+    legacyComment.cid = commentCid;
+    legacyComment.clients = {};
+    legacyComment.timestamp = 1;
+    legacyComment.removeAllListeners = legacyComment.removeAllListeners.bind(legacyComment);
+    legacyComment.stop = vi.fn().mockResolvedValue(undefined);
+    legacyComment.update = vi.fn().mockImplementation(() => {
+      legacyComment.emit("error", new Error("legacy refresh failed"));
+      return Promise.resolve();
+    });
+    legacyComment.off = undefined;
+
+    const createCommentOrig = mockAccount.plebbit.createComment;
+    mockAccount.plebbit.createComment = vi.fn().mockResolvedValue(legacyComment);
+
+    await expect(commentsStore.getState().refreshComment(commentCid, mockAccount)).rejects.toThrow(
+      "legacy refresh failed",
+    );
+
+    mockAccount.plebbit.createComment = createCommentOrig;
+  });
+
+  test("stopCommentAutoUpdate swallows comment.stop errors", async () => {
+    const commentCid = "stop-error-cid";
+    const stopError = new Error("stop failed");
+    const legacyComment: any = {
+      cid: commentCid,
+      timestamp: 1,
+      clients: {},
+      on: vi.fn(),
+      once: vi.fn(),
+      update: vi.fn().mockResolvedValue(undefined),
+      stop: vi.fn().mockRejectedValue(stopError),
+      removeAllListeners: vi.fn(),
+    };
+
+    const createCommentOrig = mockAccount.plebbit.createComment;
+    mockAccount.plebbit.createComment = vi.fn().mockResolvedValue(legacyComment);
+
+    await act(async () => {
+      await commentsStore.getState().startCommentAutoUpdate(commentCid, "sub-1", mockAccount);
+      await commentsStore.getState().stopCommentAutoUpdate(commentCid, "sub-1");
+    });
+
+    expect(legacyComment.stop).toHaveBeenCalled();
+    mockAccount.plebbit.createComment = createCommentOrig;
   });
 });
