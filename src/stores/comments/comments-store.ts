@@ -1,4 +1,3 @@
-import validator from "../../lib/validator";
 import localForageLru from "../../lib/localforage-lru";
 const commentsDatabase = localForageLru.createInstance({
   name: "plebbitReactHooks-comments",
@@ -14,6 +13,14 @@ import repliesPagesStore from "../replies-pages";
 import { normalizeCommentCommunityAddress } from "../../lib/plebbit-compat";
 
 let plebbitGetCommentPending: { [key: string]: boolean } = {};
+const liveComments: { [commentCid: string]: Comment } = {};
+const liveCommentPromises: { [commentCid: string]: Promise<Comment> | undefined } = {};
+const commentAutoUpdateSubscribers: {
+  [commentCid: string]: { [subscriberId: string]: true };
+} = {};
+const stopCommentAfterNextUpdate: { [commentCid: string]: boolean } = {};
+const initializedComments = new WeakSet<object>();
+const trackedListeners = new WeakSet<object>();
 
 // reset all event listeners in between tests
 export const listeners: any = [];
@@ -22,64 +29,109 @@ export type CommentsState = {
   comments: Comments;
   errors: { [commentCid: string]: Error[] };
   addCommentToStore: Function;
+  startCommentAutoUpdate: Function;
+  stopCommentAutoUpdate: Function;
+  refreshComment: Function;
 };
 
-const commentsStore = createStore<CommentsState>((setState: Function, getState: Function) => ({
-  comments: {},
-  errors: {},
+const removeCommentListener = (comment: any, event: string, listener: (...args: any[]) => void) => {
+  if (typeof comment?.off === "function") {
+    comment.off(event, listener);
+    return;
+  }
+  if (typeof comment?.removeListener === "function") {
+    comment.removeListener(event, listener);
+  }
+};
 
-  async addCommentToStore(commentCid: string, account: Account) {
-    const { comments } = getState();
+const getCommentAutoUpdateSubscribersCount = (commentCid: string) =>
+  Object.keys(commentAutoUpdateSubscribers[commentCid] || {}).length;
 
-    // comment is in store already, do nothing
-    let comment: Comment | undefined = comments[commentCid];
-    if (comment || plebbitGetCommentPending[commentCid + account.id]) {
+const hasCommentAutoUpdateSubscribers = (commentCid: string) =>
+  getCommentAutoUpdateSubscribersCount(commentCid) > 0;
+
+const releaseLiveComment = (commentCid: string, comment?: Comment) => {
+  const liveComment = comment || liveComments[commentCid];
+  if (liveComment) {
+    const listenerIndex = listeners.indexOf(liveComment);
+    if (listenerIndex !== -1) {
+      listeners.splice(listenerIndex, 1);
+    }
+  }
+  if (!comment || liveComments[commentCid] === liveComment) {
+    delete liveComments[commentCid];
+  }
+};
+
+const maybeReleaseStoppedLiveComment = (commentCid: string, comment?: Comment) => {
+  if (!comment || hasCommentAutoUpdateSubscribers(commentCid)) {
+    return;
+  }
+  if (liveComments[commentCid] !== comment) {
+    return;
+  }
+  releaseLiveComment(commentCid, comment);
+};
+
+const commentsStore = createStore<CommentsState>((setState: Function, getState: Function) => {
+  const addCommentError = (commentCid: string, error: Error) => {
+    setState((state: CommentsState) => {
+      let commentErrors = state.errors[commentCid] || [];
+      commentErrors = [...commentErrors, error];
+      return { ...state, errors: { ...state.errors, [commentCid]: commentErrors } };
+    });
+  };
+
+  const persistComment = async (commentCid: string, nextComment: Comment) => {
+    const normalizedComment = normalizeCommentCommunityAddress(utils.clone(nextComment)) as Comment;
+    await commentsDatabase.setItem(commentCid, normalizedComment);
+    log("commentsStore comment update", { commentCid, updatedComment: normalizedComment });
+    setState((state: CommentsState) => ({
+      comments: { ...state.comments, [commentCid]: normalizedComment },
+    }));
+
+    // add comment replies pages to repliesPagesStore so they can be used in useComment
+    repliesPagesStore.getState().addRepliesPageCommentsToStore(nextComment);
+
+    return normalizedComment;
+  };
+
+  const stopLiveComment = async (commentCid: string, comment?: Comment) => {
+    const liveComment = comment || liveComments[commentCid];
+    if (typeof liveComment?.stop !== "function") {
       return;
     }
-    plebbitGetCommentPending[commentCid + account.id] = true;
-
-    // try to find comment in database
-    comment = await getCommentFromDatabase(commentCid, account);
-
-    if (comment) {
-      // add comment replies pages to repliesPagesStore so they can be used in useComment
-      repliesPagesStore.getState().addRepliesPageCommentsToStore(comment);
-    }
-
-    // comment not in database, fetch from plebbit-js
     try {
-      if (!comment) {
-        comment = await account.plebbit.createComment({ cid: commentCid });
-        comment = normalizeCommentCommunityAddress(comment);
-        await commentsDatabase.setItem(commentCid, utils.clone(comment));
-      }
-      comment = normalizeCommentCommunityAddress(comment);
-      log("commentsStore.addCommentToStore", { commentCid, comment, account });
-      setState((state: CommentsState) => ({
-        comments: { ...state.comments, [commentCid]: utils.clone(comment) },
-      }));
-    } catch (e: any) {
-      setState((state: CommentsState) => {
-        let commentErrors = state.errors[commentCid] || [];
-        commentErrors = [...commentErrors, e];
-        return { ...state, errors: { ...state.errors, [commentCid]: commentErrors } };
-      });
-      throw e;
-    } finally {
-      plebbitGetCommentPending[commentCid + account.id] = false;
+      await liveComment.stop();
+    } catch (error) {
+      log.trace("comment.stop error", { commentCid, comment: liveComment, error });
     }
+  };
 
-    // the comment is still missing up to date mutable data like upvotes, edits, replies, etc
+  const maybeStopCommentAfterOneShotUpdate = (commentCid: string, comment: Comment) => {
+    if (!stopCommentAfterNextUpdate[commentCid]) {
+      return;
+    }
+    delete stopCommentAfterNextUpdate[commentCid];
+    if (hasCommentAutoUpdateSubscribers(commentCid)) {
+      return;
+    }
+    void stopLiveComment(commentCid, comment).finally(() => {
+      maybeReleaseStoppedLiveComment(commentCid, comment);
+    });
+  };
+
+  const initializeComment = (commentCid: string, comment: Comment, account: Account) => {
+    if (initializedComments.has(comment as object)) {
+      liveComments[commentCid] = comment;
+      return;
+    }
+    initializedComments.add(comment as object);
+    liveComments[commentCid] = comment;
+
     comment?.on?.("update", async (updatedComment: Comment) => {
       updatedComment = normalizeCommentCommunityAddress(utils.clone(updatedComment)) as Comment;
-      await commentsDatabase.setItem(commentCid, updatedComment);
-      log("commentsStore comment update", { commentCid, updatedComment, account });
-      setState((state: CommentsState) => ({
-        comments: { ...state.comments, [commentCid]: updatedComment },
-      }));
-
-      // add comment replies pages to repliesPagesStore so they can be used in useComment
-      repliesPagesStore.getState().addRepliesPageCommentsToStore(comment);
+      await persistComment(commentCid, updatedComment);
     });
 
     comment?.on?.("updatingstatechange", (updatingState: string) => {
@@ -89,14 +141,14 @@ const commentsStore = createStore<CommentsState>((setState: Function, getState: 
           [commentCid]: { ...state.comments[commentCid], updatingState },
         },
       }));
+
+      if (updatingState === "succeeded" || updatingState === "failed") {
+        maybeStopCommentAfterOneShotUpdate(commentCid, comment);
+      }
     });
 
     comment?.on?.("error", (error: Error) => {
-      setState((state: CommentsState) => {
-        let commentErrors = state.errors[commentCid] || [];
-        commentErrors = [...commentErrors, error];
-        return { ...state, errors: { ...state.errors, [commentCid]: commentErrors } };
-      });
+      addCommentError(commentCid, error);
     });
 
     // set clients on comment so the frontend can display it, dont persist in db because a reload cancels updating
@@ -142,12 +194,206 @@ const commentsStore = createStore<CommentsState>((setState: Function, getState: 
       );
     }
 
-    listeners.push(comment);
+    if (!trackedListeners.has(comment as object)) {
+      trackedListeners.add(comment as object);
+      listeners.push(comment);
+    }
+  };
+
+  const ensureLiveComment = async (commentCid: string, account: Account, commentData?: Comment) => {
+    if (liveComments[commentCid]) {
+      return liveComments[commentCid];
+    }
+    if (liveCommentPromises[commentCid]) {
+      return liveCommentPromises[commentCid] as Promise<Comment>;
+    }
+
+    const liveCommentPromise = (async () => {
+      const initialComment =
+        normalizeCommentCommunityAddress(utils.clone(commentData || { cid: commentCid })) ||
+        ({ cid: commentCid } as Comment);
+      const liveComment = normalizeCommentCommunityAddress(
+        await account.plebbit.createComment(initialComment),
+      ) as Comment;
+      initializeComment(commentCid, liveComment, account);
+      return liveComment;
+    })();
+    liveCommentPromises[commentCid] = liveCommentPromise;
+
+    try {
+      return await liveCommentPromise;
+    } finally {
+      if (liveCommentPromises[commentCid] === liveCommentPromise) {
+        delete liveCommentPromises[commentCid];
+      }
+    }
+  };
+
+  const requestCommentUpdate = (
+    commentCid: string,
+    comment: Comment,
+    options?: { stopAfterNextUpdate?: boolean },
+  ) => {
+    if (options?.stopAfterNextUpdate) {
+      stopCommentAfterNextUpdate[commentCid] = true;
+    } else {
+      delete stopCommentAfterNextUpdate[commentCid];
+    }
+
     comment
       ?.update?.()
-      .catch((error: unknown) => log.trace("comment.update error", { comment, error }));
-  },
-}));
+      .catch((error: unknown) => log.trace("comment.update error", { commentCid, comment, error }));
+  };
+
+  const waitForCommentUpdateCycle = (commentCid: string, comment: Comment) =>
+    new Promise<Comment>((resolve, reject) => {
+      const onUpdatingStateChange = (updatingState: string) => {
+        if (updatingState === "succeeded") {
+          cleanup();
+          resolve(normalizeCommentCommunityAddress(utils.clone(comment)) as Comment);
+          return;
+        }
+        if (updatingState === "failed") {
+          cleanup();
+          reject(getState().errors[commentCid]?.slice(-1)[0] || Error("comment update failed"));
+        }
+      };
+
+      const onError = (error: Error) => {
+        cleanup();
+        reject(error);
+      };
+
+      const cleanup = () => {
+        removeCommentListener(comment, "updatingstatechange", onUpdatingStateChange);
+        removeCommentListener(comment, "error", onError);
+      };
+
+      comment?.on?.("updatingstatechange", onUpdatingStateChange);
+      comment?.on?.("error", onError);
+    });
+
+  return {
+    comments: {},
+    errors: {},
+
+    async addCommentToStore(commentCid: string, account: Account) {
+      const { comments } = getState();
+      const pendingKey = commentCid + account.id;
+
+      // comment is in store already, do nothing
+      let comment: Comment | undefined = comments[commentCid];
+      if (comment || plebbitGetCommentPending[pendingKey]) {
+        return;
+      }
+      plebbitGetCommentPending[pendingKey] = true;
+
+      try {
+        // try to find comment in database
+        comment = await getCommentFromDatabase(commentCid, account);
+
+        if (!comment) {
+          comment = await ensureLiveComment(commentCid, account, { cid: commentCid });
+          comment = normalizeCommentCommunityAddress(comment);
+          log("commentsStore.addCommentToStore", { commentCid, comment, account });
+          setState((state: CommentsState) => ({
+            comments: { ...state.comments, [commentCid]: utils.clone(comment) },
+          }));
+        } else {
+          comment = normalizeCommentCommunityAddress(comment);
+          setState((state: CommentsState) => ({
+            comments: { ...state.comments, [commentCid]: utils.clone(comment) },
+          }));
+
+          // add comment replies pages to repliesPagesStore so they can be used in useComment
+          repliesPagesStore.getState().addRepliesPageCommentsToStore(comment);
+
+          comment = await ensureLiveComment(commentCid, account, comment);
+        }
+
+        requestCommentUpdate(commentCid, comment, { stopAfterNextUpdate: true });
+      } catch (e: any) {
+        addCommentError(commentCid, e);
+        throw e;
+      } finally {
+        plebbitGetCommentPending[pendingKey] = false;
+      }
+    },
+
+    async startCommentAutoUpdate(commentCid: string, subscriberId: string, account: Account) {
+      const hadAutoUpdateSubscribers = hasCommentAutoUpdateSubscribers(commentCid);
+      commentAutoUpdateSubscribers[commentCid] = {
+        ...(commentAutoUpdateSubscribers[commentCid] || {}),
+        [subscriberId]: true,
+      };
+
+      if (hadAutoUpdateSubscribers && liveComments[commentCid]) {
+        return;
+      }
+
+      const storedComment = getState().comments[commentCid];
+      const liveComment = await ensureLiveComment(
+        commentCid,
+        account,
+        storedComment || ({ cid: commentCid } as Comment),
+      );
+
+      if (!storedComment) {
+        setState((state: CommentsState) => ({
+          comments: { ...state.comments, [commentCid]: utils.clone(liveComment) },
+        }));
+      }
+
+      if (!hasCommentAutoUpdateSubscribers(commentCid)) {
+        await stopLiveComment(commentCid, liveComment);
+        maybeReleaseStoppedLiveComment(commentCid, liveComment);
+        return;
+      }
+
+      requestCommentUpdate(commentCid, liveComment);
+    },
+
+    async stopCommentAutoUpdate(commentCid: string, subscriberId: string) {
+      if (commentAutoUpdateSubscribers[commentCid]) {
+        delete commentAutoUpdateSubscribers[commentCid][subscriberId];
+        if (Object.keys(commentAutoUpdateSubscribers[commentCid]).length === 0) {
+          delete commentAutoUpdateSubscribers[commentCid];
+        }
+      }
+
+      if (hasCommentAutoUpdateSubscribers(commentCid)) {
+        return;
+      }
+
+      delete stopCommentAfterNextUpdate[commentCid];
+      const liveComment = liveComments[commentCid];
+      await stopLiveComment(commentCid, liveComment);
+      maybeReleaseStoppedLiveComment(commentCid, liveComment);
+    },
+
+    async refreshComment(commentCid: string, account: Account) {
+      const storedComment = getState().comments[commentCid];
+      const liveComment = await ensureLiveComment(
+        commentCid,
+        account,
+        storedComment || ({ cid: commentCid } as Comment),
+      );
+
+      if (
+        !hasCommentAutoUpdateSubscribers(commentCid) &&
+        liveComment?.updatingState !== "stopped"
+      ) {
+        await stopLiveComment(commentCid, liveComment);
+      }
+
+      const waitForUpdate = waitForCommentUpdateCycle(commentCid, liveComment);
+      requestCommentUpdate(commentCid, liveComment, {
+        stopAfterNextUpdate: !hasCommentAutoUpdateSubscribers(commentCid),
+      });
+      return waitForUpdate;
+    },
+  };
+});
 
 const getCommentFromDatabase = async (commentCid: string, account: Account) => {
   const commentData: any = await commentsDatabase.getItem(commentCid);
@@ -173,8 +419,32 @@ const originalState = commentsStore.getState();
 // async function because some stores have async init
 export const resetCommentsStore = async () => {
   plebbitGetCommentPending = {};
+  for (const commentCid in commentAutoUpdateSubscribers) {
+    delete commentAutoUpdateSubscribers[commentCid];
+  }
+  for (const commentCid in stopCommentAfterNextUpdate) {
+    delete stopCommentAfterNextUpdate[commentCid];
+  }
+  for (const commentCid in liveCommentPromises) {
+    delete liveCommentPromises[commentCid];
+  }
+  for (const commentCid in liveComments) {
+    delete liveComments[commentCid];
+  }
+
   // remove all event listeners
-  listeners.forEach((listener: any) => listener.removeAllListeners());
+  await Promise.all(
+    listeners.map(async (listener: any) => {
+      try {
+        if (typeof listener?.stop === "function") {
+          await listener.stop();
+        }
+      } catch {}
+      listener?.removeAllListeners?.();
+    }),
+  );
+  listeners.length = 0;
+
   // destroy all component subscriptions to the store
   commentsStore.destroy();
   // restore original state

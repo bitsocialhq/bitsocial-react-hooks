@@ -510,6 +510,13 @@ class Publication extends EventEmitter {
       this.emit("statechange", "stopped");
       this.emit("publishingstatechange", "stopped");
     }
+    if ((this as any).updating || (this as any).updatingState !== "stopped") {
+      (this as any).state = "stopped";
+      (this as any).updating = false;
+      (this as any).updatingState = "stopped";
+      this.emit("statechange", "stopped");
+      this.emit("updatingstatechange", "stopped");
+    }
   }
 }
 
@@ -559,9 +566,9 @@ export class Comment extends Publication {
 
   async update() {
     this.updateCalledTimes++;
-    if (this.updateCalledTimes > 2) {
+    if (this.updateCalledTimes > 5) {
       throw Error(
-        "with the current hooks, comment.update() should be called maximum 2 times, this number might change if the hooks change and is only there to catch bugs, the real comment.update() can be called infinite times",
+        "with the current hooks, comment.update() should be called maximum 5 times, this number might change if the hooks change and is only there to catch bugs, the real comment.update() can be called infinite times",
       );
     }
     // don't update twice
@@ -581,6 +588,9 @@ export class Comment extends Publication {
   }
 
   simulateUpdateEvent() {
+    if (!this.updating) {
+      return;
+    }
     // if timestamp isn't defined, simulate fetching the comment ipfs
     if (!this.timestamp) {
       this.simulateFetchCommentIpfsUpdateEvent();
@@ -598,8 +608,14 @@ export class Comment extends Publication {
   }
 
   async simulateFetchCommentIpfsUpdateEvent() {
+    if (!this.updating) {
+      return;
+    }
     // use plebbit.getComment() so mocking Plebbit.prototype.getComment works
     const commentIpfs = await new Plebbit().getComment({ cid: this.cid || "" });
+    if (!this.updating) {
+      return;
+    }
     this.content = commentIpfs.content;
     this.author = commentIpfs.author;
     this.timestamp = commentIpfs.timestamp;

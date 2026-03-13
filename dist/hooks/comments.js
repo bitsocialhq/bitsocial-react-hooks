@@ -1,4 +1,13 @@
-import { useEffect, useState, useMemo } from "react";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAccount } from "./accounts";
 import validator from "../lib/validator";
 import Logger from "@plebbit/plebbit-logger";
@@ -8,7 +17,7 @@ import useCommentsStore from "../stores/comments";
 import useAccountsStore from "../stores/accounts";
 import { commentIsValid } from "../lib/utils";
 import { addCommentModeration, addCommentModerationToComments, } from "../lib/utils/comment-moderation";
-import useSubplebbitsPagesStore from "../stores/subplebbits-pages";
+import useCommunitiesPagesStore from "../stores/communities-pages";
 import useRepliesPagesStore from "../stores/replies-pages";
 import shallow from "zustand/shallow";
 export function getCommentFreshness(comment) {
@@ -24,57 +33,14 @@ export function preferFresher(current, candidate) {
         return candidate;
     return getCommentFreshness(candidate) > getCommentFreshness(current) ? candidate : current;
 }
-/**
- * @param commentCid - The IPFS CID of the comment to get
- * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use
- * the active account.
- */
-export function useComment(options) {
-    assert(!options || typeof options === "object", `useComment options argument '${options}' not an object`);
-    const { commentCid, accountName, onlyIfCached } = options !== null && options !== void 0 ? options : {};
-    const account = useAccount({ accountName });
-    const commentFromStore = useCommentsStore((state) => state.comments[commentCid || ""]);
-    const addCommentToStore = useCommentsStore((state) => state.addCommentToStore);
-    const subplebbitsPagesComment = useSubplebbitsPagesStore((state) => state.comments[commentCid || ""]);
-    const repliesPagesComment = useRepliesPagesStore((state) => state.comments[commentCid || ""]);
-    const errors = useCommentsStore((state) => state.errors[commentCid || ""]);
-    // get account comment of the cid if any
-    const accountCommentInfo = useAccountsStore((state) => state.commentCidsToAccountsComments[commentCid || ""]);
-    const accountComment = useAccountsStore((state) => {
-        var _a;
-        return (_a = state.accountsComments[(accountCommentInfo === null || accountCommentInfo === void 0 ? void 0 : accountCommentInfo.accountId) || ""]) === null || _a === void 0 ? void 0 : _a[Number(accountCommentInfo === null || accountCommentInfo === void 0 ? void 0 : accountCommentInfo.accountCommentIndex)];
-    });
-    useEffect(() => {
-        if (!commentCid || !account) {
-            return;
-        }
-        validator.validateUseCommentArguments(commentCid, account);
-        if (!commentFromStore && !onlyIfCached) {
-            // if comment isn't already in store, add it
-            addCommentToStore(commentCid, account).catch((error) => log.error("useComment addCommentToStore error", { commentCid, error }));
-        }
-    }, [commentCid, account === null || account === void 0 ? void 0 : account.id, onlyIfCached]);
-    let comment = commentFromStore;
-    if (commentCid && subplebbitsPagesComment) {
-        comment = preferFresher(comment, subplebbitsPagesComment);
-    }
-    if (commentCid && repliesPagesComment) {
-        comment = preferFresher(comment, repliesPagesComment);
-    }
-    // if comment is still not defined, but account comment is, use account comment
-    // check `comment.timestamp` instead of `comment` in case comment exists but in a loading state
-    const commentFromStoreNotLoaded = !(comment === null || comment === void 0 ? void 0 : comment.timestamp);
-    if (commentCid && commentFromStoreNotLoaded && accountComment) {
-        comment = accountComment;
-    }
-    comment = addCommentModeration(comment);
+const getCommentStateAndReplyCount = (comment) => {
     let state = (comment === null || comment === void 0 ? void 0 : comment.updatingState) || "initializing";
     // force 'fetching-ipns' even if could be something else, so the frontend can use
     // the correct loading skeleton
     if (comment === null || comment === void 0 ? void 0 : comment.timestamp) {
         state = "fetching-update-ipns";
     }
-    // force succeeded even if the commment is fecthing a new update
+    // force succeeded even if the comment is fecthing a new update
     if (comment === null || comment === void 0 ? void 0 : comment.updatedAt) {
         state = "succeeded";
     }
@@ -87,6 +53,109 @@ export function useComment(options) {
         // set replyCount because some frontend are likely to check if replyCount === undefined to show a loading skeleton
         replyCount = 0;
     }
+    return { state, replyCount };
+};
+const getCommentsState = (comments) => comments.every((comment) => getCommentStateAndReplyCount(comment).state === "succeeded")
+    ? "succeeded"
+    : "fetching-ipfs";
+let commentAutoUpdateSubscriptionCount = 0;
+let commentsAutoUpdateSubscriptionCount = 0;
+/**
+ * @param commentCid - The IPFS CID of the comment to get
+ * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use
+ * the active account.
+ */
+export function useComment(options) {
+    assert(!options || typeof options === "object", `useComment options argument '${options}' not an object`);
+    const { commentCid, accountName, onlyIfCached, autoUpdate = true } = options !== null && options !== void 0 ? options : {};
+    const account = useAccount({ accountName });
+    const commentFromStore = useCommentsStore((state) => state.comments[commentCid || ""]);
+    const addCommentToStore = useCommentsStore((state) => state.addCommentToStore);
+    const startCommentAutoUpdate = useCommentsStore((state) => state.startCommentAutoUpdate);
+    const stopCommentAutoUpdate = useCommentsStore((state) => state.stopCommentAutoUpdate);
+    const refreshCommentInStore = useCommentsStore((state) => state.refreshComment);
+    const communitiesPagesComment = useCommunitiesPagesStore((state) => state.comments[commentCid || ""]);
+    const repliesPagesComment = useRepliesPagesStore((state) => state.comments[commentCid || ""]);
+    const errors = useCommentsStore((state) => state.errors[commentCid || ""]);
+    // get account comment of the cid if any
+    const accountCommentInfo = useAccountsStore((state) => state.commentCidsToAccountsComments[commentCid || ""]);
+    const accountComment = useAccountsStore((state) => {
+        var _a;
+        return (_a = state.accountsComments[(accountCommentInfo === null || accountCommentInfo === void 0 ? void 0 : accountCommentInfo.accountId) || ""]) === null || _a === void 0 ? void 0 : _a[Number(accountCommentInfo === null || accountCommentInfo === void 0 ? void 0 : accountCommentInfo.accountCommentIndex)];
+    });
+    const autoUpdateSubscriptionId = useRef(`useComment-${++commentAutoUpdateSubscriptionCount}`);
+    const currentCommentCidRef = useRef(commentCid);
+    currentCommentCidRef.current = commentCid;
+    const [frozenComment, setFrozenComment] = useState();
+    const [freezeSettledCid, setFreezeSettledCid] = useState();
+    useEffect(() => {
+        if (!commentCid || !account) {
+            return;
+        }
+        validator.validateUseCommentArguments(commentCid, account);
+        if (!commentFromStore && !onlyIfCached) {
+            // if comment isn't already in store, add it
+            addCommentToStore(commentCid, account).catch((error) => log.error("useComment addCommentToStore error", { commentCid, error }));
+        }
+    }, [commentCid, account === null || account === void 0 ? void 0 : account.id, onlyIfCached]);
+    useEffect(() => {
+        if (!commentCid || !account || onlyIfCached || !autoUpdate) {
+            return;
+        }
+        startCommentAutoUpdate(commentCid, autoUpdateSubscriptionId.current, account).catch((error) => log.error("useComment startCommentAutoUpdate error", { commentCid, error }));
+        return () => {
+            stopCommentAutoUpdate(commentCid, autoUpdateSubscriptionId.current).catch((error) => log.error("useComment stopCommentAutoUpdate error", { commentCid, error }));
+        };
+    }, [commentCid, account === null || account === void 0 ? void 0 : account.id, onlyIfCached, autoUpdate]);
+    let selectedComment = commentFromStore;
+    if (commentCid && communitiesPagesComment) {
+        selectedComment = preferFresher(selectedComment, communitiesPagesComment);
+    }
+    if (commentCid && repliesPagesComment) {
+        selectedComment = preferFresher(selectedComment, repliesPagesComment);
+    }
+    // if comment is still not defined, but account comment is, use account comment
+    // check `comment.timestamp` instead of `comment` in case comment exists but in a loading state
+    const commentFromStoreNotLoaded = !(selectedComment === null || selectedComment === void 0 ? void 0 : selectedComment.timestamp);
+    if (commentCid && commentFromStoreNotLoaded && accountComment) {
+        selectedComment = accountComment;
+    }
+    const selectedCommentState = getCommentStateAndReplyCount(selectedComment).state;
+    const freezeSettledForCurrentCid = freezeSettledCid === commentCid;
+    useEffect(() => {
+        if (autoUpdate) {
+            setFrozenComment(undefined);
+            setFreezeSettledCid(undefined);
+            return;
+        }
+        setFrozenComment(undefined);
+        setFreezeSettledCid(undefined);
+    }, [commentCid, autoUpdate]);
+    useEffect(() => {
+        if (autoUpdate) {
+            return;
+        }
+        if (!commentCid) {
+            setFrozenComment(undefined);
+            setFreezeSettledCid(undefined);
+            return;
+        }
+        if (freezeSettledForCurrentCid || !selectedComment) {
+            return;
+        }
+        setFrozenComment(selectedComment);
+        if (selectedCommentState === "succeeded") {
+            setFreezeSettledCid(commentCid);
+        }
+    }, [autoUpdate, commentCid, selectedComment, selectedCommentState, freezeSettledForCurrentCid]);
+    const frozenCommentForCurrentCid = (frozenComment === null || frozenComment === void 0 ? void 0 : frozenComment.cid) === commentCid ? frozenComment : undefined;
+    let comment = autoUpdate
+        ? selectedComment
+        : freezeSettledForCurrentCid
+            ? frozenCommentForCurrentCid
+            : frozenCommentForCurrentCid || selectedComment;
+    comment = addCommentModeration(comment);
+    const { state, replyCount } = getCommentStateAndReplyCount(comment);
     if (account && commentCid) {
         log("useComment", {
             commentCid,
@@ -94,16 +163,29 @@ export function useComment(options) {
             replyCount,
             state,
             commentFromStore,
-            subplebbitsPagesComment,
+            communitiesPagesComment,
             repliesPagesComment,
             accountComment,
             commentsStore: useCommentsStore.getState().comments,
             account,
             onlyIfCached,
+            autoUpdate,
         });
     }
+    const refresh = useCallback(() => __awaiter(this, void 0, void 0, function* () {
+        if (!commentCid || !account) {
+            throw Error("useComment cannot refresh comment not initialized yet");
+        }
+        const refreshCommentCid = commentCid;
+        const refreshedComment = yield refreshCommentInStore(refreshCommentCid, account);
+        if (!autoUpdate && refreshedComment && currentCommentCidRef.current === refreshCommentCid) {
+            setFrozenComment(refreshedComment);
+            setFreezeSettledCid(refreshCommentCid);
+        }
+    }), [account, autoUpdate, commentCid, refreshCommentInStore]);
     return useMemo(() => (Object.assign(Object.assign({}, comment), { replyCount,
-        state, error: errors === null || errors === void 0 ? void 0 : errors[errors.length - 1], errors: errors || [] })), [comment, commentCid, errors]);
+        state,
+        refresh, error: errors === null || errors === void 0 ? void 0 : errors[errors.length - 1], errors: errors || [] })), [comment, commentCid, errors, refresh, state, replyCount]);
 }
 /**
  * @param commentCids - The IPFS CIDs of the comments to get
@@ -112,11 +194,22 @@ export function useComment(options) {
  */
 export function useComments(options) {
     assert(!options || typeof options === "object", `useComments options argument '${options}' not an object`);
-    const { commentCids = [], accountName, onlyIfCached } = options !== null && options !== void 0 ? options : {};
+    const { commentCids = [], accountName, onlyIfCached, autoUpdate = true } = options !== null && options !== void 0 ? options : {};
     const account = useAccount({ accountName });
     const commentsStoreComments = useCommentsStore((state) => commentCids.map((commentCid) => state.comments[commentCid || ""]), shallow);
-    const subplebbitsPagesComments = useSubplebbitsPagesStore((state) => commentCids.map((commentCid) => state.comments[commentCid || ""]), shallow);
+    const communitiesPagesComments = useCommunitiesPagesStore((state) => commentCids.map((commentCid) => state.comments[commentCid || ""]), shallow);
     const addCommentToStore = useCommentsStore((state) => state.addCommentToStore);
+    const startCommentAutoUpdate = useCommentsStore((state) => state.startCommentAutoUpdate);
+    const stopCommentAutoUpdate = useCommentsStore((state) => state.stopCommentAutoUpdate);
+    const refreshCommentInStore = useCommentsStore((state) => state.refreshComment);
+    const autoUpdateSubscriptionId = useRef(`useComments-${++commentsAutoUpdateSubscriptionCount}`);
+    const commentCidsKey = JSON.stringify(commentCids);
+    const commentsKey = `${(account === null || account === void 0 ? void 0 : account.id) || ""}:${commentCidsKey}`;
+    const currentCommentsKeyRef = useRef(commentsKey);
+    currentCommentsKeyRef.current = commentsKey;
+    const [frozenComments, setFrozenComments] = useState([]);
+    const [frozenCommentsKey, setFrozenCommentsKey] = useState();
+    const [freezeSettledKey, setFreezeSettledKey] = useState();
     useEffect(() => {
         if (!commentCids || !account) {
             return;
@@ -129,7 +222,21 @@ export function useComments(options) {
         for (const commentCid of uniqueCommentCids) {
             addCommentToStore(commentCid, account).catch((error) => log.error("useComments addCommentToStore error", { commentCid, error }));
         }
-    }, [commentCids === null || commentCids === void 0 ? void 0 : commentCids.toString(), account === null || account === void 0 ? void 0 : account.id, onlyIfCached]);
+    }, [commentCidsKey, account === null || account === void 0 ? void 0 : account.id, onlyIfCached]);
+    useEffect(() => {
+        if (!commentCids || !account || onlyIfCached || !autoUpdate) {
+            return;
+        }
+        const uniqueCommentCids = [...new Set(commentCids)];
+        for (const commentCid of uniqueCommentCids) {
+            startCommentAutoUpdate(commentCid, autoUpdateSubscriptionId.current, account).catch((error) => log.error("useComments startCommentAutoUpdate error", { commentCid, error }));
+        }
+        return () => {
+            for (const commentCid of uniqueCommentCids) {
+                stopCommentAutoUpdate(commentCid, autoUpdateSubscriptionId.current).catch((error) => log.error("useComments stopCommentAutoUpdate error", { commentCid, error }));
+            }
+        };
+    }, [commentCidsKey, account === null || account === void 0 ? void 0 : account.id, onlyIfCached, autoUpdate]);
     if (account && (commentCids === null || commentCids === void 0 ? void 0 : commentCids.length)) {
         log("useComments", {
             commentCids,
@@ -138,25 +245,68 @@ export function useComments(options) {
             account,
         });
     }
-    // if comment from subplebbit pages exists and is fresher (or current missing), use it instead
-    const comments = useMemo(() => {
+    // if comment from community pages exists and is fresher (or current missing), use it instead
+    const liveComments = useMemo(() => {
         const result = [...commentsStoreComments];
         for (const i in result) {
-            const candidate = subplebbitsPagesComments[i];
+            const candidate = communitiesPagesComments[i];
             if (candidate)
                 result[i] = preferFresher(result[i], candidate);
         }
         return result;
-    }, [commentsStoreComments, subplebbitsPagesComments]);
+    }, [commentsStoreComments, communitiesPagesComments]);
+    const liveCommentsSettled = liveComments.every((comment) => getCommentStateAndReplyCount(comment).state === "succeeded");
+    const freezeSettledForCurrentKey = freezeSettledKey === commentsKey;
+    useEffect(() => {
+        if (autoUpdate) {
+            setFrozenComments([]);
+            setFrozenCommentsKey(undefined);
+            setFreezeSettledKey(undefined);
+            return;
+        }
+        setFrozenComments([]);
+        setFrozenCommentsKey(undefined);
+        setFreezeSettledKey(undefined);
+    }, [commentsKey, autoUpdate]);
+    useEffect(() => {
+        if (autoUpdate || freezeSettledForCurrentKey) {
+            return;
+        }
+        setFrozenComments(liveComments);
+        setFrozenCommentsKey(commentsKey);
+        if (liveCommentsSettled) {
+            setFreezeSettledKey(commentsKey);
+        }
+    }, [autoUpdate, commentsKey, freezeSettledForCurrentKey, liveComments, liveCommentsSettled]);
+    const frozenCommentsForCurrentSelection = frozenCommentsKey === commentsKey ? frozenComments : undefined;
+    const comments = autoUpdate ? liveComments : frozenCommentsForCurrentSelection || liveComments;
     const normalizedComments = useMemo(() => addCommentModerationToComments(comments), [comments]);
     // succeed if no comments are undefined
-    const state = normalizedComments.indexOf(undefined) === -1 ? "succeeded" : "fetching-ipfs";
+    const state = getCommentsState(normalizedComments);
+    const refresh = useCallback(() => __awaiter(this, void 0, void 0, function* () {
+        if (!account) {
+            throw Error("useComments cannot refresh comments not initialized yet");
+        }
+        const uniqueCommentCids = [...new Set(commentCids)];
+        const refreshedComments = yield Promise.all(uniqueCommentCids.map((commentCid) => refreshCommentInStore(commentCid, account)));
+        if (!autoUpdate && currentCommentsKeyRef.current === commentsKey) {
+            const latestCommunitiesPagesComments = useCommunitiesPagesStore.getState().comments;
+            const refreshedCommentsByCid = uniqueCommentCids.reduce((refreshedCommentsMap, commentCid, index) => {
+                refreshedCommentsMap[commentCid] = refreshedComments[index];
+                return refreshedCommentsMap;
+            }, {});
+            setFrozenComments(commentCids.map((commentCid) => preferFresher(refreshedCommentsByCid[commentCid || ""], latestCommunitiesPagesComments[commentCid || ""])));
+            setFrozenCommentsKey(commentsKey);
+            setFreezeSettledKey(commentsKey);
+        }
+    }), [account, autoUpdate, commentCids, commentsKey, refreshCommentInStore]);
     return useMemo(() => ({
         comments: normalizedComments,
         state,
+        refresh,
         error: undefined,
         errors: [],
-    }), [normalizedComments, commentCids === null || commentCids === void 0 ? void 0 : commentCids.toString()]);
+    }), [normalizedComments, commentsKey, refresh, state]);
 }
 export function useValidateComment(options) {
     assert(!options || typeof options === "object", `useValidateComment options argument '${options}' not an object`);
@@ -170,10 +320,10 @@ export function useValidateComment(options) {
             setValidated(undefined);
             return;
         }
-        // don't automatically block subplebbit because what subplebbit it comes from
-        // a malicious subplebbit could try to block other subplebbits, etc
-        const blockSubplebbit = false;
-        commentIsValid(comment, { validateReplies, blockSubplebbit }, account.plebbit).then((validated) => setValidated(validated));
+        // don't automatically block community because what community it comes from
+        // a malicious community could try to block other communities, etc
+        const blockCommunity = false;
+        commentIsValid(comment, { validateReplies, blockCommunity }, account.plebbit).then((validated) => setValidated(validated));
     }, [comment, validateReplies, account === null || account === void 0 ? void 0 : account.plebbit]);
     let state = "initializing";
     if (validated === true) {

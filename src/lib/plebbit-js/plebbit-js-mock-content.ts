@@ -1279,10 +1279,21 @@ class Publication extends EventEmitter {
     };
     this.emit("challengeverification", challengeVerificationMessage, this);
   }
+
+  stop() {
+    if ((this as any).updating || (this as any).updatingState !== "stopped") {
+      (this as any).state = "stopped";
+      (this as any).updating = false;
+      (this as any).updatingState = "stopped";
+      this.emit("statechange", "stopped");
+      this.emit("updatingstatechange", "stopped");
+    }
+  }
 }
 
 class Comment extends Publication {
   author: any;
+  updating: boolean;
   upvoteCount: number | undefined;
   downvoteCount: number | undefined;
   content: string | undefined;
@@ -1363,16 +1374,22 @@ class Comment extends Publication {
     this.updatingState = "fetching-ipfs";
     this.emit("updatingstatechange", "fetching-ipfs");
     (async () => {
-      while (true) {
+      while (this.updating) {
         await simulateLoadingTime();
         await simulateLoadingTime();
         await simulateLoadingTime();
+        if (!this.updating) {
+          return;
+        }
         this.simulateUpdateEvent();
       }
     })();
   }
 
   async simulateUpdateEvent() {
+    if (!this.updating) {
+      return;
+    }
     assert(this.cid, `invalid comment.cid '${this.cid}' can't simulateUpdateEvent`);
     if (this._getCommentOnFirstUpdate) {
       return this.simulateGetCommentOnFirstUpdateEvent();
@@ -1390,10 +1407,16 @@ class Comment extends Publication {
   }
 
   async simulateGetCommentOnFirstUpdateEvent() {
+    if (!this.updating) {
+      return;
+    }
     this._getCommentOnFirstUpdate = false;
 
     // @ts-ignore
     const comment = await new Plebbit().getComment({ cid: this.cid });
+    if (!this.updating) {
+      return;
+    }
     const props = JSON.parse(JSON.stringify(comment));
     for (const prop in props) {
       if (prop.startsWith("_")) {
