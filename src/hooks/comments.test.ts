@@ -242,6 +242,13 @@ describe("comments", () => {
       expect(rendered.result.current.state).toBe("succeeded");
     });
 
+    test("useComment with autoUpdate false and no commentCid stays uninitialized", async () => {
+      const rendered = renderHook<any, any>(() => useComment({ autoUpdate: false }));
+      await act(async () => {});
+      expect(rendered.result.current.cid).toBeUndefined();
+      expect(rendered.result.current.state).toBe("initializing");
+    });
+
     test("useComments with empty string in commentCids hits commentCid||'' branch (164,168)", async () => {
       const rendered = renderHook<any, any>(() =>
         useComments({ commentCids: ["comment cid 1", ""] }),
@@ -257,6 +264,22 @@ describe("comments", () => {
       const rendered = renderHook<any, any>(() => useComments({ commentCids: ["comment cid 1"] }));
       await act(async () => {});
       expect(rendered.result.current.comments).toEqual([undefined]);
+      vi.mocked(accountsHooks.useAccount).mockRestore();
+    });
+
+    test("useComment refresh rejects before initialization", async () => {
+      const rendered = renderHook<any, any>(() => useComment({ autoUpdate: false }));
+      await expect(rendered.result.current.refresh()).rejects.toThrow(
+        "useComment cannot refresh comment not initialized yet",
+      );
+    });
+
+    test("useComments refresh rejects when account is unavailable", async () => {
+      vi.spyOn(accountsHooks, "useAccount").mockReturnValue(undefined as any);
+      const rendered = renderHook<any, any>(() => useComments({ commentCids: ["comment cid 1"] }));
+      await expect(rendered.result.current.refresh()).rejects.toThrow(
+        "useComments cannot refresh comments not initialized yet",
+      );
       vi.mocked(accountsHooks.useAccount).mockRestore();
     });
 
@@ -502,6 +525,28 @@ describe("comments", () => {
       Comment.prototype.update = commentUpdate;
     });
 
+    test("useComment logs stopCommentAutoUpdate cleanup errors", async () => {
+      const stopCommentAutoUpdate = vi.fn().mockRejectedValue(new Error("stop cleanup failed"));
+      commentsStore.setState((state: any) => ({
+        ...state,
+        comments: {
+          ...state.comments,
+          "comment cid cleanup": { cid: "comment cid cleanup", timestamp: 1, updatedAt: 1 },
+        },
+        startCommentAutoUpdate: vi.fn().mockResolvedValue(undefined),
+        stopCommentAutoUpdate,
+      }));
+
+      const rendered = renderHook<any, any>(() =>
+        useComment({ commentCid: "comment cid cleanup" }),
+      );
+      await act(async () => {});
+      rendered.unmount();
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(stopCommentAutoUpdate).toHaveBeenCalled();
+    });
+
     test("plebbit.createComment throws adds useComment().error", async () => {
       // mock update to save comment instance
       const createComment = Plebbit.prototype.createComment;
@@ -521,6 +566,107 @@ describe("comments", () => {
 
       // restore mock
       Plebbit.prototype.createComment = createComment;
+    });
+
+    test("useComment with autoUpdate false can refresh manually", async () => {
+      const rendered = renderHook<any, any>(() =>
+        useComment({ commentCid: "comment cid refresh", autoUpdate: false }),
+      );
+      const waitFor = testUtils.createWaitFor(rendered);
+
+      await waitFor(() => rendered.result.current.upvoteCount === 3);
+      expect(rendered.result.current.state).toBe("succeeded");
+
+      await act(async () => {
+        await rendered.result.current.refresh();
+      });
+
+      await waitFor(() => rendered.result.current.upvoteCount === 5);
+      expect(rendered.result.current.state).toBe("succeeded");
+    });
+
+    test("useComment with autoUpdate false stays frozen while another hook keeps the same comment updating", async () => {
+      const commentUpdate = Comment.prototype.update;
+      const updatingComments: any[] = [];
+      Comment.prototype.update = function () {
+        updatingComments.push(this);
+        return commentUpdate.bind(this)();
+      };
+
+      const renderedFrozen = renderHook<any, any>(() =>
+        useComment({ commentCid: "comment cid frozen", autoUpdate: false }),
+      );
+      const waitForFrozen = testUtils.createWaitFor(renderedFrozen);
+      const renderedLive = renderHook<any, any>(() =>
+        useComment({ commentCid: "comment cid frozen" }),
+      );
+      const waitForLive = testUtils.createWaitFor(renderedLive);
+
+      await waitForFrozen(() => renderedFrozen.result.current.upvoteCount === 3);
+      await waitForLive(() => renderedLive.result.current.upvoteCount === 3);
+
+      await act(async () => {
+        await updatingComments[0].stop();
+        await updatingComments[0].update();
+      });
+
+      await waitForLive(() => renderedLive.result.current.upvoteCount === 5);
+      expect(renderedFrozen.result.current.upvoteCount).toBe(3);
+      expect(renderedLive.result.current.upvoteCount).toBe(5);
+
+      renderedFrozen.unmount();
+      renderedLive.unmount();
+      Comment.prototype.update = commentUpdate;
+    });
+
+    test("useComments with autoUpdate false can refresh manually", async () => {
+      const rendered = renderHook<any, any>(() =>
+        useComments({
+          commentCids: ["comment cid refresh 1", "comment cid refresh 2"],
+          autoUpdate: false,
+        }),
+      );
+      const waitFor = testUtils.createWaitFor(rendered);
+
+      await waitFor(
+        () =>
+          rendered.result.current.comments[0]?.upvoteCount === 3 &&
+          rendered.result.current.comments[1]?.upvoteCount === 3,
+      );
+
+      await act(async () => {
+        await rendered.result.current.refresh();
+      });
+
+      await waitFor(
+        () =>
+          rendered.result.current.comments[0]?.upvoteCount === 5 &&
+          rendered.result.current.comments[1]?.upvoteCount === 5,
+      );
+      expect(rendered.result.current.state).toBe("succeeded");
+    });
+
+    test("useComments logs stopCommentAutoUpdate cleanup errors", async () => {
+      const stopCommentAutoUpdate = vi.fn().mockRejectedValue(new Error("stop cleanup failed"));
+      commentsStore.setState((state: any) => ({
+        ...state,
+        comments: {
+          ...state.comments,
+          "comment cid cleanup 1": { cid: "comment cid cleanup 1", timestamp: 1, updatedAt: 1 },
+          "comment cid cleanup 2": { cid: "comment cid cleanup 2", timestamp: 1, updatedAt: 1 },
+        },
+        startCommentAutoUpdate: vi.fn().mockResolvedValue(undefined),
+        stopCommentAutoUpdate,
+      }));
+
+      const rendered = renderHook<any, any>(() =>
+        useComments({ commentCids: ["comment cid cleanup 1", "comment cid cleanup 2"] }),
+      );
+      await act(async () => {});
+      rendered.unmount();
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(stopCommentAutoUpdate).toHaveBeenCalledTimes(2);
     });
   });
 

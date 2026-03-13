@@ -110,9 +110,9 @@ useNotifications(): {notifications: Notification[], markAsRead: Function}
 #### Comments Hooks
 
 ```
-useComment({commentCid: string, onlyIfCached?: boolean}): Comment
+useComment({commentCid: string, onlyIfCached?: boolean, autoUpdate?: boolean}): Comment & {refresh: Function}
 useReplies({comment: Comment, sortType?: string, flat?: boolean, repliesPerPage?: number, filter?: CommentsFilter, accountComments?: {newerThan: number, append?: boolean}}): {replies: Comment[], hasMore: boolean, loadMore: function, reset: function, updatedReplies: Comment[], bufferedReplies: Comment[]}
-useComments({commentCids: string[], onlyIfCached?: boolean}): {comments: Comment[]}
+useComments({commentCids: string[], onlyIfCached?: boolean, autoUpdate?: boolean}): {comments: Comment[], refresh: Function}
 useEditedComment({comment: Comment}): {editedComment: Comment | undefined}
 useValidateComment({comment: Comment, validateReplies?: boolean}): {valid: boolean}
 ```
@@ -246,12 +246,19 @@ await publishComment();
 ```jsx
 const post = useComment({ commentCid });
 
+// manual refresh is always available
+await post.refresh();
+
 // post.author.address should not be used directly, it needs to be verified asynchronously using useAuthorAddress
 const { authorAddress, shortAuthorAddress } = useAuthorAddress({ comment: post });
 // exception: when linking to an author profile page, /u/${comment.author.address}/c/${comment.cid} should be used, not useAuthorAddress({comment}).authorAddress
 
 // use many times in a page without affecting performance
 const post = useComment({ commentCid, onlyIfCached: true });
+
+// disable background polling and refresh on demand
+const post = useComment({ commentCid, autoUpdate: false });
+await post.refresh();
 
 // post.replies are not validated, to show replies
 const { replies, hasMore, loadMore } = useReplies({ comment: post });
@@ -268,7 +275,8 @@ if (valid === false) {
 
 ```jsx
 const comment = useComment({ commentCid });
-const { comments } = useComments({ commentCids: [commentCid1, commentCid2, commentCid3] });
+const { comments, refresh } = useComments({ commentCids: [commentCid1, commentCid2, commentCid3] });
+await refresh();
 
 // content
 console.log(comment.content || comment.link || comment.title);
