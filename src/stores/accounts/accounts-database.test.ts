@@ -861,5 +861,73 @@ describe("accounts-database", () => {
       expect(edits["same-cid"][0].content).toBe("edit1");
       expect(edits["same-cid"][1].content).toBe("edit2");
     });
+
+    test("deleteAccountEdit removes only the matching edit", async () => {
+      const acc = makeAccount({ id: "ge-delete", name: "GEDelete" });
+      await accountsDatabase.addAccount(acc);
+      await accountsDatabase.addAccountEdit(acc.id, {
+        commentCid: "same-cid",
+        content: "edit1",
+        communityAddress: "s",
+        timestamp: 1,
+      } as any);
+      await accountsDatabase.addAccountEdit(acc.id, {
+        commentCid: "same-cid",
+        content: "edit2",
+        communityAddress: "s",
+        timestamp: 2,
+      } as any);
+
+      const deleted = await accountsDatabase.deleteAccountEdit(acc.id, {
+        commentCid: "same-cid",
+        content: "edit1",
+        communityAddress: "s",
+        timestamp: 1,
+      } as any);
+
+      expect(deleted).toBe(true);
+      const edits = await accountsDatabase.getAccountEdits(acc.id);
+      expect(edits["same-cid"]).toHaveLength(1);
+      expect(edits["same-cid"][0].content).toBe("edit2");
+    });
+
+    test("deleteAccountEdit is a no-op when the edit does not exist", async () => {
+      const acc = makeAccount({ id: "ge-noop", name: "GENoop" });
+      await accountsDatabase.addAccount(acc);
+      await accountsDatabase.addAccountEdit(acc.id, {
+        commentCid: "same-cid",
+        content: "edit1",
+        communityAddress: "s",
+        timestamp: 1,
+      } as any);
+
+      const deleted = await accountsDatabase.deleteAccountEdit(acc.id, {
+        commentCid: "same-cid",
+        content: "missing",
+        communityAddress: "s",
+        timestamp: 2,
+      } as any);
+
+      expect(deleted).toBe(false);
+      const edits = await accountsDatabase.getAccountEdits(acc.id);
+      expect(edits["same-cid"]).toHaveLength(1);
+      expect(edits["same-cid"][0].content).toBe("edit1");
+    });
+
+    test("deleteAccountEdit returns false when the account has no edits", async () => {
+      const acc = makeAccount({ id: "ge-empty", name: "GEEmpty" });
+      await accountsDatabase.addAccount(acc);
+
+      const deleted = await accountsDatabase.deleteAccountEdit(acc.id, {
+        commentCid: "same-cid",
+        content: "missing",
+        communityAddress: "s",
+        timestamp: 2,
+      } as any);
+
+      expect(deleted).toBe(false);
+      const edits = await accountsDatabase.getAccountEdits(acc.id);
+      expect(edits).toEqual({});
+    });
   });
 });
