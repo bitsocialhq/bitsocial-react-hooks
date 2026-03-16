@@ -3,6 +3,7 @@ import validator from "../../lib/validator";
 import chain from "../../lib/chain";
 import assert from "assert";
 import localForage from "localforage";
+import isEqual from "lodash.isequal";
 import localForageLru from "../../lib/localforage-lru";
 import {
   Accounts,
@@ -542,6 +543,48 @@ const addAccountEdit = async (accountId: string, createEditOptions: CreateCommen
   ]);
 };
 
+const doesStoredAccountEditMatch = (storedAccountEdit: any, targetStoredAccountEdit: any) =>
+  storedAccountEdit?.clientId && targetStoredAccountEdit?.clientId
+    ? storedAccountEdit.clientId === targetStoredAccountEdit.clientId
+    : isEqual(storedAccountEdit, targetStoredAccountEdit);
+
+const deleteAccountEdit = async (accountId: string, editToDelete: CreateCommentOptions) => {
+  assert(
+    editToDelete?.commentCid && typeof editToDelete?.commentCid === "string",
+    `deleteAccountEdit editToDelete.commentCid '${editToDelete?.commentCid}' not a string`,
+  );
+  const accountEditsDatabase = getAccountEditsDatabase(accountId);
+  const length = (await accountEditsDatabase.getItem("length")) || 0;
+  const items = await getDatabaseAsArray(accountEditsDatabase);
+
+  let deletedEdit = false;
+  const nextItems = items.filter((item) => {
+    if (!deletedEdit && doesStoredAccountEditMatch(item, editToDelete)) {
+      deletedEdit = true;
+      return false;
+    }
+    return true;
+  });
+
+  const newLength = nextItems.length;
+  const nextCommentEdits = nextItems.filter((item) => item?.commentCid === editToDelete.commentCid);
+  const promises: Promise<void>[] = [];
+  for (let i = 0; i < newLength; i++) {
+    promises.push(accountEditsDatabase.setItem(String(i), nextItems[i]));
+  }
+  if (length > newLength) {
+    promises.push(accountEditsDatabase.removeItem(String(length - 1)));
+    promises.push(accountEditsDatabase.setItem("length", newLength));
+  }
+  if (nextCommentEdits.length > 0) {
+    promises.push(accountEditsDatabase.setItem(editToDelete.commentCid, nextCommentEdits));
+  } else {
+    promises.push(accountEditsDatabase.removeItem(editToDelete.commentCid));
+  }
+  await Promise.all(promises);
+  return deletedEdit;
+};
+
 const getAccountEdits = async (accountId: string) => {
   const accountEditsDatabase = getAccountEditsDatabase(accountId);
   const length = (await accountEditsDatabase.getItem("length")) || 0;
@@ -603,6 +646,7 @@ const database = {
   getAccountsEdits,
   getAccountEdits,
   addAccountEdit,
+  deleteAccountEdit,
   accountVersion,
   migrate,
 };

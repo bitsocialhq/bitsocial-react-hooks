@@ -39,6 +39,8 @@ import {
   getAccountCommentDepth,
   addShortAddressesToAccountComment,
 } from "./utils";
+import isEqual from "lodash.isequal";
+import { v4 as uuid } from "uuid";
 import utils from "../../lib/utils";
 
 // Active publish-session tracking for pending comments (Task 3)
@@ -119,6 +121,72 @@ const cleanupPublishSessionOnTerminal = (accountId: string, index: number) => {
   const key = getPublishSessionKey(accountId, index);
   activePublishSessions.delete(key);
   abandonedPublishKeys.delete(key);
+};
+
+const doesStoredAccountEditMatch = (storedAccountEdit: any, targetStoredAccountEdit: any) =>
+  storedAccountEdit?.clientId && targetStoredAccountEdit?.clientId
+    ? storedAccountEdit.clientId === targetStoredAccountEdit.clientId
+    : isEqual(storedAccountEdit, targetStoredAccountEdit);
+
+const sanitizeStoredAccountEdit = (storedAccountEdit: any) => {
+  const sanitizedStoredAccountEdit = { ...storedAccountEdit };
+  delete sanitizedStoredAccountEdit.signer;
+  delete sanitizedStoredAccountEdit.author;
+  return sanitizedStoredAccountEdit;
+};
+
+const addStoredAccountEditToState = (
+  accountsEdits: Record<string, Record<string, any[]>>,
+  accountId: string,
+  storedAccountEdit: any,
+) => {
+  const accountEdits = accountsEdits[accountId] || {};
+  const commentEdits = accountEdits[storedAccountEdit.commentCid] || [];
+  return {
+    accountsEdits: {
+      ...accountsEdits,
+      [accountId]: {
+        ...accountEdits,
+        [storedAccountEdit.commentCid]: [...commentEdits, storedAccountEdit],
+      },
+    },
+  };
+};
+
+const removeStoredAccountEditFromState = (
+  accountsEdits: Record<string, Record<string, any[]>>,
+  accountId: string,
+  storedAccountEdit: any,
+) => {
+  const accountEdits = accountsEdits[accountId] || {};
+  const commentEdits = accountEdits[storedAccountEdit.commentCid] || [];
+  let deletedEdit = false;
+  const nextCommentEdits = commentEdits.filter((commentEdit) => {
+    if (!deletedEdit && doesStoredAccountEditMatch(commentEdit, storedAccountEdit)) {
+      deletedEdit = true;
+      return false;
+    }
+    return true;
+  });
+
+  const nextAccountEdits =
+    nextCommentEdits.length > 0
+      ? {
+          ...accountEdits,
+          [storedAccountEdit.commentCid]: nextCommentEdits,
+        }
+      : Object.fromEntries(
+          Object.entries(accountEdits).filter(
+            ([commentCid]) => commentCid !== storedAccountEdit.commentCid,
+          ),
+        );
+
+  return {
+    accountsEdits: {
+      ...accountsEdits,
+      [accountId]: nextAccountEdits,
+    },
+  };
 };
 
 const addNewAccountToDatabaseAndState = async (newAccount: Account) => {
@@ -1016,14 +1084,39 @@ export const publishCommentEdit = async (
   delete createCommentEditOptions.onChallengeVerification;
   delete createCommentEditOptions.onError;
   delete createCommentEditOptions.onPublishingStateChange;
-  const storedCreateCommentEditOptions =
-    normalizePublicationOptionsForStore(createCommentEditOptions);
+  const storedCreateCommentEditOptions = {
+    ...normalizePublicationOptionsForStore(createCommentEditOptions),
+    clientId: uuid(),
+  };
+  const storedCommentEdit = sanitizeStoredAccountEdit(storedCreateCommentEditOptions);
 
   let commentEdit = backfillPublicationCommunityAddress(
     await account.plebbit.createCommentEdit(createCommentEditOptions),
     createCommentEditOptions,
   );
   let lastChallenge: Challenge | undefined;
+  let challengeSucceeded = false;
+  let rollbackPendingEditPromise: Promise<void> | undefined;
+  const rollbackStoredCommentEdit = () => {
+    if (!rollbackPendingEditPromise && !challengeSucceeded) {
+      rollbackPendingEditPromise = Promise.all([
+        accountsDatabase.deleteAccountEdit(account.id, storedCommentEdit),
+        Promise.resolve(
+          accountsStore.setState(({ accountsEdits }) =>
+            removeStoredAccountEditFromState(accountsEdits, account.id, storedCommentEdit),
+          ),
+        ),
+      ]).then(() => {});
+    }
+    return rollbackPendingEditPromise;
+  };
+
+  await accountsDatabase.addAccountEdit(account.id, storedCreateCommentEditOptions);
+  log("accountsActions.publishCommentEdit", { createCommentEditOptions });
+  accountsStore.setState(({ accountsEdits }) =>
+    addStoredAccountEditToState(accountsEdits, account.id, storedCommentEdit),
+  );
+
   const publishAndRetryFailedChallengeVerification = async () => {
     commentEdit.once("challenge", async (challenge: Challenge) => {
       lastChallenge = challenge;
@@ -1033,6 +1126,9 @@ export const publishCommentEdit = async (
       "challengeverification",
       async (challengeVerification: ChallengeVerification) => {
         publishCommentEditOptions.onChallengeVerification(challengeVerification, commentEdit);
+        if (challengeVerification.challengeSuccess) {
+          challengeSucceeded = true;
+        }
         if (!challengeVerification.challengeSuccess && lastChallenge) {
           // publish again automatically on fail
           createCommentEditOptions = {
@@ -1048,9 +1144,10 @@ export const publishCommentEdit = async (
         }
       },
     );
-    commentEdit.on("error", (error: Error) =>
-      publishCommentEditOptions.onError?.(error, commentEdit),
-    );
+    commentEdit.on("error", async (error: Error) => {
+      await rollbackStoredCommentEdit();
+      publishCommentEditOptions.onError?.(error, commentEdit);
+    });
     // TODO: add publishingState to account edits
     commentEdit.on("publishingstatechange", (publishingState: string) =>
       publishCommentEditOptions.onPublishingStateChange?.(publishingState),
@@ -1061,33 +1158,12 @@ export const publishCommentEdit = async (
       // if it fails before, like failing to resolve ENS, we can emit the error
       await commentEdit.publish();
     } catch (error) {
+      await rollbackStoredCommentEdit();
       publishCommentEditOptions.onError?.(error, commentEdit);
     }
   };
 
   publishAndRetryFailedChallengeVerification();
-
-  await accountsDatabase.addAccountEdit(account.id, storedCreateCommentEditOptions);
-  log("accountsActions.publishCommentEdit", { createCommentEditOptions });
-  accountsStore.setState(({ accountsEdits }) => {
-    // remove signer and author because not needed and they expose private key
-    const commentEdit = {
-      ...storedCreateCommentEditOptions,
-      signer: undefined,
-      author: undefined,
-    };
-    let commentEdits = accountsEdits[account.id][storedCreateCommentEditOptions.commentCid] || [];
-    commentEdits = [...commentEdits, commentEdit];
-    return {
-      accountsEdits: {
-        ...accountsEdits,
-        [account.id]: {
-          ...accountsEdits[account.id],
-          [storedCreateCommentEditOptions.commentCid]: commentEdits,
-        },
-      },
-    };
-  });
 };
 
 export const publishCommentModeration = async (

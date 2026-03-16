@@ -3,6 +3,7 @@ import { vi } from "vitest";
 import testUtils, { renderHook } from "../../lib/test-utils";
 import * as accountsActions from "./accounts-actions";
 import * as accountsActionsInternal from "./accounts-actions-internal";
+import accountsDatabase from "./accounts-database";
 import accountsStore from "./accounts-store";
 import PlebbitJsMock, {
   Plebbit as BasePlebbit,
@@ -834,6 +835,153 @@ describe("accounts-actions", () => {
       const accountId = accountsStore.getState().activeAccountId;
       const edits = accountsEdits[accountId!]?.["cid"] || [];
       expect(edits.length).toBeGreaterThan(0);
+    });
+
+    test("publishCommentEdit awaits rollback before firing onError", async () => {
+      const account = Object.values(accountsStore.getState().accounts)[0];
+      const accountId = accountsStore.getState().activeAccountId!;
+      const origCreate = account.plebbit.createCommentEdit.bind(account.plebbit);
+      const deleteAccountEdit = vi.spyOn(accountsDatabase, "deleteAccountEdit");
+      vi.spyOn(account.plebbit, "createCommentEdit").mockImplementation(async (opts: any) => {
+        const publication = await origCreate(opts);
+        vi.spyOn(publication, "publishChallengeAnswers").mockImplementation(async () => {
+          const error = new Error(
+            "Error from /lit/: CommentEditPubsubPublication is attempting to edit a comment while not being the original author of the comment",
+          );
+          publication.emit("error", error);
+          publication.emit("error", error);
+        });
+        return publication;
+      });
+
+      let resolveOnError!: () => void;
+      const onErrorSeen = new Promise<void>((resolve) => {
+        resolveOnError = resolve;
+      });
+      const onError = vi.fn(async () => {
+        expect(accountsStore.getState().accountsEdits[accountId]?.["cid"]).toBeUndefined();
+        const persistedEdits = await accountsDatabase.getAccountEdits(accountId);
+        expect(persistedEdits["cid"]).toBeUndefined();
+        resolveOnError();
+      });
+      await act(async () => {
+        await accountsActions.publishCommentEdit({
+          communityAddress: "sub.eth",
+          commentCid: "cid",
+          deleted: true,
+          onChallenge: (challenge: any, publication: any) =>
+            publication.publishChallengeAnswers(["4"]),
+          onChallengeVerification: () => {},
+          onError,
+        });
+      });
+
+      await onErrorSeen;
+
+      expect(deleteAccountEdit).toHaveBeenCalledTimes(1);
+      expect(onError).toHaveBeenCalledTimes(2);
+      expect(accountsStore.getState().accountsEdits[accountId]?.["cid"]).toBeUndefined();
+
+      const persistedEdits = await accountsDatabase.getAccountEdits(accountId);
+      expect(persistedEdits["cid"]).toBeUndefined();
+    });
+
+    test("publishCommentEdit rollback preserves older identical edits for the same comment", async () => {
+      const account = Object.values(accountsStore.getState().accounts)[0];
+      const nowSpy = vi.spyOn(Date, "now").mockReturnValue(1000);
+      const existingEdit = {
+        commentCid: "cid",
+        communityAddress: "sub.eth",
+        deleted: true,
+        timestamp: 1,
+        clientId: "existing-edit",
+      };
+      await accountsDatabase.addAccountEdit(account.id, existingEdit as any);
+      accountsStore.setState(({ accountsEdits }) => ({
+        accountsEdits: {
+          ...accountsEdits,
+          [account.id]: {
+            ...accountsEdits[account.id],
+            cid: [existingEdit],
+          },
+        },
+      }));
+
+      const origCreate = account.plebbit.createCommentEdit.bind(account.plebbit);
+      vi.spyOn(account.plebbit, "createCommentEdit").mockImplementation(async (opts: any) => {
+        const publication = await origCreate(opts);
+        vi.spyOn(publication, "publishChallengeAnswers").mockImplementation(async () => {
+          publication.emit("error", new Error("terminal delete failure"));
+        });
+        return publication;
+      });
+
+      await act(async () => {
+        await accountsActions.publishCommentEdit({
+          communityAddress: "sub.eth",
+          commentCid: "cid",
+          deleted: true,
+          onChallenge: (challenge: any, publication: any) =>
+            publication.publishChallengeAnswers(["4"]),
+          onChallengeVerification: () => {},
+        });
+      });
+
+      await new Promise((r) => setTimeout(r, 200));
+      nowSpy.mockRestore();
+
+      const remainingStateEdits = accountsStore.getState().accountsEdits[account.id]?.["cid"];
+      expect(remainingStateEdits).toHaveLength(1);
+      expect(remainingStateEdits?.[0]).toMatchObject(existingEdit);
+
+      const persistedEdits = await accountsDatabase.getAccountEdits(account.id);
+      expect(persistedEdits["cid"]).toHaveLength(1);
+      expect(persistedEdits["cid"][0]).toMatchObject(existingEdit);
+    });
+
+    test("publishCommentEdit keeps optimistic edit when a later error happens after challenge success", async () => {
+      setPlebbitJs(PlebbitJsMock);
+      await testUtils.resetDatabasesAndStores();
+      const account = Object.values(accountsStore.getState().accounts)[0];
+      const accountId = accountsStore.getState().activeAccountId!;
+      const origCreate = account.plebbit.createCommentEdit.bind(account.plebbit);
+      vi.spyOn(account.plebbit, "createCommentEdit").mockImplementation(async (opts: any) => {
+        const publication = await origCreate(opts);
+        const origPublishChallengeAnswers = publication.publishChallengeAnswers.bind(publication);
+        vi.spyOn(publication, "publishChallengeAnswers").mockImplementation(async (...args) => {
+          await origPublishChallengeAnswers(...args);
+          publication.emit("error", new Error("post-success error"));
+        });
+        return publication;
+      });
+
+      let resolveOnError!: () => void;
+      const onErrorSeen = new Promise<void>((resolve) => {
+        resolveOnError = resolve;
+      });
+      const onError = vi.fn(() => {
+        resolveOnError();
+      });
+
+      await act(async () => {
+        await accountsActions.publishCommentEdit({
+          communityAddress: "sub.eth",
+          commentCid: "cid",
+          deleted: true,
+          onChallenge: (challenge: any, publication: any) =>
+            publication.publishChallengeAnswers(["4"]),
+          onChallengeVerification: () => {},
+          onError,
+        });
+      });
+
+      await onErrorSeen;
+
+      const storedEdits = accountsStore.getState().accountsEdits[accountId]?.["cid"] || [];
+      expect(storedEdits).toHaveLength(1);
+      const persistedEdits = await accountsDatabase.getAccountEdits(accountId);
+      expect(persistedEdits["cid"]).toHaveLength(1);
+      expect(onError).toHaveBeenCalledTimes(1);
     });
 
     test("publishCommentModeration retries on challenge failure", async () => {
