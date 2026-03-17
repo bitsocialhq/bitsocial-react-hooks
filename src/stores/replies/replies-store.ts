@@ -60,7 +60,7 @@ const addDefaultFeedOptions = (feedOptions: any) => {
   if (feedOptions.flat === undefined || feedOptions.flat === null) {
     feedOptions.flat = false;
   }
-  feedOptions.onlyIfCached = Boolean(feedOptions.onlyIfCached);
+  feedOptions.onlyIfCached = feedOptions.onlyIfCached === true;
   if (feedOptions.accountComments === undefined || feedOptions.accountComments === null) {
     feedOptions.accountComments = defaultAccountComments;
   }
