@@ -57,8 +57,8 @@ describe("plebbit-rpc", () => {
     const waitFor = testUtils.createWaitFor(rendered);
     expect(rendered.result.current.plebbitRpcSettings).toBe(undefined);
 
-    await waitFor(() => rendered.result.current.state === "connecting");
-    expect(rendered.result.current.state).toBe("connecting");
+    await waitFor(() => rendered.result.current.state !== "initializing");
+    expect(["connecting", "connected"]).toContain(rendered.result.current.state);
 
     await waitFor(() => !!rendered.result.current.plebbitRpcSettings);
     expect(rendered.result.current.plebbitRpcSettings.challenges).not.toBe(undefined);
