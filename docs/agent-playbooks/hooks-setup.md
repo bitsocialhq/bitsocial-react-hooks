@@ -7,7 +7,7 @@ If your AI coding assistant supports lifecycle hooks, configure these for this r
 | Hook            | Command                         | Purpose                                        |
 | --------------- | ------------------------------- | ---------------------------------------------- |
 | `afterFileEdit` | `.cursor/hooks/format.sh`       | Auto-format files after AI edits (prettier)    |
-| `afterFileEdit` | `.cursor/hooks/yarn-install.sh` | Run `yarn install` when `package.json` changes |
+| `afterFileEdit` | `.cursor/hooks/yarn-install.sh` | Run Yarn install when `package.json` changes |
 | `stop`          | `.cursor/hooks/verify.sh`       | Build and test at end                          |
 
 ## Why
@@ -50,7 +50,7 @@ exit 0
 
 ```bash
 #!/bin/bash
-# Run yarn install when package.json is changed
+# Run Yarn install when package.json is changed
 # Hook receives JSON via stdin with file_path
 
 input=$(cat)

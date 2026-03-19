@@ -23,6 +23,17 @@ yarn add https://github.com/bitsocialnet/bitsocial-react-hooks.git#<commit-hash>
 
 Use a pinned commit hash (or tag) so installs are reproducible.
 
+## Development Setup
+
+```bash
+nvm install
+nvm use
+corepack enable
+yarn install
+```
+
+Run `corepack enable` once per machine so plain `yarn` resolves to the pinned Yarn 4 release.
+
 ---
 
 ## Table of Contents

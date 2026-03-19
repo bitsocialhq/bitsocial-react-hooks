@@ -12,6 +12,7 @@ on:
       - 'scripts/**'
       - 'config/**'
       - '.github/**'
+      - '.yarnrc.yml'
       - 'package.json'
       - 'yarn.lock'
   push:
@@ -23,6 +24,7 @@ on:
       - 'scripts/**'
       - 'config/**'
       - '.github/**'
+      - '.yarnrc.yml'
       - 'package.json'
       - 'yarn.lock'
 
@@ -39,8 +41,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'yarn'
-      - run: HUSKY=0 yarn install --frozen-lockfile --network-concurrency 1
+      - run: corepack enable
+      - run: yarn install --immutable
       - run: yarn lint
       - run: yarn type-check
       - name: Run unit tests with coverage
@@ -90,8 +92,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'yarn'
-      - run: HUSKY=0 yarn install --frozen-lockfile --network-concurrency 1
+      - run: corepack enable
+      - run: yarn install --immutable
       - uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright

@@ -4,6 +4,8 @@
 yarn add https://github.com/bitsocialnet/bitsocial-react-hooks
 ```
 
+If you are developing in this repo, run `corepack enable` once first so `yarn` uses the pinned Yarn 4 release.
+
 #### Add env variable for mocking
 
 - Create a .env file in your react project with the content:

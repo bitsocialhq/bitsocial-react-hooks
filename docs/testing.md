@@ -1,6 +1,8 @@
 #### Install
 
-- `yarn`
+- `nvm install && nvm use`
+- `corepack enable` once per machine
+- `yarn install`
 
 #### Unit tests
 

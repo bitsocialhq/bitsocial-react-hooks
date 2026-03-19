@@ -52,7 +52,8 @@ This repo is a temporary fork of [plebbit/plebbit-react-hooks](https://github.co
 - Vitest for unit tests
 - Playwright for e2e tests
 - Prettier for formatting
-- yarn
+- Node 22 LTS via `nvm`
+- Corepack-managed Yarn 4
 
 ## Project Structure
 
@@ -69,7 +70,7 @@ src/
 
 ### Package and Dependency Rules
 
-- Use `yarn`, never `npm`.
+- Use Node 22 via `.nvmrc` and Corepack-managed Yarn 4, never npm/pnpm/bun or a global Yarn v1 install.
 - Pin exact dependency versions (`package@x.y.z`), never `^` or `~`.
 - Keep lockfile synchronized when dependency manifests change.
 
@@ -121,6 +122,7 @@ src/
 ### Verification Rules
 
 - Never mark work complete without verification.
+- Run `nvm install && nvm use`, then `corepack enable` once per machine before using the commands below.
 - After code changes, run: `yarn build`.
 - After test changes, run: `yarn test`.
 - Do not commit local `dist/` rebuild output. `dist/` is CI-managed in this repo; if verification dirties tracked files there, run `git restore --worktree -- dist` before committing.
