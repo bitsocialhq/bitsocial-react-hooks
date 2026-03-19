@@ -29,7 +29,7 @@ This repo is a temporary fork of [plebbit/plebbit-react-hooks](https://github.co
 | Situation | Required action |
 |---|---|
 | Hook or store logic changed (`src/hooks/`, `src/stores/`) | Follow architecture rules below; run `yarn build` |
-| `package.json` changed | Run `yarn install` to keep `yarn.lock` in sync |
+| `package.json` changed | Run `corepack yarn install` to keep `yarn.lock` in sync |
 | Bug report in a specific file/line | Start with git history scan from `docs/agent-playbooks/bug-investigation.md` before editing |
 | Public API changed (`src/index.ts`, `src/types.ts`) | Ensure backward compatibility; update README if signatures changed |
 | User-facing behavior/feature added or changed | Update `README.md` usage/docs in the same task before marking work complete |
@@ -52,7 +52,7 @@ This repo is a temporary fork of [plebbit/plebbit-react-hooks](https://github.co
 - Vitest for unit tests
 - Playwright for e2e tests
 - Prettier for formatting
-- yarn
+- Corepack-managed Yarn 4
 
 ## Project Structure
 
@@ -69,7 +69,7 @@ src/
 
 ### Package and Dependency Rules
 
-- Use `yarn`, never `npm`.
+- Use Corepack-managed Yarn 4, never npm/pnpm/bun or a global Yarn v1 install.
 - Pin exact dependency versions (`package@x.y.z`), never `^` or `~`.
 - Keep lockfile synchronized when dependency manifests change.
 
@@ -121,6 +121,7 @@ src/
 ### Verification Rules
 
 - Never mark work complete without verification.
+- Run `corepack enable` once per machine before using the commands below.
 - After code changes, run: `yarn build`.
 - After test changes, run: `yarn test`.
 - Do not commit local `dist/` rebuild output. `dist/` is CI-managed in this repo; if verification dirties tracked files there, run `git restore --worktree -- dist` before committing.
@@ -165,7 +166,7 @@ src/
 ## Common Commands
 
 ```bash
-yarn install
+corepack yarn install
 yarn build                # TypeScript compilation
 yarn knip                 # Advisory dependency/binary manifest audit
 yarn knip:full            # Exploratory full unused files/exports scan (non-blocking)

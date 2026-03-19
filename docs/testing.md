@@ -1,6 +1,6 @@
 #### Install
 
-- `yarn`
+- `corepack enable` once per machine, then `yarn`
 
 #### Unit tests
 
