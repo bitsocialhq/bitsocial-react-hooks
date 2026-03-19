@@ -39,6 +39,7 @@ import {
   useAccountWithCalculatedProperties,
   useCalculatedNotifications,
 } from "./utils";
+import { getAccountEditPropertySummary } from "../../stores/accounts/utils";
 import {
   getCanonicalCommunityAddress,
   getEquivalentCommunityAddressGroupKey,
@@ -199,9 +200,7 @@ export function useAccountCommunities(
     const communities: any = {};
     for (const [i, community] of communitiesArray.entries()) {
       const { groupKey, preferredAddress } = groupedCommunityAddresses[i];
-      const canonicalAddress =
-        canonicalAddressByGroupKey[groupKey] ||
-        getCanonicalCommunityAddress(community?.address || preferredAddress);
+      const canonicalAddress = canonicalAddressByGroupKey[groupKey];
       communities[canonicalAddress] = {
         ...communities[canonicalAddress],
         ...community,
@@ -218,8 +217,7 @@ export function useAccountCommunities(
     if (accountsStoreAccountCommunities) {
       for (const communityAddress in accountsStoreAccountCommunities) {
         const groupKey = getEquivalentCommunityAddressGroupKey(communityAddress);
-        const canonicalAddress =
-          canonicalAddressByGroupKey[groupKey] || getCanonicalCommunityAddress(communityAddress);
+        const canonicalAddress = canonicalAddressByGroupKey[groupKey];
         accountCommunities[canonicalAddress] = {
           ...accountCommunities[canonicalAddress],
           ...accountsStoreAccountCommunities[communityAddress],
@@ -230,8 +228,7 @@ export function useAccountCommunities(
     // add plebbit.communities data
     for (const communityAddress of ownerCommunityAddresses) {
       const groupKey = getEquivalentCommunityAddressGroupKey(communityAddress);
-      const canonicalAddress =
-        canonicalAddressByGroupKey[groupKey] || getCanonicalCommunityAddress(communityAddress);
+      const canonicalAddress = canonicalAddressByGroupKey[groupKey];
       accountCommunities[canonicalAddress] = {
         ...accountCommunities[canonicalAddress],
         address: canonicalAddress,
@@ -335,17 +332,37 @@ const getAccountCommentsStates = (accountComments: AccountComment[]) => {
   return states;
 };
 
+export const haveAccountCommentStatesChanged = (nextStates: string[], previousStates: string[]) =>
+  nextStates.toString() !== previousStates.toString();
+
 export function useAccountComments(options?: UseAccountCommentsOptions): UseAccountCommentsResult {
   assert(
     !options || typeof options === "object",
     `useAccountComments options argument '${options}' not an object`,
   );
-  const { accountName, filter } = options || {};
+  const {
+    accountName,
+    filter,
+    commentCid,
+    commentIndices,
+    communityAddress,
+    parentCid,
+    newerThan,
+    page,
+    pageSize,
+    order = "asc",
+  } = options || {};
   assert(
     !filter || typeof filter === "function",
     `useAccountComments options.filter argument '${filter}' not an function`,
   );
   const accountId = useAccountId(accountName);
+  const accountCommentsIndexes = useAccountsStore(
+    (state) => state.accountsCommentsIndexes[accountId || ""],
+  );
+  const commentCidToAccountComment = useAccountsStore(
+    (state) => state.commentCidsToAccountsComments[commentCid || ""],
+  );
   const accountComments = useAccountsStore((state) => state.accountsComments[accountId || ""]);
   const [accountCommentStates, setAccountCommentStates] = useState<string[]>([]);
 
@@ -353,11 +370,70 @@ export function useAccountComments(options?: UseAccountCommentsOptions): UseAcco
     if (!accountComments) {
       return [];
     }
-    if (filter) {
-      return accountComments.filter(filter);
+
+    let scopedAccountComments = accountComments;
+    if (Array.isArray(commentIndices) && commentIndices.length > 0) {
+      const normalizedCommentIndices = commentIndices
+        .map((commentIndex) => Number(commentIndex))
+        .filter((commentIndex) => Number.isInteger(commentIndex) && commentIndex >= 0);
+      scopedAccountComments = normalizedCommentIndices
+        .map((commentIndex) => accountComments[commentIndex])
+        .filter(Boolean);
+    } else if (commentCid) {
+      const mappedIndex =
+        commentCidToAccountComment?.accountId === accountId
+          ? commentCidToAccountComment.accountCommentIndex
+          : undefined;
+      scopedAccountComments =
+        typeof mappedIndex === "number" ? [accountComments[mappedIndex]].filter(Boolean) : [];
+    } else if (parentCid) {
+      const parentIndexes = accountCommentsIndexes?.byParentCid?.[parentCid];
+      scopedAccountComments = parentIndexes?.length
+        ? parentIndexes.map((index) => accountComments[index]).filter(Boolean)
+        : accountComments.filter((accountComment) => accountComment.parentCid === parentCid);
+    } else if (communityAddress) {
+      const communityIndexes = accountCommentsIndexes?.byCommunityAddress?.[communityAddress];
+      scopedAccountComments = communityIndexes?.length
+        ? communityIndexes.map((index) => accountComments[index]).filter(Boolean)
+        : accountComments.filter(
+            (accountComment) => accountComment.communityAddress === communityAddress,
+          );
     }
-    return accountComments;
-  }, [accountComments, filter]);
+
+    if (typeof newerThan === "number") {
+      const newerThanTimestamp =
+        newerThan === Infinity ? 0 : Math.floor(Date.now() / 1000) - newerThan;
+      scopedAccountComments = scopedAccountComments.filter(
+        (accountComment) => accountComment.timestamp > newerThanTimestamp,
+      );
+    }
+    if (filter) {
+      scopedAccountComments = scopedAccountComments.filter(filter);
+    }
+    if (order === "desc") {
+      scopedAccountComments = [...scopedAccountComments].reverse();
+    }
+    if (typeof pageSize === "number" && pageSize > 0) {
+      const pageNumber = Math.max(page || 0, 0);
+      const startIndex = pageNumber * pageSize;
+      return scopedAccountComments.slice(startIndex, startIndex + pageSize);
+    }
+    return scopedAccountComments;
+  }, [
+    accountComments,
+    accountCommentsIndexes,
+    accountId,
+    commentCid,
+    commentIndices,
+    commentCidToAccountComment,
+    communityAddress,
+    filter,
+    newerThan,
+    order,
+    page,
+    pageSize,
+    parentCid,
+  ]);
 
   // recheck the states for changes every 1 minute because succeeded / failed / pending aren't events, they are time elapsed
   const delay = 60_000;
@@ -365,7 +441,7 @@ export function useAccountComments(options?: UseAccountCommentsOptions): UseAcco
   useInterval(
     () => {
       const states = getAccountCommentsStates(filteredAccountComments);
-      if (states.toString() !== accountCommentStates.toString()) {
+      if (haveAccountCommentStatesChanged(states, accountCommentStates)) {
         setAccountCommentStates(states);
       }
     },
@@ -377,7 +453,7 @@ export function useAccountComments(options?: UseAccountCommentsOptions): UseAcco
     const states = getAccountCommentsStates(filteredAccountComments);
     return filteredAccountComments.map((comment, i) => ({
       ...comment,
-      state: states[i] || "initializing",
+      state: states[i],
     }));
   }, [filteredAccountComments, accountCommentStates]);
 
@@ -386,7 +462,15 @@ export function useAccountComments(options?: UseAccountCommentsOptions): UseAcco
       accountId,
       filteredAccountCommentsWithStates,
       accountComments,
+      commentCid,
+      commentIndices,
+      communityAddress,
       filter,
+      newerThan,
+      order,
+      page,
+      pageSize,
+      parentCid,
     });
   }
 
@@ -412,12 +496,25 @@ export function useAccountComment(options?: UseAccountCommentOptions): UseAccoun
     `useAccountComment options argument '${options}' not an object`,
   );
   const opts = options ?? {};
-  const { commentIndex, accountName } = opts;
-  const { accountComments } = useAccountComments({ accountName });
-  const accountComment = useMemo(
-    () => accountComments?.[Number(commentIndex)] || {},
-    [accountComments, commentIndex],
+  const { commentIndex, commentCid, accountName } = opts;
+  const accountId = useAccountId(accountName);
+  const commentCidToAccountComment = useAccountsStore(
+    (state) => state.commentCidsToAccountsComments[commentCid || ""],
   );
+  const accountComments = useAccountsStore((state) => state.accountsComments[accountId || ""]);
+  const normalizedCommentIndex = commentIndex === undefined ? undefined : Number(commentIndex);
+  const resolvedCommentIndex =
+    typeof normalizedCommentIndex === "number" && !Number.isNaN(normalizedCommentIndex)
+      ? normalizedCommentIndex
+      : commentCidToAccountComment?.accountId === accountId
+        ? commentCidToAccountComment.accountCommentIndex
+        : undefined;
+  const accountComment: any = useMemo(() => {
+    if (typeof resolvedCommentIndex !== "number") {
+      return {};
+    }
+    return accountComments?.[resolvedCommentIndex] || {};
+  }, [accountComments, resolvedCommentIndex]);
   const state = accountComment.state || "initializing";
 
   return useMemo(
@@ -441,7 +538,17 @@ export function useAccountVotes(options?: UseAccountVotesOptions): UseAccountVot
     `useAccountVotes options argument '${options}' not an object`,
   );
   const opts = options ?? {};
-  const { accountName, filter } = opts;
+  const {
+    accountName,
+    filter,
+    vote,
+    commentCid,
+    communityAddress,
+    newerThan,
+    page,
+    pageSize,
+    order = "asc",
+  } = opts;
   assert(
     !filter || typeof filter === "function",
     `useAccountVotes options.filter argument '${filter}' not an function`,
@@ -457,14 +564,54 @@ export function useAccountVotes(options?: UseAccountVotesOptions): UseAccountVot
     for (const i in accountVotes) {
       accountVotesArray.push(accountVotes[i]);
     }
+    if (typeof vote === "number") {
+      accountVotesArray = accountVotesArray.filter((accountVote) => accountVote.vote === vote);
+    }
+    if (commentCid) {
+      accountVotesArray = accountVotesArray.filter(
+        (accountVote) => accountVote.commentCid === commentCid,
+      );
+    }
+    if (communityAddress) {
+      accountVotesArray = accountVotesArray.filter(
+        (accountVote) => accountVote.communityAddress === communityAddress,
+      );
+    }
+    if (typeof newerThan === "number") {
+      const newerThanTimestamp =
+        newerThan === Infinity ? 0 : Math.floor(Date.now() / 1000) - newerThan;
+      accountVotesArray = accountVotesArray.filter(
+        (accountVote) => accountVote.timestamp > newerThanTimestamp,
+      );
+    }
     if (filter) {
       accountVotesArray = accountVotesArray.filter(filter);
     }
+    if (order === "desc") {
+      accountVotesArray.reverse();
+    }
+    if (typeof pageSize === "number" && pageSize > 0) {
+      const pageNumber = Math.max(page || 0, 0);
+      const startIndex = pageNumber * pageSize;
+      accountVotesArray = accountVotesArray.slice(startIndex, startIndex + pageSize);
+    }
     return accountVotesArray;
-  }, [accountVotes, filter]);
+  }, [accountVotes, commentCid, communityAddress, filter, newerThan, order, page, pageSize, vote]);
 
-  if (accountVotes && filter) {
-    log("useAccountVotes", { accountId, filteredAccountVotesArray, accountVotes, filter });
+  if (accountVotes && options) {
+    log("useAccountVotes", {
+      accountId,
+      filteredAccountVotesArray,
+      accountVotes,
+      commentCid,
+      communityAddress,
+      filter,
+      newerThan,
+      order,
+      page,
+      pageSize,
+      vote,
+    });
   }
 
   // TODO: add failed / pending states
@@ -527,11 +674,23 @@ export function useAccountEdits(options?: UseAccountEditsOptions): UseAccountEdi
     `useAccountEdits options.filter argument '${filter}' not an function`,
   );
   const accountId = useAccountId(accountName);
+  const accountActionsInternal = useAccountsStore((state) => state.accountsActionsInternal);
   const accountEdits = useAccountsStore((state) => state.accountsEdits[accountId || ""]);
+  const accountEditsLoaded = useAccountsStore(
+    (state) => state.accountsEditsLoaded[accountId || ""],
+  );
+
+  if (accountId && !accountEditsLoaded) {
+    accountActionsInternal
+      .ensureAccountEditsLoaded(accountId)
+      .catch((error: unknown) =>
+        log.error("useAccountEdits ensureAccountEditsLoaded error", { accountId, error }),
+      );
+  }
 
   const accountEditsArray = useMemo(() => {
     const accountEditsArray = [];
-    for (const i in accountEdits) {
+    for (const i in accountEdits || {}) {
       accountEditsArray.push(...accountEdits[i]);
     }
     // sort by oldest first
@@ -547,7 +706,7 @@ export function useAccountEdits(options?: UseAccountEditsOptions): UseAccountEdi
 
   // TODO: add failed / pending states
 
-  const state = accountId ? "succeeded" : "initializing";
+  const state = accountId ? (accountEditsLoaded ? "succeeded" : "initializing") : "initializing";
 
   return useMemo(
     () => ({
@@ -576,6 +735,9 @@ export function useEditedComment(options?: UseEditedCommentOptions): UseEditedCo
   const commentEdits = useAccountsStore(
     (state) => state.accountsEdits[accountIdKey]?.[commentCidKey],
   );
+  const commentEditSummary = useAccountsStore(
+    (state) => state.accountsEditsSummaries[accountIdKey]?.[commentCidKey],
+  );
 
   let initialState = "initializing";
   if (accountId && comment && comment.cid) {
@@ -592,49 +754,11 @@ export function useEditedComment(options?: UseEditedCommentOptions): UseEditedCo
     };
 
     // there are no edits
-    if (!commentEdits?.length) {
+    const propertyNameEdits: any =
+      commentEdits?.length > 0 ? getAccountEditPropertySummary(commentEdits) : commentEditSummary;
+
+    if (!propertyNameEdits || Object.keys(propertyNameEdits).length === 0) {
       return editedResult;
-    }
-
-    // don't include these props as they are not edit props, they are publication props
-    const nonEditPropertyNames = new Set([
-      "author",
-      "signer",
-      "clientId",
-      "commentCid",
-      "communityAddress",
-      "subplebbitAddress",
-      "timestamp",
-    ]);
-
-    // iterate over commentEdits and consolidate them into 1 propertyNameEdits object
-    const propertyNameEdits: any = {};
-    for (let commentEdit of commentEdits) {
-      // TODO: commentEdit and commentModeration are now separate, but both still in accountEdits store
-      // merge them until we find a better design
-      let editToUse: any = commentEdit;
-      if (commentEdit.commentModeration) {
-        editToUse = { ...commentEdit, ...commentEdit.commentModeration };
-        delete editToUse.commentModeration;
-      }
-
-      for (const propertyName in editToUse) {
-        // not valid edited properties
-        if (editToUse[propertyName] === undefined || nonEditPropertyNames.has(propertyName)) {
-          continue;
-        }
-        const previousTimestamp = propertyNameEdits[propertyName]?.timestamp || 0;
-        // only use the latest propertyNameEdit timestamp
-        if (editToUse.timestamp > previousTimestamp) {
-          propertyNameEdits[propertyName] = {
-            timestamp: editToUse.timestamp,
-            value: editToUse[propertyName],
-            // NOTE: don't use comment edit challengeVerification.challengeSuccess
-            // to know if an edit has failed or succeeded, since another mod can also edit
-            // if another mod overrides an edit, consider the edit failed
-          };
-        }
-      }
     }
 
     const now = Math.round(Date.now() / 1000);
@@ -729,7 +853,7 @@ export function useEditedComment(options?: UseEditedCommentOptions): UseEditedCo
     editedResult.editedComment = addCommentModeration(editedResult.editedComment);
 
     return editedResult;
-  }, [comment, commentEdits]);
+  }, [comment, commentEditSummary, commentEdits]);
 
   return useMemo(
     () => ({

@@ -7,7 +7,6 @@ import assert from "assert";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
 import {
   Account,
-  PublishCommentOptions,
   AccountCommentReply,
   Comment,
   AccountsComments,
@@ -21,7 +20,13 @@ import {
   normalizePublicationOptionsForPlebbit,
   normalizePublicationOptionsForStore,
 } from "../../lib/plebbit-compat";
-import { addShortAddressesToAccountComment } from "./utils";
+import {
+  addShortAddressesToAccountComment,
+  getAccountsCommentsIndexes,
+  sanitizeStoredAccountComment,
+} from "./utils";
+
+const accountEditsLoadPromises = new Map<string, Promise<void>>();
 
 const backfillLiveCommentCommunityAddress = (
   comment: Comment | undefined,
@@ -133,35 +138,15 @@ export const startUpdatingAccountCommentOnCommentUpdateEvents = async (
       getCommentCommunityAddress(commentArgument) ||
       storedComment?.communityAddress ||
       storedComment?.subplebbitAddress;
-    updatedComment = addShortAddressesToAccountComment(
+    const normalizedUpdatedComment = addShortAddressesToAccountComment(
       normalizePublicationOptionsForStore(updatedComment) as Comment,
     ) as Comment;
-    if (updatedComment.replies?.pages) {
-      updatedComment = {
-        ...updatedComment,
-        replies: {
-          ...updatedComment.replies,
-          pages: Object.fromEntries(
-            Object.entries(updatedComment.replies.pages).map(([pageCid, page]: [string, any]) => [
-              pageCid,
-              page?.comments
-                ? {
-                    ...page,
-                    comments: page.comments.map((reply: any) =>
-                      normalizePublicationOptionsForStore(reply),
-                    ),
-                  }
-                : page,
-            ]),
-          ),
-        },
-      } as Comment;
-    }
-    await accountsDatabase.addAccountComment(account.id, updatedComment, currentIndex);
+    const storedUpdatedComment = sanitizeStoredAccountComment(normalizedUpdatedComment) as Comment;
+    await accountsDatabase.addAccountComment(account.id, storedUpdatedComment, currentIndex);
     log("startUpdatingAccountCommentOnCommentUpdateEvents comment update", {
       commentCid: comment.cid,
       accountCommentIndex: currentIndex,
-      updatedComment,
+      updatedComment: storedUpdatedComment,
       account,
     });
     accountsStore.setState(({ accountsComments }) => {
@@ -178,16 +163,26 @@ export const startUpdatingAccountCommentOnCommentUpdateEvents = async (
       const updatedAccountComments = [...accountsComments[account.id]];
       const previousComment = updatedAccountComments[currentIndex];
       const updatedAccountComment = utils.clone({
-        ...updatedComment,
+        ...storedUpdatedComment,
         index: currentIndex,
         accountId: account.id,
       });
       updatedAccountComments[currentIndex] = updatedAccountComment;
-      return { accountsComments: { ...accountsComments, [account.id]: updatedAccountComments } };
+      const nextAccountsComments = {
+        ...accountsComments,
+        [account.id]: updatedAccountComments,
+      };
+      return {
+        accountsComments: nextAccountsComments,
+        accountsCommentsIndexes: {
+          ...accountsStore.getState().accountsCommentsIndexes,
+          [account.id]: getAccountsCommentsIndexes(nextAccountsComments)[account.id],
+        },
+      };
     });
 
     // update AccountCommentsReplies with new replies if has any new replies
-    const replyPageArray: any[] = Object.values(updatedComment.replies?.pages || {});
+    const replyPageArray: any[] = Object.values(normalizedUpdatedComment.replies?.pages || {});
     const getReplyCount = (replyPage: any) => replyPage?.comments?.length ?? 0;
     const replyCount =
       replyPageArray.length > 0
@@ -195,7 +190,7 @@ export const startUpdatingAccountCommentOnCommentUpdateEvents = async (
         : 0;
     const hasReplies = replyCount > 0;
     const repliesAreValid = await utils.repliesAreValid(
-      updatedComment,
+      normalizedUpdatedComment,
       { validateReplies: false, blockCommunity: true },
       account.plebbit,
     );
@@ -216,11 +211,19 @@ export const startUpdatingAccountCommentOnCommentUpdateEvents = async (
         const updatedAccountCommentsReplies: { [replyCid: string]: AccountCommentReply } = {};
         for (const replyPage of replyPageArray) {
           for (const reply of replyPage?.comments || []) {
+            const normalizedReply = normalizePublicationOptionsForStore(reply) as Comment;
+            normalizedReply.communityAddress =
+              getCommentCommunityAddress(normalizedReply) ||
+              normalizedUpdatedComment.communityAddress ||
+              storedUpdatedComment.communityAddress;
             const markedAsRead =
               accountsCommentsReplies[account.id]?.[reply.cid]?.markedAsRead === true
                 ? true
                 : false;
-            updatedAccountCommentsReplies[reply.cid] = { ...reply, markedAsRead };
+            updatedAccountCommentsReplies[normalizedReply.cid] = {
+              ...normalizedReply,
+              markedAsRead,
+            };
           }
         }
 
@@ -286,6 +289,11 @@ export const addCidToAccountComment = async (comment: Comment) => {
         };
         return {
           accountsComments: newAccountsComments,
+          accountsCommentsIndexes: {
+            ...accountsStore.getState().accountsCommentsIndexes,
+            [accountComment.accountId]:
+              getAccountsCommentsIndexes(newAccountsComments)[accountComment.accountId],
+          },
           commentCidsToAccountsComments: {
             ...commentCidsToAccountsComments,
             [comment.cid]: {
@@ -352,6 +360,39 @@ const getAccountsCommentsWithoutCids = () => {
   }
   previousAccountsCommentsWithoutCids = accountsCommentsWithoutCids;
   return accountsCommentsWithoutCids;
+};
+
+export const ensureAccountEditsLoaded = async (accountId: string) => {
+  assert(
+    accountId && typeof accountId === "string",
+    `ensureAccountEditsLoaded invalid '${accountId}'`,
+  );
+
+  if (accountsStore.getState().accountsEditsLoaded[accountId]) {
+    return;
+  }
+  const existingPromise = accountEditsLoadPromises.get(accountId);
+  if (existingPromise) {
+    return existingPromise;
+  }
+
+  const loadPromise = accountsDatabase
+    .getAccountEdits(accountId)
+    .then((accountEdits) => {
+      accountsStore.setState(({ accountsEdits, accountsEditsLoaded }) => ({
+        accountsEdits: { ...accountsEdits, [accountId]: accountEdits },
+        accountsEditsLoaded: { ...accountsEditsLoaded, [accountId]: true },
+      }));
+    })
+    .finally(() => {
+      accountEditsLoadPromises.delete(accountId);
+    });
+  accountEditsLoadPromises.set(accountId, loadPromise);
+  return loadPromise;
+};
+
+export const resetLazyAccountHistoryLoaders = () => {
+  accountEditsLoadPromises.clear();
 };
 
 // internal accounts action: mark an account's notifications as read

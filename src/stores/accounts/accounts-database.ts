@@ -14,15 +14,24 @@ import {
   AccountsComments,
   AccountCommentReply,
   AccountsCommentsReplies,
+  AccountEdit,
+  AccountEditsSummary,
 } from "../../types";
 import utils from "../../lib/utils";
 import { getDefaultPlebbitOptions, overwritePlebbitOptions } from "./account-generator";
+import { getAccountsEditsSummary, sanitizeStoredAccountComment } from "./utils";
 import Logger from "@plebbit/plebbit-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
 const accountsDatabase = localForage.createInstance({ name: "plebbitReactHooks-accounts" });
 const accountsMetadataDatabase = localForage.createInstance({
   name: "plebbitReactHooks-accountsMetadata",
 });
+const storageVersionKey = "__storageVersion";
+const votesLatestIndexKey = "__commentCidToLatestIndex";
+const editsTargetToIndicesKey = "__targetToIndices";
+const editsSummaryKey = "__summary";
+const voteStorageVersion = 1;
+const editStorageVersion = 1;
 
 // TODO: remove this eventually after everyone has migrated
 // migrate to name with safe prefix
@@ -193,6 +202,44 @@ const getDatabaseAsArray = async (database: any) => {
   return items;
 };
 
+const removeFunctionsAndSensitiveFields = (publication: CreateCommentOptions) => {
+  const sanitizedPublication: Record<string, any> = {};
+  for (const key in publication) {
+    if (key === "signer" || key === "author" || typeof publication[key] === "function") {
+      continue;
+    }
+    sanitizedPublication[key] = publication[key];
+  }
+  return sanitizedPublication;
+};
+
+const isNumericDatabaseKey = (key: string) => /^[0-9]+$/.test(key);
+
+const rebuildVotesLatestIndex = (votes: any[]) => {
+  const latestIndexByCommentCid: Record<string, number> = {};
+  for (const [index, vote] of votes.entries()) {
+    if (vote?.commentCid) {
+      latestIndexByCommentCid[vote.commentCid] = index;
+    }
+  }
+  return latestIndexByCommentCid;
+};
+
+const rebuildEditsTargetIndexes = (edits: any[]) => {
+  const targetToIndices: Record<string, number[]> = {};
+  for (const [index, edit] of edits.entries()) {
+    const editTarget = getAccountEditTarget(edit);
+    if (!editTarget) {
+      continue;
+    }
+    if (!targetToIndices[editTarget]) {
+      targetToIndices[editTarget] = [];
+    }
+    targetToIndices[editTarget].push(index);
+  }
+  return targetToIndices;
+};
+
 const addAccount = async (account: Account) => {
   validator.validateAccountsDatabaseAddAccountArguments(account);
   let accountIds: string[] | null = await accountsMetadataDatabase.getItem("accountIds");
@@ -286,6 +333,12 @@ const removeAccount = async (account: Account) => {
 
   const accountVotesDatabase = getAccountVotesDatabase(account.id);
   await accountVotesDatabase.clear();
+
+  const accountCommentsRepliesDatabase = getAccountCommentsRepliesDatabase(account.id);
+  await accountCommentsRepliesDatabase.clear();
+
+  const accountEditsDatabase = getAccountEditsDatabase(account.id);
+  await accountEditsDatabase.clear();
 };
 
 const accountsCommentsDatabases: any = {};
@@ -328,7 +381,7 @@ const addAccountComment = async (
 ) => {
   const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
   const length = (await accountCommentsDatabase.getItem("length")) || 0;
-  comment = utils.clone({ ...comment, signer: undefined });
+  comment = sanitizeStoredAccountComment(comment);
   if (typeof accountCommentIndex === "number") {
     assert(
       accountCommentIndex < length,
@@ -357,6 +410,7 @@ const getAccountComments = async (accountId: string) => {
   const comments = await Promise.all(promises);
   // add index and account id to account comments for easier updating
   for (const i in comments) {
+    comments[i] = sanitizeStoredAccountComment(comments[i]);
     comments[i].index = Number(i);
     comments[i].accountId = accountId;
   }
@@ -394,41 +448,62 @@ const getAccountVotesDatabase = (accountId: string) => {
   return accountsVotesDatabases[accountId];
 };
 
+const ensureAccountVotesDatabaseLayout = async (accountId: string) => {
+  const accountVotesDatabase = getAccountVotesDatabase(accountId);
+  if ((await accountVotesDatabase.getItem(storageVersionKey)) === voteStorageVersion) {
+    return;
+  }
+
+  const votes = await getDatabaseAsArray(accountVotesDatabase);
+  const latestIndexByCommentCid = rebuildVotesLatestIndex(votes);
+  const keys = await accountVotesDatabase.keys();
+  const duplicateKeysToDelete = keys.filter(
+    (key: string) =>
+      !isNumericDatabaseKey(key) &&
+      key !== "length" &&
+      key !== storageVersionKey &&
+      key !== votesLatestIndexKey &&
+      latestIndexByCommentCid[key] !== undefined,
+  );
+  await Promise.all([
+    ...duplicateKeysToDelete.map((key: string) => accountVotesDatabase.removeItem(key)),
+    accountVotesDatabase.setItem(votesLatestIndexKey, latestIndexByCommentCid),
+    accountVotesDatabase.setItem(storageVersionKey, voteStorageVersion),
+  ]);
+};
+
 const addAccountVote = async (accountId: string, createVoteOptions: CreateCommentOptions) => {
   assert(
     createVoteOptions?.commentCid && typeof createVoteOptions?.commentCid === "string",
     `addAccountVote createVoteOptions.commentCid '${createVoteOptions?.commentCid}' not a string`,
   );
   const accountVotesDatabase = getAccountVotesDatabase(accountId);
+  await ensureAccountVotesDatabaseLayout(accountId);
   const length = (await accountVotesDatabase.getItem("length")) || 0;
-  const vote = { ...createVoteOptions };
-  delete vote.signer;
-  delete vote.author;
-  // delete all functions because they can't be added to indexeddb
-  for (const i in vote) {
-    if (typeof vote[i] === "function") {
-      delete vote[i];
-    }
-  }
+  const vote = removeFunctionsAndSensitiveFields(createVoteOptions);
+  const existingLatestIndexByCommentCid = await accountVotesDatabase.getItem(votesLatestIndexKey);
+  const latestIndexByCommentCid = {
+    ...existingLatestIndexByCommentCid,
+    [vote.commentCid]: length,
+  };
   await Promise.all([
-    accountVotesDatabase.setItem(vote.commentCid, vote),
     accountVotesDatabase.setItem(String(length), vote),
+    accountVotesDatabase.setItem(votesLatestIndexKey, latestIndexByCommentCid),
+    accountVotesDatabase.setItem(storageVersionKey, voteStorageVersion),
     accountVotesDatabase.setItem("length", length + 1),
   ]);
 };
 
 const getAccountVotes = async (accountId: string) => {
   const accountVotesDatabase = getAccountVotesDatabase(accountId);
-  const length = (await accountVotesDatabase.getItem("length")) || 0;
+  await ensureAccountVotesDatabaseLayout(accountId);
+  const latestIndexByCommentCid = await accountVotesDatabase.getItem(votesLatestIndexKey);
   const votes: any = {};
-  if (length === 0) {
+  const latestIndexes = Object.values<number>(latestIndexByCommentCid);
+  if (latestIndexes.length === 0) {
     return votes;
   }
-  let promises = [];
-  let i = 0;
-  while (i < length) {
-    promises.push(accountVotesDatabase.getItem(String(i++)));
-  }
+  const promises = latestIndexes.map((index) => accountVotesDatabase.getItem(String(index)));
   const votesArray = await Promise.all(promises);
   for (const vote of votesArray) {
     votes[vote?.commentCid] = vote;
@@ -515,32 +590,68 @@ const getAccountEditsDatabase = (accountId: string) => {
   return accountsEditsDatabases[accountId];
 };
 
+const getAccountEditTarget = (edit: AccountEdit) =>
+  edit?.commentCid || edit?.communityAddress || edit?.subplebbitAddress;
+
+const persistAccountEditsIndexes = async (accountId: string, edits: AccountEdit[]) => {
+  const accountEditsDatabase = getAccountEditsDatabase(accountId);
+  const targetToIndices = rebuildEditsTargetIndexes(edits);
+  const summary = getAccountsEditsSummary(
+    Object.fromEntries(
+      Object.entries(targetToIndices).map(([target, indices]) => [
+        target,
+        indices.map((index) => edits[index]).filter(Boolean),
+      ]),
+    ),
+  );
+  await Promise.all([
+    accountEditsDatabase.setItem(editsTargetToIndicesKey, targetToIndices),
+    accountEditsDatabase.setItem(editsSummaryKey, summary),
+    accountEditsDatabase.setItem(storageVersionKey, editStorageVersion),
+  ]);
+  return { targetToIndices, summary };
+};
+
+const ensureAccountEditsDatabaseLayout = async (accountId: string) => {
+  const accountEditsDatabase = getAccountEditsDatabase(accountId);
+  if ((await accountEditsDatabase.getItem(storageVersionKey)) === editStorageVersion) {
+    return;
+  }
+
+  const edits = (await getDatabaseAsArray(accountEditsDatabase)).filter(Boolean);
+  const keys = await accountEditsDatabase.keys();
+  const duplicateKeysToDelete = keys.filter(
+    (key: string) =>
+      !isNumericDatabaseKey(key) &&
+      key !== "length" &&
+      key !== storageVersionKey &&
+      key !== editsTargetToIndicesKey &&
+      key !== editsSummaryKey &&
+      edits.some((edit) => getAccountEditTarget(edit) === key),
+  );
+  await Promise.all(
+    duplicateKeysToDelete.map((key: string) => accountEditsDatabase.removeItem(key)),
+  );
+  await persistAccountEditsIndexes(accountId, edits);
+};
+
 const addAccountEdit = async (accountId: string, createEditOptions: CreateCommentOptions) => {
   assert(
     createEditOptions?.commentCid && typeof createEditOptions?.commentCid === "string",
     `addAccountEdit createEditOptions.commentCid '${createEditOptions?.commentCid}' not a string`,
   );
   const accountEditsDatabase = getAccountEditsDatabase(accountId);
+  await ensureAccountEditsDatabaseLayout(accountId);
   const length = (await accountEditsDatabase.getItem("length")) || 0;
-  const edit = { ...createEditOptions };
-  delete edit.signer;
-  delete edit.author;
-  // delete all functions because they can't be added to indexeddb
-  for (const i in edit) {
-    if (typeof edit[i] === "function") {
-      delete edit[i];
-    }
-  }
-
-  // edits are an array because you can edit the same comment multiple times
-  const edits = (await accountEditsDatabase.getItem(edit.commentCid)) || [];
-  edits.push(edit);
-
+  const edit = removeFunctionsAndSensitiveFields(createEditOptions);
+  const existingEdits = (await getDatabaseAsArray(accountEditsDatabase)).filter(Boolean);
+  existingEdits.push(edit);
   await Promise.all([
-    accountEditsDatabase.setItem(edit.commentCid, edits),
     accountEditsDatabase.setItem(String(length), edit),
+    accountEditsDatabase.setItem(storageVersionKey, editStorageVersion),
     accountEditsDatabase.setItem("length", length + 1),
   ]);
+  await persistAccountEditsIndexes(accountId, existingEdits as AccountEdit[]);
 };
 
 const doesStoredAccountEditMatch = (storedAccountEdit: any, targetStoredAccountEdit: any) =>
@@ -554,6 +665,7 @@ const deleteAccountEdit = async (accountId: string, editToDelete: CreateCommentO
     `deleteAccountEdit editToDelete.commentCid '${editToDelete?.commentCid}' not a string`,
   );
   const accountEditsDatabase = getAccountEditsDatabase(accountId);
+  await ensureAccountEditsDatabaseLayout(accountId);
   const length = (await accountEditsDatabase.getItem("length")) || 0;
   const items = await getDatabaseAsArray(accountEditsDatabase);
 
@@ -567,7 +679,6 @@ const deleteAccountEdit = async (accountId: string, editToDelete: CreateCommentO
   });
 
   const newLength = nextItems.length;
-  const nextCommentEdits = nextItems.filter((item) => item?.commentCid === editToDelete.commentCid);
   const promises: Promise<void>[] = [];
   for (let i = 0; i < newLength; i++) {
     promises.push(accountEditsDatabase.setItem(String(i), nextItems[i]));
@@ -576,36 +687,34 @@ const deleteAccountEdit = async (accountId: string, editToDelete: CreateCommentO
     promises.push(accountEditsDatabase.removeItem(String(length - 1)));
     promises.push(accountEditsDatabase.setItem("length", newLength));
   }
-  if (nextCommentEdits.length > 0) {
-    promises.push(accountEditsDatabase.setItem(editToDelete.commentCid, nextCommentEdits));
-  } else {
-    promises.push(accountEditsDatabase.removeItem(editToDelete.commentCid));
-  }
   await Promise.all(promises);
+  await persistAccountEditsIndexes(accountId, nextItems as AccountEdit[]);
   return deletedEdit;
 };
 
 const getAccountEdits = async (accountId: string) => {
   const accountEditsDatabase = getAccountEditsDatabase(accountId);
-  const length = (await accountEditsDatabase.getItem("length")) || 0;
+  await ensureAccountEditsDatabaseLayout(accountId);
+  const targetToIndices = await accountEditsDatabase.getItem(editsTargetToIndicesKey);
   const edits: any = {};
-  if (length === 0) {
+  const targets = Object.keys(targetToIndices);
+  if (targets.length === 0) {
     return edits;
   }
-  let promises = [];
-  let i = 0;
-  while (i < length) {
-    promises.push(accountEditsDatabase.getItem(String(i++)));
-  }
-  const editsArray = await Promise.all(promises);
-  for (const edit of editsArray) {
-    // TODO: must change this logic for community edits
-    if (!edits[edit?.commentCid]) {
-      edits[edit?.commentCid] = [];
-    }
-    edits[edit?.commentCid].push(edit);
+  for (const target of targets) {
+    const targetIndices: number[] = targetToIndices[target];
+    const targetEdits = await Promise.all(
+      targetIndices.map((index) => accountEditsDatabase.getItem(String(index))),
+    );
+    edits[target] = targetEdits.filter(Boolean);
   }
   return edits;
+};
+
+const getAccountEditsSummary = async (accountId: string): Promise<AccountEditsSummary> => {
+  const accountEditsDatabase = getAccountEditsDatabase(accountId);
+  await ensureAccountEditsDatabaseLayout(accountId);
+  return await accountEditsDatabase.getItem(editsSummaryKey);
 };
 
 const getAccountsEdits = async (accountIds: string[]) => {
@@ -623,6 +732,19 @@ const getAccountsEdits = async (accountIds: string[]) => {
     accountsEdits[accountId] = accountsEditsArray[i];
   }
   return accountsEdits;
+};
+
+const getAccountsEditsSummaries = async (accountIds: string[]) => {
+  assert(
+    Array.isArray(accountIds),
+    `getAccountsEditsSummaries invalid accountIds '${accountIds}' not an array`,
+  );
+  const accountsEditsSummaries = await Promise.all(
+    accountIds.map((accountId) => getAccountEditsSummary(accountId)),
+  );
+  return Object.fromEntries(
+    accountIds.map((accountId, index) => [accountId, accountsEditsSummaries[index]]),
+  );
 };
 
 const database = {
@@ -645,6 +767,8 @@ const database = {
   getAccountsCommentsReplies,
   getAccountsEdits,
   getAccountEdits,
+  getAccountsEditsSummaries,
+  getAccountEditsSummary,
   addAccountEdit,
   deleteAccountEdit,
   accountVersion,

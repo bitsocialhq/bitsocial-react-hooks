@@ -566,6 +566,92 @@ describe("accounts-database", () => {
       expect(Array.isArray(edits["cid1"])).toBe(true);
       expect(edits["cid1"][0].onChallenge).toBeUndefined();
     });
+
+    test("migrates legacy duplicate vote and edit keys into compact indexes", async () => {
+      const acc = makeAccount({ id: "legacy-history", name: "LegacyHistory" });
+      await accountsDatabase.addAccount(acc);
+
+      const votesDb = localForage.createInstance({
+        name: `plebbitReactHooks-accountVotes-${acc.id}`,
+      });
+      await votesDb.setItem("0", { commentCid: "vote-cid", vote: 1, timestamp: 1 });
+      await votesDb.setItem("length", 1);
+      await votesDb.setItem("vote-cid", { commentCid: "vote-cid", vote: 1, timestamp: 1 });
+
+      const editsDb = localForage.createInstance({
+        name: `plebbitReactHooks-accountEdits-${acc.id}`,
+      });
+      await editsDb.setItem("0", { commentCid: "edit-cid", spoiler: true, timestamp: 10 });
+      await editsDb.setItem("length", 1);
+      await editsDb.setItem("edit-cid", [{ commentCid: "edit-cid", spoiler: true, timestamp: 10 }]);
+
+      const votes = await accountsDatabase.getAccountVotes(acc.id);
+      const edits = await accountsDatabase.getAccountEdits(acc.id);
+      const editSummary = await accountsDatabase.getAccountEditsSummary(acc.id);
+
+      expect(votes["vote-cid"].vote).toBe(1);
+      expect(edits["edit-cid"]).toHaveLength(1);
+      expect(editSummary["edit-cid"].spoiler.value).toBe(true);
+      expect(await votesDb.getItem("vote-cid")).toBeNull();
+      expect(await editsDb.getItem("edit-cid")).toBeNull();
+    });
+
+    test("ignores malformed legacy votes without commentCid when rebuilding compact indexes", async () => {
+      const acc = makeAccount({ id: "legacy-vote-no-cid", name: "LegacyVoteNoCid" });
+      await accountsDatabase.addAccount(acc);
+      const votesDb = localForage.createInstance({
+        name: `plebbitReactHooks-accountVotes-${acc.id}`,
+      });
+      await votesDb.setItem("0", { vote: 1, timestamp: 1 });
+      await votesDb.setItem("length", 1);
+
+      const votes = await accountsDatabase.getAccountVotes(acc.id);
+
+      expect(votes).toEqual({});
+    });
+
+    test("legacy edit entries without a target are ignored when rebuilding indexes", async () => {
+      const acc = makeAccount({ id: "legacy-edit-no-target", name: "LegacyEditNoTarget" });
+      await accountsDatabase.addAccount(acc);
+      const editsDb = localForage.createInstance({
+        name: `plebbitReactHooks-accountEdits-${acc.id}`,
+      });
+      await editsDb.setItem("0", { spoiler: true, timestamp: 10 });
+      await editsDb.setItem("length", 1);
+
+      const edits = await accountsDatabase.getAccountEdits(acc.id);
+      const summary = await accountsDatabase.getAccountEditsSummary(acc.id);
+
+      expect(edits).toEqual({});
+      expect(summary).toEqual({});
+    });
+
+    test("builds compact edit indexes for community and subplebbit targets", async () => {
+      const acc = makeAccount({ id: "legacy-edit-targets", name: "LegacyEditTargets" });
+      await accountsDatabase.addAccount(acc);
+      const editsDb = localForage.createInstance({
+        name: `plebbitReactHooks-accountEdits-${acc.id}`,
+      });
+      await editsDb.setItem("0", {
+        communityAddress: "community.eth",
+        title: "community",
+        timestamp: 10,
+      });
+      await editsDb.setItem("1", {
+        subplebbitAddress: "legacy-community.eth",
+        description: "legacy",
+        timestamp: 20,
+      });
+      await editsDb.setItem("length", 2);
+
+      const edits = await accountsDatabase.getAccountEdits(acc.id);
+      const summary = await accountsDatabase.getAccountEditsSummary(acc.id);
+
+      expect(edits["community.eth"][0].title).toBe("community");
+      expect(edits["legacy-community.eth"][0].description).toBe("legacy");
+      expect(summary["community.eth"].title.value).toBe("community");
+      expect(summary["legacy-community.eth"].description.value).toBe("legacy");
+    });
   });
 
   describe("getExportedAccountJson", () => {
@@ -632,6 +718,31 @@ describe("accounts-database", () => {
       expect(comments).toHaveLength(2);
       expect(comments[0].cid).toBe("cid1");
       expect(comments[1].cid).toBe("cid2");
+    });
+
+    test("addAccountComment strips nested replies.pages payloads but keeps core comment fields", async () => {
+      const acc = makeAccount({ id: "comment-slim", name: "CommentSlim" });
+      await accountsDatabase.addAccount(acc);
+      await accountsDatabase.addAccountComment(acc.id, {
+        cid: "cid-slim",
+        content: "hello",
+        communityAddress: "sub",
+        timestamp: 1,
+        author: { address: "addr" },
+        replies: {
+          pages: {
+            best: {
+              comments: [{ cid: "reply-1", content: "reply" }],
+            },
+          },
+          pageCids: { best: "page-1" },
+        },
+      } as any);
+      const comments = await accountsDatabase.getAccountComments(acc.id);
+      const exported = JSON.parse(await accountsDatabase.getExportedAccountJson(acc.id));
+      expect(comments[0].replies?.pages).toBeUndefined();
+      expect(comments[0].replies?.pageCids).toEqual({ best: "page-1" });
+      expect(exported.accountComments[0].replies?.pages).toBeUndefined();
     });
 
     test("addAccountComment asserts accountCommentIndex < length", async () => {
