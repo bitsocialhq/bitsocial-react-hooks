@@ -2615,8 +2615,12 @@ describe("replies", () => {
         accountComments: { newerThan: Infinity, append: true },
       });
 
-      // wait for 2 the first time because account comments can appear before comment update replies
-      await waitFor(() => rendered.result.current.repliesDepth1.replies.length > 2);
+      // Wait for the appended account reply to reach its expected slot before asserting order.
+      await waitFor(() => {
+        const replies = rendered.result.current.repliesDepth1.replies;
+        expect(replies.length).toBe(3);
+        expect(replies[2].cid).toBe(accountReplyCid1);
+      });
       let res = rendered.result.current;
 
       expect(res.repliesDepth1.replies.length).toBe(3);
