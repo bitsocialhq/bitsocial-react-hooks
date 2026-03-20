@@ -758,6 +758,37 @@ describe("accounts-database", () => {
       expect(parsed.accountComments).toHaveLength(1);
       expect(parsed.accountComments[0].cid).toBe("ec1");
     });
+
+    test("compacts legacy stored accountComments before export", async () => {
+      const acc = makeAccount({ id: "export-legacy-comments", name: "ExportLegacyComments" });
+      await accountsDatabase.addAccount(acc);
+      const commentsDb = createPerAccountDatabase("accountComments", acc.id);
+      await commentsDb.setItem("0", {
+        cid: "legacy-comment",
+        content: "legacy",
+        communityAddress: "sub",
+        timestamp: 1,
+        author: { address: "addr" },
+        replies: {
+          pages: {
+            best: {
+              comments: [{ cid: "reply-1", content: "reply" }],
+            },
+          },
+          pageCids: { best: "page-1" },
+        },
+      });
+      await commentsDb.setItem("length", 1);
+
+      const exported = JSON.parse(await accountsDatabase.getExportedAccountJson(acc.id));
+      const storedComment = await commentsDb.getItem<any>("0");
+
+      expect(exported.accountComments[0].replies?.pages).toBeUndefined();
+      expect(exported.accountComments[0].replies?.pageCids).toEqual({ best: "page-1" });
+      expect(storedComment.replies?.pages).toBeUndefined();
+      expect(storedComment.replies?.pageCids).toEqual({ best: "page-1" });
+      expect(await commentsDb.getItem("__storageVersion")).toBe(1);
+    });
   });
 
   describe("account comments", () => {
@@ -807,6 +838,86 @@ describe("accounts-database", () => {
       expect(comments[0].replies?.pages).toBeUndefined();
       expect(comments[0].replies?.pageCids).toEqual({ best: "page-1" });
       expect(exported.accountComments[0].replies?.pages).toBeUndefined();
+    });
+
+    test("getAccountComments compacts legacy stored comments on read", async () => {
+      const acc = makeAccount({ id: "legacy-read-comments", name: "LegacyReadComments" });
+      await accountsDatabase.addAccount(acc);
+      const commentsDb = createPerAccountDatabase("accountComments", acc.id);
+      await commentsDb.setItem("0", {
+        cid: "legacy-read-comment",
+        content: "legacy",
+        communityAddress: "sub",
+        timestamp: 1,
+        author: { address: "addr" },
+        replies: {
+          pages: {
+            best: {
+              comments: [{ cid: "reply-1", content: "reply" }],
+            },
+          },
+          pageCids: { best: "page-1" },
+        },
+      });
+      await commentsDb.setItem("length", 1);
+
+      const comments = await accountsDatabase.getAccountComments(acc.id);
+      const storedComment = await commentsDb.getItem<any>("0");
+
+      expect(comments[0].replies?.pages).toBeUndefined();
+      expect(comments[0].replies?.pageCids).toEqual({ best: "page-1" });
+      expect(storedComment.replies?.pages).toBeUndefined();
+      expect(storedComment.replies?.pageCids).toEqual({ best: "page-1" });
+      expect(await commentsDb.getItem("__storageVersion")).toBe(1);
+    });
+
+    test("deleteAccountComment compacts legacy stored comments before mutating", async () => {
+      const acc = makeAccount({ id: "legacy-delete-comments", name: "LegacyDeleteComments" });
+      await accountsDatabase.addAccount(acc);
+      const commentsDb = createPerAccountDatabase("accountComments", acc.id);
+      await commentsDb.setItem("0", {
+        cid: "legacy-delete-comment-1",
+        content: "legacy-1",
+        communityAddress: "sub",
+        timestamp: 1,
+        author: { address: "addr" },
+        replies: {
+          pages: {
+            best: {
+              comments: [{ cid: "reply-1", content: "reply" }],
+            },
+          },
+          pageCids: { best: "page-1" },
+        },
+      });
+      await commentsDb.setItem("1", {
+        cid: "legacy-delete-comment-2",
+        content: "legacy-2",
+        communityAddress: "sub",
+        timestamp: 2,
+        author: { address: "addr" },
+        replies: {
+          pages: {
+            best: {
+              comments: [{ cid: "reply-2", content: "reply" }],
+            },
+          },
+          pageCids: { best: "page-2" },
+        },
+      });
+      await commentsDb.setItem("length", 2);
+
+      await accountsDatabase.deleteAccountComment(acc.id, 0);
+      const storedComment = await commentsDb.getItem<any>("0");
+      const exported = JSON.parse(await accountsDatabase.getExportedAccountJson(acc.id));
+
+      expect(storedComment.cid).toBe("legacy-delete-comment-2");
+      expect(storedComment.replies?.pages).toBeUndefined();
+      expect(storedComment.replies?.pageCids).toEqual({ best: "page-2" });
+      expect(exported.accountComments).toHaveLength(1);
+      expect(exported.accountComments[0].replies?.pages).toBeUndefined();
+      expect(exported.accountComments[0].replies?.pageCids).toEqual({ best: "page-2" });
+      expect(await commentsDb.getItem("__storageVersion")).toBe(1);
     });
 
     test("addAccountComment asserts accountCommentIndex < length", async () => {

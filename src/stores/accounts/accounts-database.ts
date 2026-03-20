@@ -36,6 +36,7 @@ const storageVersionKey = "__storageVersion";
 const votesLatestIndexKey = "__commentCidToLatestIndex";
 const editsTargetToIndicesKey = "__targetToIndices";
 const editsSummaryKey = "__summary";
+const commentStorageVersion = 1;
 const voteStorageVersion = 1;
 const editStorageVersion = 1;
 
@@ -187,6 +188,7 @@ const getExportedAccountJson = async (accountId: string) => {
   const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
   const accountVotesDatabase = getAccountVotesDatabase(accountId);
   const accountEditsDatabase = getAccountEditsDatabase(accountId);
+  await ensureAccountCommentsDatabaseLayout(accountId);
   const [accountComments, accountVotes, accountEdits] = await Promise.all([
     getDatabaseAsArray(accountCommentsDatabase),
     getDatabaseAsArray(accountVotesDatabase),
@@ -348,6 +350,7 @@ const removeAccount = async (account: Account) => {
 };
 
 const accountsCommentsDatabases: any = {};
+const accountCommentsLayoutMigrations: Record<string, Promise<void> | undefined> = {};
 const getAccountCommentsDatabase = (accountId: string) => {
   assert(
     accountId && typeof accountId === "string",
@@ -361,8 +364,40 @@ const getAccountCommentsDatabase = (accountId: string) => {
   return accountsCommentsDatabases[accountId];
 };
 
+const ensureAccountCommentsDatabaseLayout = async (accountId: string) => {
+  const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
+  if ((await accountCommentsDatabase.getItem(storageVersionKey)) === commentStorageVersion) {
+    return;
+  }
+  if (!accountCommentsLayoutMigrations[accountId]) {
+    accountCommentsLayoutMigrations[accountId] = (async () => {
+      if ((await accountCommentsDatabase.getItem(storageVersionKey)) === commentStorageVersion) {
+        return;
+      }
+
+      const comments = await getDatabaseAsArray(accountCommentsDatabase);
+      const updatedComments = comments.map((comment) =>
+        comment ? sanitizeStoredAccountComment(comment) : comment,
+      );
+      const rewritePromises: Promise<void>[] = [];
+      for (const [index, updatedComment] of updatedComments.entries()) {
+        if (!isEqual(updatedComment, comments[index])) {
+          rewritePromises.push(accountCommentsDatabase.setItem(String(index), updatedComment));
+        }
+      }
+      await Promise.all(rewritePromises);
+      await accountCommentsDatabase.setItem(storageVersionKey, commentStorageVersion);
+    })().finally(() => {
+      delete accountCommentsLayoutMigrations[accountId];
+    });
+  }
+
+  await accountCommentsLayoutMigrations[accountId];
+};
+
 const deleteAccountComment = async (accountId: string, accountCommentIndex: number) => {
   const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
+  await ensureAccountCommentsDatabaseLayout(accountId);
   const length = (await accountCommentsDatabase.getItem("length")) || 0;
   assert(
     accountCommentIndex >= 0 && accountCommentIndex < length,
@@ -386,6 +421,7 @@ const addAccountComment = async (
   accountCommentIndex?: number,
 ) => {
   const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
+  await ensureAccountCommentsDatabaseLayout(accountId);
   const length = (await accountCommentsDatabase.getItem("length")) || 0;
   comment = sanitizeStoredAccountComment(comment);
   if (typeof accountCommentIndex === "number") {
@@ -393,10 +429,14 @@ const addAccountComment = async (
       accountCommentIndex < length,
       `addAccountComment cannot edit comment no comment in database at accountCommentIndex '${accountCommentIndex}'`,
     );
-    await accountCommentsDatabase.setItem(String(accountCommentIndex), comment);
+    await Promise.all([
+      accountCommentsDatabase.setItem(String(accountCommentIndex), comment),
+      accountCommentsDatabase.setItem(storageVersionKey, commentStorageVersion),
+    ]);
   } else {
     await Promise.all([
       accountCommentsDatabase.setItem(String(length), comment),
+      accountCommentsDatabase.setItem(storageVersionKey, commentStorageVersion),
       accountCommentsDatabase.setItem("length", length + 1),
     ]);
   }
@@ -404,6 +444,7 @@ const addAccountComment = async (
 
 const getAccountComments = async (accountId: string) => {
   const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
+  await ensureAccountCommentsDatabaseLayout(accountId);
   const length = (await accountCommentsDatabase.getItem("length")) || 0;
   if (length === 0) {
     return [];
