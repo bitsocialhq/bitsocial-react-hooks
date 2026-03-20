@@ -1,6 +1,7 @@
 import { Account, Communities, AccountComment, AccountsComments, AccountsCommentsIndexes, AccountCommentsIndex, CommentCidsToAccountsComments, Comment, AccountEdit, AccountEditsSummary } from "../../types";
 export declare const getAccountCommunities: (account: Account, communities: Communities) => any;
 export declare const getCommentCidsToAccountsComments: (accountsComments: AccountsComments) => CommentCidsToAccountsComments;
+export declare const sanitizeAccountCommentForState: (comment: Comment) => any;
 export declare const sanitizeStoredAccountComment: (comment: Comment) => any;
 export declare const getAccountCommentsIndex: (accountComments: AccountComment[] | undefined) => AccountCommentsIndex;
 export declare const getAccountsCommentsIndexes: (accountsComments: AccountsComments) => AccountsCommentsIndexes;
@@ -27,6 +28,7 @@ declare const utils: {
     getCommentCidsToAccountsComments: (accountsComments: AccountsComments) => CommentCidsToAccountsComments;
     getAccountCommentsIndex: (accountComments: AccountComment[] | undefined) => AccountCommentsIndex;
     getAccountsCommentsIndexes: (accountsComments: AccountsComments) => AccountsCommentsIndexes;
+    sanitizeAccountCommentForState: (comment: Comment) => any;
     sanitizeStoredAccountComment: (comment: Comment) => any;
     getAccountEditPropertySummary: (accountEdits: AccountEdit[] | undefined) => {
         [propertyName: string]: import("../../types").AccountEditPropertySummary;

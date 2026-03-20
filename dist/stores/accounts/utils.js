@@ -72,18 +72,85 @@ const cloneWithoutFunctions = (value) => {
     }
     return clonedValue;
 };
-export const sanitizeStoredAccountComment = (comment) => {
+const compactStoredCommentAuthor = (author) => {
+    if (!author || typeof author !== "object") {
+        return undefined;
+    }
+    const compactAuthor = cloneWithoutFunctions({
+        address: author.address,
+        shortAddress: author.shortAddress,
+        displayName: author.displayName,
+        avatar: author.avatar,
+        flair: author.flair,
+    });
+    return compactAuthor && Object.keys(compactAuthor).length > 0 ? compactAuthor : undefined;
+};
+const compactStoredOriginalComment = (originalComment) => {
+    if (!originalComment || typeof originalComment !== "object") {
+        return undefined;
+    }
+    const compactOriginalComment = cloneWithoutFunctions({
+        cid: originalComment.cid,
+        content: originalComment.content,
+        title: originalComment.title,
+        link: originalComment.link,
+        linkWidth: originalComment.linkWidth,
+        linkHeight: originalComment.linkHeight,
+        linkHtmlTagName: originalComment.linkHtmlTagName,
+        thumbnailUrl: originalComment.thumbnailUrl,
+        media: originalComment.media,
+        spoiler: originalComment.spoiler,
+        nsfw: originalComment.nsfw,
+        deleted: originalComment.deleted,
+        removed: originalComment.removed,
+        reason: originalComment.reason,
+        quotedCids: originalComment.quotedCids,
+        parentCid: originalComment.parentCid,
+        postCid: originalComment.postCid,
+        communityAddress: originalComment.communityAddress,
+        subplebbitAddress: originalComment.subplebbitAddress,
+        timestamp: originalComment.timestamp,
+        author: compactStoredCommentAuthor(originalComment.author),
+    });
+    return compactOriginalComment && Object.keys(compactOriginalComment).length > 0
+        ? compactOriginalComment
+        : undefined;
+};
+const compactStoredReplies = (replies) => {
+    if (!replies || typeof replies !== "object") {
+        return undefined;
+    }
+    const compactReplies = cloneWithoutFunctions(Object.fromEntries(Object.entries(replies).filter(([replyKey]) => replyKey !== "pages" && replyKey !== "clients")));
+    return compactReplies && Object.keys(compactReplies).length > 0 ? compactReplies : undefined;
+};
+export const sanitizeAccountCommentForState = (comment) => {
     var _a;
-    const preprocessedComment = Object.assign(Object.assign({}, comment), { signer: undefined, replies: (comment === null || comment === void 0 ? void 0 : comment.replies)
+    const sanitizedComment = cloneWithoutFunctions(Object.assign(Object.assign({}, comment), { signer: undefined, raw: undefined, replies: (comment === null || comment === void 0 ? void 0 : comment.replies)
             ? Object.fromEntries(Object.entries(comment.replies).filter(([replyKey]) => replyKey !== "pages"))
-            : comment === null || comment === void 0 ? void 0 : comment.replies });
-    const sanitizedComment = cloneWithoutFunctions(preprocessedComment);
+            : comment === null || comment === void 0 ? void 0 : comment.replies }));
+    if (!sanitizedComment || typeof sanitizedComment !== "object") {
+        return sanitizedComment;
+    }
     if ((_a = sanitizedComment === null || sanitizedComment === void 0 ? void 0 : sanitizedComment.replies) === null || _a === void 0 ? void 0 : _a.pages) {
         sanitizedComment.replies = Object.assign({}, sanitizedComment.replies);
         delete sanitizedComment.replies.pages;
     }
     if ((sanitizedComment === null || sanitizedComment === void 0 ? void 0 : sanitizedComment.replies) && Object.keys(sanitizedComment.replies).length === 0) {
         delete sanitizedComment.replies;
+    }
+    return sanitizedComment;
+};
+export const sanitizeStoredAccountComment = (comment) => {
+    const preprocessedComment = Object.assign(Object.assign({}, comment), { signer: undefined, clients: undefined, raw: undefined, replies: compactStoredReplies(comment === null || comment === void 0 ? void 0 : comment.replies), original: (comment === null || comment === void 0 ? void 0 : comment.edit) ? compactStoredOriginalComment(comment.original) : undefined });
+    const sanitizedComment = cloneWithoutFunctions(preprocessedComment);
+    if (!sanitizedComment || typeof sanitizedComment !== "object") {
+        return sanitizedComment;
+    }
+    if ((sanitizedComment === null || sanitizedComment === void 0 ? void 0 : sanitizedComment.replies) && Object.keys(sanitizedComment.replies).length === 0) {
+        delete sanitizedComment.replies;
+    }
+    if ((sanitizedComment === null || sanitizedComment === void 0 ? void 0 : sanitizedComment.original) && Object.keys(sanitizedComment.original).length === 0) {
+        delete sanitizedComment.original;
     }
     return sanitizedComment;
 };
@@ -339,6 +406,7 @@ const utils = {
     getCommentCidsToAccountsComments,
     getAccountCommentsIndex,
     getAccountsCommentsIndexes,
+    sanitizeAccountCommentForState,
     sanitizeStoredAccountComment,
     getAccountEditPropertySummary,
     getAccountsEditsSummary,

@@ -31,7 +31,7 @@ const storageVersionKey = "__storageVersion";
 const votesLatestIndexKey = "__commentCidToLatestIndex";
 const editsTargetToIndicesKey = "__targetToIndices";
 const editsSummaryKey = "__summary";
-const commentStorageVersion = 1;
+const commentStorageVersion = 2;
 const voteStorageVersion = 1;
 const editStorageVersion = 1;
 // TODO: remove this eventually after everyone has migrated
@@ -312,13 +312,19 @@ const ensureAccountCommentsDatabaseLayout = (accountId) => __awaiter(void 0, voi
                 return;
             }
             const comments = yield getDatabaseAsArray(accountCommentsDatabase);
-            const updatedComments = comments.map((comment) => comment ? sanitizeStoredAccountComment(comment) : comment);
+            const updatedComments = comments
+                .map((comment) => (comment ? sanitizeStoredAccountComment(comment) : undefined))
+                .filter((comment) => comment !== undefined);
             const rewritePromises = [];
             for (const [index, updatedComment] of updatedComments.entries()) {
                 if (!isEqual(updatedComment, comments[index])) {
                     rewritePromises.push(accountCommentsDatabase.setItem(String(index), updatedComment));
                 }
             }
+            for (let index = updatedComments.length; index < comments.length; index++) {
+                rewritePromises.push(accountCommentsDatabase.removeItem(String(index)));
+            }
+            rewritePromises.push(accountCommentsDatabase.setItem("length", updatedComments.length));
             yield Promise.all(rewritePromises);
             yield accountCommentsDatabase.setItem(storageVersionKey, commentStorageVersion);
         }))().finally(() => {
