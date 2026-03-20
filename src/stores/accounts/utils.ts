@@ -156,6 +156,12 @@ const normalizeAccountEditForSummary = (accountEdit: AccountEdit) => {
     Object.assign(normalizedAccountEdit, normalizedAccountEdit.commentModeration);
     delete normalizedAccountEdit.commentModeration;
   }
+  const communityEdit = normalizedAccountEdit.communityEdit ?? normalizedAccountEdit.subplebbitEdit;
+  if (communityEdit && typeof communityEdit === "object") {
+    Object.assign(normalizedAccountEdit, communityEdit);
+  }
+  delete normalizedAccountEdit.communityEdit;
+  delete normalizedAccountEdit.subplebbitEdit;
   return normalizedAccountEdit;
 };
 

@@ -226,7 +226,7 @@ describe("accountsStore utils", () => {
       expect(indexes.acc2.byParentCid["parent-cid"]).toEqual([1]);
     });
 
-    test("getAccountEditPropertySummary merges commentModeration and ignores stale or non-edit fields", () => {
+    test("getAccountEditPropertySummary merges nested edits and ignores stale or non-edit fields", () => {
       const summary = utils.getAccountEditPropertySummary([
         {
           commentCid: "cid-1",
@@ -249,9 +249,15 @@ describe("accountsStore utils", () => {
           timestamp: 12,
           spoiler: false,
         },
+        {
+          communityAddress: "sub.eth",
+          timestamp: 25,
+          subplebbitEdit: { title: "edited title" },
+        },
       ] as any);
       expect(summary.spoiler).toEqual({ timestamp: 15, value: true });
       expect(summary.removed).toEqual({ timestamp: 20, value: true });
+      expect(summary.title).toEqual({ timestamp: 25, value: "edited title" });
       expect((summary as any).author).toBeUndefined();
     });
 

@@ -5,11 +5,13 @@ import * as accountsActions from "./accounts-actions";
 import * as accountsActionsInternal from "./accounts-actions-internal";
 import accountsDatabase from "./accounts-database";
 import accountsStore from "./accounts-store";
+import communitiesStore from "../communities";
 import PlebbitJsMock, {
   Plebbit as BasePlebbit,
   Comment as BaseComment,
 } from "../../lib/plebbit-js/plebbit-js-mock";
 import { setPlebbitJs } from "../../lib/plebbit-js";
+import * as plebbitCompat from "../../lib/plebbit-compat";
 
 // Custom Plebbit that returns publications emitting challengeSuccess: false on first attempt
 function createRetryPlebbitMock() {
@@ -710,6 +712,49 @@ describe("accounts-actions", () => {
       expect(sub?.address).toBeDefined();
     });
 
+    test("publishCommunityEdit uses local owner state when plebbit communities list is stale", async () => {
+      const account = Object.values(accountsStore.getState().accounts)[0];
+      const getPlebbitCommunityAddressesSpy = vi
+        .spyOn(plebbitCompat, "getPlebbitCommunityAddresses")
+        .mockReturnValue([]);
+      const editCommunitySpy = vi.spyOn(communitiesStore.getState(), "editCommunity");
+      const createCommunityEditSpy = vi.spyOn(account.plebbit, "createCommunityEdit");
+      const onChallengeVerification = vi.fn();
+
+      try {
+        communitiesStore.setState({
+          communities: {
+            "owned-community.eth": {
+              address: "owned-community.eth",
+              roles: {
+                [account.author.address]: { role: "owner" },
+              },
+            } as any,
+          },
+        });
+
+        await act(async () => {
+          await accountsActions.publishCommunityEdit("owned-community.eth", {
+            title: "edited locally",
+            onChallenge: () => {},
+            onChallengeVerification,
+          });
+        });
+
+        expect(editCommunitySpy).toHaveBeenCalledWith(
+          "owned-community.eth",
+          expect.objectContaining({ title: "edited locally" }),
+          account,
+        );
+        expect(createCommunityEditSpy).not.toHaveBeenCalled();
+        expect(onChallengeVerification).toHaveBeenCalledWith({ challengeSuccess: true });
+      } finally {
+        getPlebbitCommunityAddressesSpy.mockRestore();
+        editCommunitySpy.mockRestore();
+        createCommunityEditSpy.mockRestore();
+      }
+    });
+
     test("importAccount with no accountComments/votes/edits (branches 313, 316, 319)", async () => {
       await act(async () => {
         await accountsActions.createAccount("Minimal");
@@ -1227,7 +1272,17 @@ describe("accounts-actions", () => {
       });
 
       await new Promise((r) => setTimeout(r, 200));
-      // no throw = success
+      const accountId = accountsStore.getState().activeAccountId!;
+      const storedEdits =
+        accountsStore.getState().accountsEdits[accountId]?.["remote-sub.eth"] || [];
+      expect(storedEdits).toHaveLength(1);
+      expect(storedEdits[0].title).toBeUndefined();
+      expect(storedEdits[0].subplebbitEdit?.title).toBe("edited");
+      expect(
+        accountsStore.getState().accountsEditsSummaries[accountId]?.["remote-sub.eth"]?.title,
+      ).toEqual({ timestamp: storedEdits[0].timestamp, value: "edited" });
+      const persistedEdits = await accountsDatabase.getAccountEdits(accountId);
+      expect(persistedEdits["remote-sub.eth"]).toHaveLength(1);
     });
   });
 
@@ -2234,6 +2289,13 @@ describe("accounts-actions", () => {
 
       await new Promise((r) => setTimeout(r, 50));
       expect(onError).toHaveBeenCalled();
+      const accountId = accountsStore.getState().activeAccountId!;
+      expect(accountsStore.getState().accountsEdits[accountId]?.["remote-sub.eth"]).toBeUndefined();
+      expect(
+        accountsStore.getState().accountsEditsSummaries[accountId]?.["remote-sub.eth"],
+      ).toBeUndefined();
+      const persistedEdits = await accountsDatabase.getAccountEdits(accountId);
+      expect(persistedEdits["remote-sub.eth"]).toBeUndefined();
     });
   });
 });

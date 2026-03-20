@@ -21,6 +21,7 @@ import useInterval from "./utils/use-interval";
 import createStore from "zustand";
 import { resolveEnsTxtRecord } from "../lib/chain";
 import useCommunitiesStore from "../stores/communities";
+import useAccountsStore from "../stores/accounts";
 import shallow from "zustand/shallow";
 import { getPlebbitCommunityAddresses } from "../lib/plebbit-compat";
 
@@ -36,9 +37,13 @@ export function useCommunity(options?: UseCommunityOptions): UseCommunityResult 
   );
   const { communityAddress, accountName, onlyIfCached } = options ?? {};
   const account = useAccount({ accountName });
+  const accountId = account?.id || "";
   const community = useCommunitiesStore((state: any) => state.communities[communityAddress || ""]);
   const addCommunityToStore = useCommunitiesStore((state: any) => state.addCommunityToStore);
   const errors = useCommunitiesStore((state: any) => state.errors[communityAddress || ""]);
+  const communityEditSummary = useAccountsStore(
+    (state: any) => state.accountsEditsSummaries[accountId]?.[communityAddress || ""],
+  );
 
   useEffect(() => {
     if (!communityAddress || !account) {
@@ -57,20 +62,53 @@ export function useCommunity(options?: UseCommunityOptions): UseCommunityResult 
     log("useCommunity", { communityAddress, community, account });
   }
 
-  let state = community?.updatingState || "initializing";
+  const mergedCommunity = useMemo(() => {
+    if (!communityEditSummary) {
+      return community;
+    }
+    const localCommunityAddresses = getPlebbitCommunityAddresses(account?.plebbit);
+    const editedCommunityAddress = communityEditSummary.address?.value;
+    if (
+      !community &&
+      editedCommunityAddress &&
+      !localCommunityAddresses.includes(communityAddress || "") &&
+      !localCommunityAddresses.includes(editedCommunityAddress)
+    ) {
+      return community;
+    }
+    if (
+      community?.address &&
+      editedCommunityAddress &&
+      community.address !== editedCommunityAddress
+    ) {
+      return community;
+    }
+    const summaryValues = Object.fromEntries(
+      Object.entries(communityEditSummary).map(([propertyName, propertySummary]: [string, any]) => [
+        propertyName,
+        propertySummary?.value,
+      ]),
+    );
+    return {
+      ...(community || { address: communityAddress }),
+      ...summaryValues,
+    };
+  }, [account?.plebbit, community, communityAddress, communityEditSummary]);
+
+  let state = mergedCommunity?.updatingState || "initializing";
   // force succeeded even if the community is fecthing a new update
-  if (community?.updatedAt) {
+  if (mergedCommunity?.updatedAt) {
     state = "succeeded";
   }
 
   return useMemo(
     () => ({
-      ...community,
+      ...mergedCommunity,
       state,
       error: errors?.[errors.length - 1],
       errors: errors || [],
     }),
-    [community, communityAddress, errors],
+    [mergedCommunity, communityAddress, errors],
   );
 }
 

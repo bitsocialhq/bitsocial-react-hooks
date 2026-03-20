@@ -58,6 +58,26 @@ type PublishSession = {
 const activePublishSessions = new Map<string, PublishSession>();
 const abandonedPublishSessionIds = new Set<string>();
 
+const accountOwnsCommunityLocally = (account: Account, communityAddress: string) => {
+  const localCommunityAddresses = getPlebbitCommunityAddresses(account.plebbit);
+  if (localCommunityAddresses.includes(communityAddress)) {
+    return true;
+  }
+
+  const storedCommunity = communitiesStore.getState().communities[communityAddress];
+  if (storedCommunity?.roles?.[account.author.address]?.role === "owner") {
+    return true;
+  }
+  if (
+    storedCommunity?.signer?.address &&
+    storedCommunity.signer.address === account.signer?.address
+  ) {
+    return true;
+  }
+
+  return account.communities?.[communityAddress]?.role?.role === "owner";
+};
+
 const createPublishSession = (accountId: string, index: number) => {
   const sessionId = uuid();
   activePublishSessions.set(sessionId, {
@@ -151,8 +171,23 @@ const accountEditNonPropertyNames = new Set([
   "commentCid",
   "communityAddress",
   "subplebbitAddress",
+  "communityEdit",
+  "subplebbitEdit",
   "timestamp",
 ]);
+
+const normalizeStoredAccountEditForSummary = (storedAccountEdit: any) => {
+  const normalizedEdit = storedAccountEdit.commentModeration
+    ? { ...storedAccountEdit, ...storedAccountEdit.commentModeration, commentModeration: undefined }
+    : { ...storedAccountEdit };
+  const communityEdit = normalizedEdit.communityEdit ?? normalizedEdit.subplebbitEdit;
+  if (communityEdit && typeof communityEdit === "object") {
+    Object.assign(normalizedEdit, communityEdit);
+  }
+  delete normalizedEdit.communityEdit;
+  delete normalizedEdit.subplebbitEdit;
+  return normalizedEdit;
+};
 
 const getStoredAccountEditTarget = (storedAccountEdit: any) =>
   storedAccountEdit.commentCid ||
@@ -172,9 +207,7 @@ export const addStoredAccountEditSummaryToState = (
   const accountEditsSummary = accountsEditsSummaries[accountId] || {};
   const targetSummary = accountEditsSummary[editTarget] || {};
   const nextSummary = { ...targetSummary };
-  const normalizedEdit = storedAccountEdit.commentModeration
-    ? { ...storedAccountEdit, ...storedAccountEdit.commentModeration, commentModeration: undefined }
-    : storedAccountEdit;
+  const normalizedEdit = normalizeStoredAccountEditForSummary(storedAccountEdit);
 
   for (const propertyName in normalizedEdit) {
     if (
@@ -1556,13 +1589,67 @@ export const publishCommunityEdit = async (
   delete communityEditOptions.onChallengeVerification;
   delete communityEditOptions.onError;
   delete communityEditOptions.onPublishingStateChange;
+  let createCommunityEditOptions: any = normalizeCommunityEditOptionsForPlebbit(account.plebbit, {
+    timestamp: Math.floor(Date.now() / 1000),
+    author: account.author,
+    signer: account.signer,
+    // not possible to edit community.address over pubsub, only locally
+    communityAddress,
+    communityEdit: communityEditOptions,
+    subplebbitEdit: communityEditOptions,
+  });
+  const storedCreateCommunityEditOptions = {
+    ...normalizePublicationOptionsForStore(createCommunityEditOptions),
+    clientId: uuid(),
+  };
+  const storedCommunityEdit = sanitizeStoredAccountEdit(storedCreateCommunityEditOptions);
+  let challengeSucceeded = false;
+  let rollbackPendingEditPromise: Promise<void> | undefined;
+  const rollbackStoredCommunityEdit = () => {
+    if (!rollbackPendingEditPromise && !challengeSucceeded) {
+      rollbackPendingEditPromise = Promise.all([
+        accountsDatabase.deleteAccountEdit(account.id, storedCommunityEdit),
+        Promise.resolve(
+          accountsStore.setState(({ accountsEdits, accountsEditsSummaries }) => {
+            const nextState: any = removeStoredAccountEditSummaryFromState(
+              accountsEditsSummaries,
+              accountsEdits,
+              account.id,
+              storedCommunityEdit,
+            );
+            Object.assign(
+              nextState,
+              removeStoredAccountEditFromState(accountsEdits, account.id, storedCommunityEdit),
+            );
+            return nextState;
+          }),
+        ),
+      ]).then(() => {});
+    }
+    return rollbackPendingEditPromise;
+  };
+  const storePublishedCommunityEdit = async () => {
+    await accountsDatabase.addAccountEdit(account.id, storedCreateCommunityEditOptions);
+    accountsStore.setState(({ accountsEdits, accountsEditsSummaries }) => {
+      const nextState: any = addStoredAccountEditSummaryToState(
+        accountsEditsSummaries,
+        account.id,
+        storedCommunityEdit,
+      );
+      Object.assign(
+        nextState,
+        addStoredAccountEditToState(accountsEdits, account.id, storedCommunityEdit),
+      );
+      return nextState;
+    });
+  };
 
   // account is the owner of the community and can edit it locally, no need to publish
-  const localCommunityAddresses = getPlebbitCommunityAddresses(account.plebbit);
-  if (localCommunityAddresses.includes(communityAddress)) {
+  if (accountOwnsCommunityLocally(account, communityAddress)) {
     await communitiesStore
       .getState()
       .editCommunity(communityAddress, communityEditOptions, account);
+    await storePublishedCommunityEdit();
     // create fake success challenge verification for consistent behavior with remote community edit
     publishCommunityEditOptions.onChallengeVerification({ challengeSuccess: true });
     publishCommunityEditOptions.onPublishingStateChange?.("succeeded");
@@ -1574,16 +1661,6 @@ export const publishCommunityEdit = async (
       publishCommunityEditOptions.address === communityAddress,
     `accountsActions.publishCommunityEdit can't edit address of a remote community`,
   );
-  let createCommunityEditOptions: any = normalizeCommunityEditOptionsForPlebbit(account.plebbit, {
-    timestamp: Math.floor(Date.now() / 1000),
-    author: account.author,
-    signer: account.signer,
-    // not possible to edit community.address over pubsub, only locally
-    communityAddress,
-    communityEdit: communityEditOptions,
-    subplebbitEdit: communityEditOptions,
-  });
-
   let communityEdit = backfillPublicationCommunityAddress(
     await createPlebbitCommunityEdit(account.plebbit, createCommunityEditOptions),
     createCommunityEditOptions,
@@ -1598,6 +1675,14 @@ export const publishCommunityEdit = async (
       "challengeverification",
       async (challengeVerification: ChallengeVerification) => {
         publishCommunityEditOptions.onChallengeVerification(challengeVerification, communityEdit);
+        if (challengeVerification.challengeSuccess) {
+          challengeSucceeded = true;
+        }
+        if (hasTerminalChallengeVerificationError(challengeVerification)) {
+          lastChallenge = undefined;
+          await rollbackStoredCommunityEdit();
+          return;
+        }
         if (!challengeVerification.challengeSuccess && lastChallenge) {
           // publish again automatically on fail
           createCommunityEditOptions = {
@@ -1613,9 +1698,10 @@ export const publishCommunityEdit = async (
         }
       },
     );
-    communityEdit.on("error", (error: Error) =>
-      publishCommunityEditOptions.onError?.(error, communityEdit),
-    );
+    communityEdit.on("error", async (error: Error) => {
+      await rollbackStoredCommunityEdit();
+      publishCommunityEditOptions.onError?.(error, communityEdit);
+    });
     // TODO: add publishingState to account edits
     communityEdit.on("publishingstatechange", (publishingState: string) =>
       publishCommunityEditOptions.onPublishingStateChange?.(publishingState),
@@ -1626,10 +1712,12 @@ export const publishCommunityEdit = async (
       // if it fails before, like failing to resolve ENS, we can emit the error
       await communityEdit.publish();
     } catch (error) {
+      await rollbackStoredCommunityEdit();
       publishCommunityEditOptions.onError?.(error, communityEdit);
     }
   };
 
+  await storePublishedCommunityEdit();
   publishAndRetryFailedChallengeVerification();
   log("accountsActions.publishCommunityEdit", { createCommunityEditOptions });
 };

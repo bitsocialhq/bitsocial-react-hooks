@@ -33,6 +33,39 @@ describe("utils", () => {
 
       await expect(utils.repliesAreValid(comment as any, {}, plebbit)).resolves.toBe(true);
     });
+
+    test("accepts legacy reply pages that still use subplebbitAddress", async () => {
+      const validateComment = vi.fn(async () => true);
+      const comment = {
+        cid: "comment-legacy",
+        depth: 0,
+        communityAddress: "music-posting.eth",
+        replies: {
+          pages: {
+            new: {
+              comments: [
+                {
+                  cid: "reply-legacy",
+                  depth: 1,
+                  parentCid: "comment-legacy",
+                  subplebbitAddress: "music-posting.eth",
+                },
+              ],
+            },
+          },
+        },
+      };
+      const plebbit = { validateComment };
+
+      await expect(utils.repliesAreValid(comment as any, {}, plebbit)).resolves.toBe(true);
+      expect(validateComment).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cid: "reply-legacy",
+          communityAddress: "music-posting.eth",
+        }),
+        expect.objectContaining({ validateReplies: false }),
+      );
+    });
   });
 
   test("flattenCommentsPages", async () => {

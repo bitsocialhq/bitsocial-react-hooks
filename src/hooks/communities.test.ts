@@ -8,6 +8,7 @@ import {
   useResolvedCommunityAddress,
 } from "..";
 import * as accountsHooks from "./accounts";
+import accountsStore from "../stores/accounts";
 import communityStore from "../stores/communities";
 import communitiesPagesStore from "../stores/communities-pages";
 import { useListCommunities, resolveCommunityAddress } from "./communities";
@@ -211,6 +212,71 @@ describe("communities", () => {
 
       await waitFor(() => rendered.result.current.state === "succeeded");
       expect(rendered.result.current.state).toBe("succeeded");
+    });
+
+    test("overlays local community edit summary from the active account", async () => {
+      vi.spyOn(accountsHooks, "useAccount").mockReturnValue({ id: "acc-1", plebbit: {} } as any);
+      try {
+        communityStore.setState({
+          communities: {
+            "community address": {
+              address: "community address",
+              title: "original title",
+            } as any,
+          },
+        });
+        accountsStore.setState({
+          accountsEditsSummaries: {
+            "acc-1": {
+              "community address": {
+                title: { timestamp: 10, value: "edited title" },
+              },
+            },
+          },
+        } as any);
+
+        const rendered = renderHook<any, any>(() =>
+          useCommunity({ communityAddress: "community address", onlyIfCached: true }),
+        );
+
+        expect(rendered.result.current.address).toBe("community address");
+        expect(rendered.result.current.title).toBe("edited title");
+      } finally {
+        vi.mocked(accountsHooks.useAccount).mockRestore();
+      }
+    });
+
+    test("ignores stale rename summaries when a different live community now exists at that key", async () => {
+      vi.spyOn(accountsHooks, "useAccount").mockReturnValue({ id: "acc-1", plebbit: {} } as any);
+      try {
+        communityStore.setState({
+          communities: {
+            "community address": {
+              address: "community address",
+              title: "replacement title",
+            } as any,
+          },
+        });
+        accountsStore.setState({
+          accountsEditsSummaries: {
+            "acc-1": {
+              "community address": {
+                address: { timestamp: 11, value: "renamed.eth" },
+                title: { timestamp: 12, value: "stale edited title" },
+              },
+            },
+          },
+        } as any);
+
+        const rendered = renderHook<any, any>(() =>
+          useCommunity({ communityAddress: "community address", onlyIfCached: true }),
+        );
+
+        expect(rendered.result.current.address).toBe("community address");
+        expect(rendered.result.current.title).toBe("replacement title");
+      } finally {
+        vi.mocked(accountsHooks.useAccount).mockRestore();
+      }
     });
 
     test("has error events", async () => {

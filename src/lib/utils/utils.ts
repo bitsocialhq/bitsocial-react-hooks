@@ -4,6 +4,7 @@ import Logger from "@plebbit/plebbit-logger";
 import PlebbitJs from "../plebbit-js";
 import { Comment } from "../../types";
 import { areEquivalentCommunityAddresses } from "../community-address";
+import { getCommentCommunityAddress, normalizePublicationOptionsForStore } from "../plebbit-compat";
 const log = Logger("bitsocial-react-hooks:utils");
 
 const merge = (...args: any) => {
@@ -348,24 +349,34 @@ const repliesAreValid = async (
   if (!comment) {
     return false;
   }
-  if (communitiesWithInvalidComments[comment.communityAddress]) {
+  const commentCommunityAddress = getCommentCommunityAddress(comment);
+  if (commentCommunityAddress && communitiesWithInvalidComments[commentCommunityAddress]) {
     console.log(
-      `community '${comment.communityAddress}' had an invalid comment, invalidate all its future comments to avoid wasting resources`,
+      `community '${commentCommunityAddress}' had an invalid comment, invalidate all its future comments to avoid wasting resources`,
     );
     return false;
   }
   const replyPageArray: any[] = Object.values(comment.replies?.pages || {});
-  const replies = replyPageArray.flatMap(({ comments }) => comments);
+  const replies = replyPageArray.flatMap((replyPage: any) => replyPage?.comments || []);
+  const normalizedReplies = replies.map((reply) => {
+    const normalizedReply = normalizePublicationOptionsForStore(reply) as Comment;
+    normalizedReply.communityAddress =
+      getCommentCommunityAddress(normalizedReply) || commentCommunityAddress;
+    return normalizedReply;
+  });
 
   // manual validation
-  for (const reply of replies) {
+  for (const reply of normalizedReplies) {
     if (
-      !areEquivalentCommunityAddresses(reply.communityAddress, comment.communityAddress) ||
+      !areEquivalentCommunityAddresses(
+        getCommentCommunityAddress(reply),
+        commentCommunityAddress,
+      ) ||
       reply.depth !== comment.depth + 1 ||
       reply.parentCid !== comment.cid
     ) {
-      if (blockCommunity) {
-        communitiesWithInvalidComments[comment.communityAddress] = true;
+      if (blockCommunity && commentCommunityAddress) {
+        communitiesWithInvalidComments[commentCommunityAddress] = true;
       }
       console.log("invalid comment", {
         comment: reply,
@@ -378,13 +389,13 @@ const repliesAreValid = async (
 
   // signature verification
   try {
-    const promises = replies.map((reply) =>
+    const promises = normalizedReplies.map((reply) =>
       commentIsValid(reply, { validateReplies: false, blockCommunity: true }, plebbit),
     );
     await Promise.all(promises);
   } catch (e: any) {
-    if (blockCommunity) {
-      communitiesWithInvalidComments[comment.communityAddress] = true;
+    if (blockCommunity && commentCommunityAddress) {
+      communitiesWithInvalidComments[commentCommunityAddress] = true;
     }
     console.log("invalid comment", { comment, error: e });
     return false;
