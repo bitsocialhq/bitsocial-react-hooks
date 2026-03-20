@@ -7,6 +7,21 @@ export declare const maybeUpdateAccountComment: (accountsComments: Record<string
         [x: string]: any[];
     };
 };
+export declare const doesStoredAccountEditMatch: (storedAccountEdit: any, targetStoredAccountEdit: any) => boolean;
+export declare const sanitizeStoredAccountEdit: (storedAccountEdit: any) => any;
+export declare const addStoredAccountEditSummaryToState: (accountsEditsSummaries: Record<string, Record<string, any>>, accountId: string, storedAccountEdit: any) => {
+    accountsEditsSummaries: Record<string, Record<string, any>>;
+};
+export declare const removeStoredAccountEditSummaryFromState: (accountsEditsSummaries: Record<string, Record<string, any>>, accountsEdits: Record<string, Record<string, any[]>>, accountId: string, storedAccountEdit: any) => {
+    accountsEditsSummaries: Record<string, Record<string, any>>;
+};
+export declare const hasTerminalChallengeVerificationError: (challengeVerification: any) => boolean;
+export declare const addStoredAccountEditToState: (accountsEdits: Record<string, Record<string, any[]>>, accountId: string, storedAccountEdit: any) => {
+    accountsEdits: Record<string, Record<string, any[]>>;
+};
+export declare const removeStoredAccountEditFromState: (accountsEdits: Record<string, Record<string, any[]>>, accountId: string, storedAccountEdit: any) => {
+    accountsEdits: Record<string, Record<string, any[]>>;
+};
 export declare const createAccount: (accountName?: string) => Promise<void>;
 export declare const deleteAccount: (accountName?: string) => Promise<void>;
 export declare const setActiveAccount: (accountName: string) => Promise<void>;

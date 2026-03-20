@@ -16,7 +16,7 @@ import createStore from "zustand";
 import * as accountsActions from "./accounts-actions";
 import * as accountsActionsInternal from "./accounts-actions-internal";
 import localForage from "localforage";
-import { getCommentCidsToAccountsComments, getInitAccountCommentsToUpdate } from "./utils";
+import { getAccountsCommentsIndexes, getCommentCidsToAccountsComments, getInitAccountCommentsToUpdate, } from "./utils";
 // reset all event listeners in between tests
 export const listeners = [];
 const accountsStore = createStore((setState, getState) => ({
@@ -25,11 +25,14 @@ const accountsStore = createStore((setState, getState) => ({
     activeAccountId: undefined,
     accountNamesToAccountIds: {},
     accountsComments: {},
+    accountsCommentsIndexes: {},
     commentCidsToAccountsComments: {},
     accountsCommentsUpdating: {},
     accountsCommentsReplies: {},
     accountsVotes: {},
     accountsEdits: {},
+    accountsEditsSummaries: {},
+    accountsEditsLoaded: {},
     accountsActions,
     accountsActionsInternal,
 }));
@@ -61,23 +64,28 @@ const initializeAccountsStore = () => __awaiter(void 0, void 0, void 0, function
         ]);
         assert(accountIds && activeAccountId && accountNamesToAccountIds, `accountsStore error creating a default account during initialization accountsMetadataDatabase.accountIds '${accountIds}' accountsMetadataDatabase.activeAccountId '${activeAccountId}' accountsMetadataDatabase.accountNamesToAccountIds '${JSON.stringify(accountNamesToAccountIds)}'`);
     }
-    const [accountsComments, accountsVotes, accountsCommentsReplies, accountsEdits] = yield Promise.all([
+    const [accountsComments, accountsVotes, accountsCommentsReplies, accountsEditsSummaries] = yield Promise.all([
         accountsDatabase.getAccountsComments(accountIds),
         accountsDatabase.getAccountsVotes(accountIds),
         accountsDatabase.getAccountsCommentsReplies(accountIds),
-        accountsDatabase.getAccountsEdits(accountIds),
+        accountsDatabase.getAccountsEditsSummaries(accountIds),
     ]);
     const commentCidsToAccountsComments = getCommentCidsToAccountsComments(accountsComments);
+    const accountsCommentsIndexes = getAccountsCommentsIndexes(accountsComments);
     accountsStore.setState((state) => ({
         accounts,
         accountIds,
         activeAccountId,
         accountNamesToAccountIds,
         accountsComments,
+        accountsCommentsIndexes,
         commentCidsToAccountsComments,
         accountsVotes,
         accountsCommentsReplies,
-        accountsEdits,
+        // Keep accountsEditsSummaries hot while accountsEdits stays cold until accountsEditsLoaded flips true.
+        accountsEdits: Object.fromEntries(accountIds.map((accountId) => [accountId, {}])),
+        accountsEditsSummaries,
+        accountsEditsLoaded: Object.fromEntries(accountIds.map((accountId) => [accountId, false])),
     }));
     // start looking for updates for all accounts comments in database
     for (const { accountComment, accountId } of getInitAccountCommentsToUpdate(accountsComments)) {
@@ -132,11 +140,13 @@ const waitForInitialized = () => __awaiter(void 0, void 0, void 0, function* () 
 const originalState = accountsStore.getState();
 // async function because some stores have async init
 export const resetAccountsStore = () => __awaiter(void 0, void 0, void 0, function* () {
+    var _a, _b;
     // don't reset while initializing, it could happen during quick successive tests
     yield waitForInitialized();
     log("accounts store reset started");
     // remove all event listeners
     listeners.forEach((listener) => listener.removeAllListeners());
+    (_b = (_a = accountsStore.getState().accountsActionsInternal).resetLazyAccountHistoryLoaders) === null || _b === void 0 ? void 0 : _b.call(_a);
     // destroy all component subscriptions to the store
     accountsStore.destroy();
     // restore original state

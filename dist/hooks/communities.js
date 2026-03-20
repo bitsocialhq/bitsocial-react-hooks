@@ -17,6 +17,7 @@ import useInterval from "./utils/use-interval";
 import createStore from "zustand";
 import { resolveEnsTxtRecord } from "../lib/chain";
 import useCommunitiesStore from "../stores/communities";
+import useAccountsStore from "../stores/accounts";
 import shallow from "zustand/shallow";
 import { getPlebbitCommunityAddresses } from "../lib/plebbit-compat";
 /**
@@ -28,9 +29,11 @@ export function useCommunity(options) {
     assert(!options || typeof options === "object", `useCommunity options argument '${options}' not an object`);
     const { communityAddress, accountName, onlyIfCached } = options !== null && options !== void 0 ? options : {};
     const account = useAccount({ accountName });
+    const accountId = (account === null || account === void 0 ? void 0 : account.id) || "";
     const community = useCommunitiesStore((state) => state.communities[communityAddress || ""]);
     const addCommunityToStore = useCommunitiesStore((state) => state.addCommunityToStore);
     const errors = useCommunitiesStore((state) => state.errors[communityAddress || ""]);
+    const communityEditSummary = useAccountsStore((state) => { var _a; return (_a = state.accountsEditsSummaries[accountId]) === null || _a === void 0 ? void 0 : _a[communityAddress || ""]; });
     useEffect(() => {
         if (!communityAddress || !account) {
             return;
@@ -44,12 +47,36 @@ export function useCommunity(options) {
     if (account && communityAddress) {
         log("useCommunity", { communityAddress, community, account });
     }
-    let state = (community === null || community === void 0 ? void 0 : community.updatingState) || "initializing";
+    const mergedCommunity = useMemo(() => {
+        var _a;
+        if (!communityEditSummary) {
+            return community;
+        }
+        const localCommunityAddresses = getPlebbitCommunityAddresses(account === null || account === void 0 ? void 0 : account.plebbit);
+        const editedCommunityAddress = (_a = communityEditSummary.address) === null || _a === void 0 ? void 0 : _a.value;
+        if (!community &&
+            editedCommunityAddress &&
+            !localCommunityAddresses.includes(communityAddress || "") &&
+            !localCommunityAddresses.includes(editedCommunityAddress)) {
+            return community;
+        }
+        if ((community === null || community === void 0 ? void 0 : community.address) &&
+            editedCommunityAddress &&
+            community.address !== editedCommunityAddress) {
+            return community;
+        }
+        const summaryValues = Object.fromEntries(Object.entries(communityEditSummary).map(([propertyName, propertySummary]) => [
+            propertyName,
+            propertySummary === null || propertySummary === void 0 ? void 0 : propertySummary.value,
+        ]));
+        return Object.assign(Object.assign({}, (community || { address: communityAddress })), summaryValues);
+    }, [account === null || account === void 0 ? void 0 : account.plebbit, community, communityAddress, communityEditSummary]);
+    let state = (mergedCommunity === null || mergedCommunity === void 0 ? void 0 : mergedCommunity.updatingState) || "initializing";
     // force succeeded even if the community is fecthing a new update
-    if (community === null || community === void 0 ? void 0 : community.updatedAt) {
+    if (mergedCommunity === null || mergedCommunity === void 0 ? void 0 : mergedCommunity.updatedAt) {
         state = "succeeded";
     }
-    return useMemo(() => (Object.assign(Object.assign({}, community), { state, error: errors === null || errors === void 0 ? void 0 : errors[errors.length - 1], errors: errors || [] })), [community, communityAddress, errors]);
+    return useMemo(() => (Object.assign(Object.assign({}, mergedCommunity), { state, error: errors === null || errors === void 0 ? void 0 : errors[errors.length - 1], errors: errors || [] })), [mergedCommunity, communityAddress, errors]);
 }
 /**
  * @param communityAddress - The address of the community, e.g. 'memes.eth', '12D3KooW...', etc

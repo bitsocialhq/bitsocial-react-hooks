@@ -1,4 +1,4 @@
-import { AccountNamesToAccountIds, Accounts, AccountsVotes, AccountsEdits, AccountsComments, AccountsCommentsReplies, CommentCidsToAccountsComments } from "../../types";
+import { AccountNamesToAccountIds, Accounts, AccountsVotes, AccountsEdits, AccountsEditsSummaries, AccountsComments, AccountsCommentsIndexes, AccountsCommentsReplies, CommentCidsToAccountsComments } from "../../types";
 export declare const listeners: any;
 type AccountsState = {
     accounts: Accounts;
@@ -6,6 +6,7 @@ type AccountsState = {
     activeAccountId: string | undefined;
     accountNamesToAccountIds: AccountNamesToAccountIds;
     accountsComments: AccountsComments;
+    accountsCommentsIndexes: AccountsCommentsIndexes;
     commentCidsToAccountsComments: CommentCidsToAccountsComments;
     accountsCommentsUpdating: {
         [commentCid: string]: boolean;
@@ -13,6 +14,10 @@ type AccountsState = {
     accountsCommentsReplies: AccountsCommentsReplies;
     accountsVotes: AccountsVotes;
     accountsEdits: AccountsEdits;
+    accountsEditsSummaries: AccountsEditsSummaries;
+    accountsEditsLoaded: {
+        [accountId: string]: boolean;
+    };
     accountsActions: {
         [functionName: string]: Function;
     };

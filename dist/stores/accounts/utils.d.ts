@@ -1,6 +1,15 @@
-import { Account, Communities, AccountComment, AccountsComments, CommentCidsToAccountsComments, Comment } from "../../types";
+import { Account, Communities, AccountComment, AccountsComments, AccountsCommentsIndexes, AccountCommentsIndex, CommentCidsToAccountsComments, Comment, AccountEdit, AccountEditsSummary } from "../../types";
 export declare const getAccountCommunities: (account: Account, communities: Communities) => any;
 export declare const getCommentCidsToAccountsComments: (accountsComments: AccountsComments) => CommentCidsToAccountsComments;
+export declare const sanitizeStoredAccountComment: (comment: Comment) => any;
+export declare const getAccountCommentsIndex: (accountComments: AccountComment[] | undefined) => AccountCommentsIndex;
+export declare const getAccountsCommentsIndexes: (accountsComments: AccountsComments) => AccountsCommentsIndexes;
+export declare const getAccountEditPropertySummary: (accountEdits: AccountEdit[] | undefined) => {
+    [propertyName: string]: import("../../types").AccountEditPropertySummary;
+};
+export declare const getAccountsEditsSummary: (accountEdits: {
+    [commentCidOrCommunityAddress: string]: AccountEdit[];
+}) => AccountEditsSummary;
 interface CommentLinkDimensions {
     linkWidth?: number;
     linkHeight?: number;
@@ -16,6 +25,15 @@ export declare const addShortAddressesToAccountComment: (comment: Comment) => Co
 declare const utils: {
     getAccountCommunities: (account: Account, communities: Communities) => any;
     getCommentCidsToAccountsComments: (accountsComments: AccountsComments) => CommentCidsToAccountsComments;
+    getAccountCommentsIndex: (accountComments: AccountComment[] | undefined) => AccountCommentsIndex;
+    getAccountsCommentsIndexes: (accountsComments: AccountsComments) => AccountsCommentsIndexes;
+    sanitizeStoredAccountComment: (comment: Comment) => any;
+    getAccountEditPropertySummary: (accountEdits: AccountEdit[] | undefined) => {
+        [propertyName: string]: import("../../types").AccountEditPropertySummary;
+    };
+    getAccountsEditsSummary: (accountEdits: {
+        [commentCidOrCommunityAddress: string]: AccountEdit[];
+    }) => AccountEditsSummary;
     fetchCommentLinkDimensions: (link: string) => Promise<CommentLinkDimensions>;
     getInitAccountCommentsToUpdate: (accountsComments: AccountsComments) => {
         accountComment: AccountComment;

@@ -16,12 +16,24 @@ import isEqual from "lodash.isequal";
 import localForageLru from "../../lib/localforage-lru";
 import utils from "../../lib/utils";
 import { getDefaultPlebbitOptions, overwritePlebbitOptions } from "./account-generator";
+import { getAccountsEditsSummary, sanitizeStoredAccountComment } from "./utils";
 import Logger from "@plebbit/plebbit-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
-const accountsDatabase = localForage.createInstance({ name: "plebbitReactHooks-accounts" });
+// Storage keeps the legacy namespace so existing installs reuse the same IndexedDB data.
+const accountsDatabaseNamespace = "plebbitReactHooks";
+const getAccountsDatabaseName = (databaseName) => `${accountsDatabaseNamespace}-${databaseName}`;
+const getPerAccountDatabaseName = (databaseName, accountId) => `${getAccountsDatabaseName(databaseName)}-${accountId}`;
+const accountsDatabase = localForage.createInstance({ name: getAccountsDatabaseName("accounts") });
 const accountsMetadataDatabase = localForage.createInstance({
-    name: "plebbitReactHooks-accountsMetadata",
+    name: getAccountsDatabaseName("accountsMetadata"),
 });
+const storageVersionKey = "__storageVersion";
+const votesLatestIndexKey = "__commentCidToLatestIndex";
+const editsTargetToIndicesKey = "__targetToIndices";
+const editsSummaryKey = "__summary";
+const commentStorageVersion = 1;
+const voteStorageVersion = 1;
+const editStorageVersion = 1;
 // TODO: remove this eventually after everyone has migrated
 // migrate to name with safe prefix
 const migrate = () => __awaiter(void 0, void 0, void 0, function* () {
@@ -59,7 +71,7 @@ const migrate = () => __awaiter(void 0, void 0, void 0, function* () {
                     name: `${databaseName}-${accountId}`,
                 });
                 const database = localForage.createInstance({
-                    name: `plebbitReactHooks-${databaseName}-${accountId}`,
+                    name: getPerAccountDatabaseName(databaseName, accountId),
                 });
                 for (const key of yield previousDatabase.keys()) {
                     promises.push(previousDatabase.getItem(key).then((value) => database.setItem(key, value)));
@@ -143,6 +155,7 @@ const getExportedAccountJson = (accountId) => __awaiter(void 0, void 0, void 0, 
     const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
     const accountVotesDatabase = getAccountVotesDatabase(accountId);
     const accountEditsDatabase = getAccountEditsDatabase(accountId);
+    yield ensureAccountCommentsDatabaseLayout(accountId);
     const [accountComments, accountVotes, accountEdits] = yield Promise.all([
         getDatabaseAsArray(accountCommentsDatabase),
         getDatabaseAsArray(accountVotesDatabase),
@@ -162,6 +175,40 @@ const getDatabaseAsArray = (database) => __awaiter(void 0, void 0, void 0, funct
     const items = yield Promise.all(promises);
     return items;
 });
+const removeFunctionsAndSensitiveFields = (publication) => {
+    const sanitizedPublication = {};
+    for (const key in publication) {
+        if (key === "signer" || key === "author" || typeof publication[key] === "function") {
+            continue;
+        }
+        sanitizedPublication[key] = publication[key];
+    }
+    return sanitizedPublication;
+};
+const isNumericDatabaseKey = (key) => /^[0-9]+$/.test(key);
+const rebuildVotesLatestIndex = (votes) => {
+    const latestIndexByCommentCid = {};
+    for (const [index, vote] of votes.entries()) {
+        if (vote === null || vote === void 0 ? void 0 : vote.commentCid) {
+            latestIndexByCommentCid[vote.commentCid] = index;
+        }
+    }
+    return latestIndexByCommentCid;
+};
+const rebuildEditsTargetIndexes = (edits) => {
+    const targetToIndices = {};
+    for (const [index, edit] of edits.entries()) {
+        const editTarget = getAccountEditTarget(edit);
+        if (!editTarget) {
+            continue;
+        }
+        if (!targetToIndices[editTarget]) {
+            targetToIndices[editTarget] = [];
+        }
+        targetToIndices[editTarget].push(index);
+    }
+    return targetToIndices;
+};
 const addAccount = (account) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     validator.validateAccountsDatabaseAddAccountArguments(account);
@@ -238,19 +285,51 @@ const removeAccount = (account) => __awaiter(void 0, void 0, void 0, function* (
     yield accountCommentsDatabase.clear();
     const accountVotesDatabase = getAccountVotesDatabase(account.id);
     yield accountVotesDatabase.clear();
+    const accountCommentsRepliesDatabase = getAccountCommentsRepliesDatabase(account.id);
+    yield accountCommentsRepliesDatabase.clear();
+    const accountEditsDatabase = getAccountEditsDatabase(account.id);
+    yield accountEditsDatabase.clear();
 });
 const accountsCommentsDatabases = {};
+const accountCommentsLayoutMigrations = {};
 const getAccountCommentsDatabase = (accountId) => {
     assert(accountId && typeof accountId === "string", `getAccountCommentsDatabase '${accountId}' not a string`);
     if (!accountsCommentsDatabases[accountId]) {
         accountsCommentsDatabases[accountId] = localForage.createInstance({
-            name: `plebbitReactHooks-accountComments-${accountId}`,
+            name: getPerAccountDatabaseName("accountComments", accountId),
         });
     }
     return accountsCommentsDatabases[accountId];
 };
+const ensureAccountCommentsDatabaseLayout = (accountId) => __awaiter(void 0, void 0, void 0, function* () {
+    const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
+    if ((yield accountCommentsDatabase.getItem(storageVersionKey)) === commentStorageVersion) {
+        return;
+    }
+    if (!accountCommentsLayoutMigrations[accountId]) {
+        accountCommentsLayoutMigrations[accountId] = (() => __awaiter(void 0, void 0, void 0, function* () {
+            if ((yield accountCommentsDatabase.getItem(storageVersionKey)) === commentStorageVersion) {
+                return;
+            }
+            const comments = yield getDatabaseAsArray(accountCommentsDatabase);
+            const updatedComments = comments.map((comment) => comment ? sanitizeStoredAccountComment(comment) : comment);
+            const rewritePromises = [];
+            for (const [index, updatedComment] of updatedComments.entries()) {
+                if (!isEqual(updatedComment, comments[index])) {
+                    rewritePromises.push(accountCommentsDatabase.setItem(String(index), updatedComment));
+                }
+            }
+            yield Promise.all(rewritePromises);
+            yield accountCommentsDatabase.setItem(storageVersionKey, commentStorageVersion);
+        }))().finally(() => {
+            delete accountCommentsLayoutMigrations[accountId];
+        });
+    }
+    yield accountCommentsLayoutMigrations[accountId];
+});
 const deleteAccountComment = (accountId, accountCommentIndex) => __awaiter(void 0, void 0, void 0, function* () {
     const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
+    yield ensureAccountCommentsDatabaseLayout(accountId);
     const length = (yield accountCommentsDatabase.getItem("length")) || 0;
     assert(accountCommentIndex >= 0 && accountCommentIndex < length, `deleteAccountComment accountCommentIndex '${accountCommentIndex}' out of range [0, ${length})`);
     const items = yield getDatabaseAsArray(accountCommentsDatabase);
@@ -266,21 +345,27 @@ const deleteAccountComment = (accountId, accountCommentIndex) => __awaiter(void 
 });
 const addAccountComment = (accountId, comment, accountCommentIndex) => __awaiter(void 0, void 0, void 0, function* () {
     const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
+    yield ensureAccountCommentsDatabaseLayout(accountId);
     const length = (yield accountCommentsDatabase.getItem("length")) || 0;
-    comment = utils.clone(Object.assign(Object.assign({}, comment), { signer: undefined }));
+    comment = sanitizeStoredAccountComment(comment);
     if (typeof accountCommentIndex === "number") {
         assert(accountCommentIndex < length, `addAccountComment cannot edit comment no comment in database at accountCommentIndex '${accountCommentIndex}'`);
-        yield accountCommentsDatabase.setItem(String(accountCommentIndex), comment);
+        yield Promise.all([
+            accountCommentsDatabase.setItem(String(accountCommentIndex), comment),
+            accountCommentsDatabase.setItem(storageVersionKey, commentStorageVersion),
+        ]);
     }
     else {
         yield Promise.all([
             accountCommentsDatabase.setItem(String(length), comment),
+            accountCommentsDatabase.setItem(storageVersionKey, commentStorageVersion),
             accountCommentsDatabase.setItem("length", length + 1),
         ]);
     }
 });
 const getAccountComments = (accountId) => __awaiter(void 0, void 0, void 0, function* () {
     const accountCommentsDatabase = getAccountCommentsDatabase(accountId);
+    yield ensureAccountCommentsDatabaseLayout(accountId);
     const length = (yield accountCommentsDatabase.getItem("length")) || 0;
     if (length === 0) {
         return [];
@@ -293,6 +378,7 @@ const getAccountComments = (accountId) => __awaiter(void 0, void 0, void 0, func
     const comments = yield Promise.all(promises);
     // add index and account id to account comments for easier updating
     for (const i in comments) {
+        comments[i] = sanitizeStoredAccountComment(comments[i]);
         comments[i].index = Number(i);
         comments[i].accountId = accountId;
     }
@@ -316,42 +402,55 @@ const getAccountVotesDatabase = (accountId) => {
     assert(accountId && typeof accountId === "string", `getAccountVotesDatabase '${accountId}' not a string`);
     if (!accountsVotesDatabases[accountId]) {
         accountsVotesDatabases[accountId] = localForage.createInstance({
-            name: `plebbitReactHooks-accountVotes-${accountId}`,
+            name: getPerAccountDatabaseName("accountVotes", accountId),
         });
     }
     return accountsVotesDatabases[accountId];
 };
+const ensureAccountVotesDatabaseLayout = (accountId) => __awaiter(void 0, void 0, void 0, function* () {
+    const accountVotesDatabase = getAccountVotesDatabase(accountId);
+    if ((yield accountVotesDatabase.getItem(storageVersionKey)) === voteStorageVersion) {
+        return;
+    }
+    const votes = yield getDatabaseAsArray(accountVotesDatabase);
+    const latestIndexByCommentCid = rebuildVotesLatestIndex(votes);
+    const keys = yield accountVotesDatabase.keys();
+    const duplicateKeysToDelete = keys.filter((key) => !isNumericDatabaseKey(key) &&
+        key !== "length" &&
+        key !== storageVersionKey &&
+        key !== votesLatestIndexKey &&
+        latestIndexByCommentCid[key] !== undefined);
+    yield Promise.all([
+        ...duplicateKeysToDelete.map((key) => accountVotesDatabase.removeItem(key)),
+        accountVotesDatabase.setItem(votesLatestIndexKey, latestIndexByCommentCid),
+        accountVotesDatabase.setItem(storageVersionKey, voteStorageVersion),
+    ]);
+});
 const addAccountVote = (accountId, createVoteOptions) => __awaiter(void 0, void 0, void 0, function* () {
     assert((createVoteOptions === null || createVoteOptions === void 0 ? void 0 : createVoteOptions.commentCid) && typeof (createVoteOptions === null || createVoteOptions === void 0 ? void 0 : createVoteOptions.commentCid) === "string", `addAccountVote createVoteOptions.commentCid '${createVoteOptions === null || createVoteOptions === void 0 ? void 0 : createVoteOptions.commentCid}' not a string`);
     const accountVotesDatabase = getAccountVotesDatabase(accountId);
+    yield ensureAccountVotesDatabaseLayout(accountId);
     const length = (yield accountVotesDatabase.getItem("length")) || 0;
-    const vote = Object.assign({}, createVoteOptions);
-    delete vote.signer;
-    delete vote.author;
-    // delete all functions because they can't be added to indexeddb
-    for (const i in vote) {
-        if (typeof vote[i] === "function") {
-            delete vote[i];
-        }
-    }
+    const vote = removeFunctionsAndSensitiveFields(createVoteOptions);
+    const existingLatestIndexByCommentCid = yield accountVotesDatabase.getItem(votesLatestIndexKey);
+    const latestIndexByCommentCid = Object.assign(Object.assign({}, existingLatestIndexByCommentCid), { [vote.commentCid]: length });
     yield Promise.all([
-        accountVotesDatabase.setItem(vote.commentCid, vote),
         accountVotesDatabase.setItem(String(length), vote),
+        accountVotesDatabase.setItem(votesLatestIndexKey, latestIndexByCommentCid),
+        accountVotesDatabase.setItem(storageVersionKey, voteStorageVersion),
         accountVotesDatabase.setItem("length", length + 1),
     ]);
 });
 const getAccountVotes = (accountId) => __awaiter(void 0, void 0, void 0, function* () {
     const accountVotesDatabase = getAccountVotesDatabase(accountId);
-    const length = (yield accountVotesDatabase.getItem("length")) || 0;
+    yield ensureAccountVotesDatabaseLayout(accountId);
+    const latestIndexByCommentCid = (yield accountVotesDatabase.getItem(votesLatestIndexKey)) || {};
     const votes = {};
-    if (length === 0) {
+    const latestIndexes = Object.values(latestIndexByCommentCid);
+    if (latestIndexes.length === 0) {
         return votes;
     }
-    let promises = [];
-    let i = 0;
-    while (i < length) {
-        promises.push(accountVotesDatabase.getItem(String(i++)));
-    }
+    const promises = latestIndexes.map((index) => accountVotesDatabase.getItem(String(index)));
     const votesArray = yield Promise.all(promises);
     for (const vote of votesArray) {
         votes[vote === null || vote === void 0 ? void 0 : vote.commentCid] = vote;
@@ -376,7 +475,7 @@ const getAccountCommentsRepliesDatabase = (accountId) => {
     assert(accountId && typeof accountId === "string", `getAccountCommentsRepliesDatabase '${accountId}' not a string`);
     if (!accountsCommentsRepliesDatabases[accountId]) {
         accountsCommentsRepliesDatabases[accountId] = localForageLru.createInstance({
-            name: `plebbitReactHooks-accountCommentsReplies-${accountId}`,
+            name: getPerAccountDatabaseName("accountCommentsReplies", accountId),
             size: 1000,
         });
     }
@@ -414,39 +513,66 @@ const getAccountEditsDatabase = (accountId) => {
     assert(accountId && typeof accountId === "string", `getAccountEditsDatabase '${accountId}' not a string`);
     if (!accountsEditsDatabases[accountId]) {
         accountsEditsDatabases[accountId] = localForage.createInstance({
-            name: `plebbitReactHooks-accountEdits-${accountId}`,
+            name: getPerAccountDatabaseName("accountEdits", accountId),
         });
     }
     return accountsEditsDatabases[accountId];
 };
-const addAccountEdit = (accountId, createEditOptions) => __awaiter(void 0, void 0, void 0, function* () {
-    assert((createEditOptions === null || createEditOptions === void 0 ? void 0 : createEditOptions.commentCid) && typeof (createEditOptions === null || createEditOptions === void 0 ? void 0 : createEditOptions.commentCid) === "string", `addAccountEdit createEditOptions.commentCid '${createEditOptions === null || createEditOptions === void 0 ? void 0 : createEditOptions.commentCid}' not a string`);
+const getAccountEditTarget = (edit) => (edit === null || edit === void 0 ? void 0 : edit.commentCid) || (edit === null || edit === void 0 ? void 0 : edit.communityAddress) || (edit === null || edit === void 0 ? void 0 : edit.subplebbitAddress);
+const persistAccountEditsIndexes = (accountId, edits) => __awaiter(void 0, void 0, void 0, function* () {
     const accountEditsDatabase = getAccountEditsDatabase(accountId);
-    const length = (yield accountEditsDatabase.getItem("length")) || 0;
-    const edit = Object.assign({}, createEditOptions);
-    delete edit.signer;
-    delete edit.author;
-    // delete all functions because they can't be added to indexeddb
-    for (const i in edit) {
-        if (typeof edit[i] === "function") {
-            delete edit[i];
-        }
-    }
-    // edits are an array because you can edit the same comment multiple times
-    const edits = (yield accountEditsDatabase.getItem(edit.commentCid)) || [];
-    edits.push(edit);
+    const targetToIndices = rebuildEditsTargetIndexes(edits);
+    const summary = getAccountsEditsSummary(Object.fromEntries(Object.entries(targetToIndices).map(([target, indices]) => [
+        target,
+        indices.map((index) => edits[index]).filter(Boolean),
+    ])));
     yield Promise.all([
-        accountEditsDatabase.setItem(edit.commentCid, edits),
+        accountEditsDatabase.setItem(editsTargetToIndicesKey, targetToIndices),
+        accountEditsDatabase.setItem(editsSummaryKey, summary),
+        accountEditsDatabase.setItem(storageVersionKey, editStorageVersion),
+    ]);
+    return { targetToIndices, summary };
+});
+const ensureAccountEditsDatabaseLayout = (accountId) => __awaiter(void 0, void 0, void 0, function* () {
+    const accountEditsDatabase = getAccountEditsDatabase(accountId);
+    if ((yield accountEditsDatabase.getItem(storageVersionKey)) === editStorageVersion) {
+        return;
+    }
+    const edits = yield getDatabaseAsArray(accountEditsDatabase);
+    const keys = yield accountEditsDatabase.keys();
+    const duplicateKeysToDelete = keys.filter((key) => !isNumericDatabaseKey(key) &&
+        key !== "length" &&
+        key !== storageVersionKey &&
+        key !== editsTargetToIndicesKey &&
+        key !== editsSummaryKey &&
+        edits.some((edit) => getAccountEditTarget(edit) === key));
+    yield Promise.all(duplicateKeysToDelete.map((key) => accountEditsDatabase.removeItem(key)));
+    yield persistAccountEditsIndexes(accountId, edits);
+});
+const addAccountEdit = (accountId, createEditOptions) => __awaiter(void 0, void 0, void 0, function* () {
+    const editTarget = getAccountEditTarget(createEditOptions);
+    assert(typeof editTarget === "string", `addAccountEdit target '${editTarget}' not a string`);
+    const accountEditsDatabase = getAccountEditsDatabase(accountId);
+    yield ensureAccountEditsDatabaseLayout(accountId);
+    const length = (yield accountEditsDatabase.getItem("length")) || 0;
+    const edit = removeFunctionsAndSensitiveFields(createEditOptions);
+    const existingEdits = yield getDatabaseAsArray(accountEditsDatabase);
+    existingEdits[length] = edit;
+    yield Promise.all([
         accountEditsDatabase.setItem(String(length), edit),
+        accountEditsDatabase.setItem(storageVersionKey, editStorageVersion),
         accountEditsDatabase.setItem("length", length + 1),
     ]);
+    yield persistAccountEditsIndexes(accountId, existingEdits);
 });
 const doesStoredAccountEditMatch = (storedAccountEdit, targetStoredAccountEdit) => (storedAccountEdit === null || storedAccountEdit === void 0 ? void 0 : storedAccountEdit.clientId) && (targetStoredAccountEdit === null || targetStoredAccountEdit === void 0 ? void 0 : targetStoredAccountEdit.clientId)
     ? storedAccountEdit.clientId === targetStoredAccountEdit.clientId
     : isEqual(storedAccountEdit, targetStoredAccountEdit);
 const deleteAccountEdit = (accountId, editToDelete) => __awaiter(void 0, void 0, void 0, function* () {
-    assert((editToDelete === null || editToDelete === void 0 ? void 0 : editToDelete.commentCid) && typeof (editToDelete === null || editToDelete === void 0 ? void 0 : editToDelete.commentCid) === "string", `deleteAccountEdit editToDelete.commentCid '${editToDelete === null || editToDelete === void 0 ? void 0 : editToDelete.commentCid}' not a string`);
+    const editTarget = getAccountEditTarget(editToDelete);
+    assert(typeof editTarget === "string", `deleteAccountEdit target '${editTarget}' not a string`);
     const accountEditsDatabase = getAccountEditsDatabase(accountId);
+    yield ensureAccountEditsDatabaseLayout(accountId);
     const length = (yield accountEditsDatabase.getItem("length")) || 0;
     const items = yield getDatabaseAsArray(accountEditsDatabase);
     let deletedEdit = false;
@@ -458,7 +584,6 @@ const deleteAccountEdit = (accountId, editToDelete) => __awaiter(void 0, void 0,
         return true;
     });
     const newLength = nextItems.length;
-    const nextCommentEdits = nextItems.filter((item) => (item === null || item === void 0 ? void 0 : item.commentCid) === editToDelete.commentCid);
     const promises = [];
     for (let i = 0; i < newLength; i++) {
         promises.push(accountEditsDatabase.setItem(String(i), nextItems[i]));
@@ -467,36 +592,30 @@ const deleteAccountEdit = (accountId, editToDelete) => __awaiter(void 0, void 0,
         promises.push(accountEditsDatabase.removeItem(String(length - 1)));
         promises.push(accountEditsDatabase.setItem("length", newLength));
     }
-    if (nextCommentEdits.length > 0) {
-        promises.push(accountEditsDatabase.setItem(editToDelete.commentCid, nextCommentEdits));
-    }
-    else {
-        promises.push(accountEditsDatabase.removeItem(editToDelete.commentCid));
-    }
     yield Promise.all(promises);
+    yield persistAccountEditsIndexes(accountId, nextItems);
     return deletedEdit;
 });
 const getAccountEdits = (accountId) => __awaiter(void 0, void 0, void 0, function* () {
     const accountEditsDatabase = getAccountEditsDatabase(accountId);
-    const length = (yield accountEditsDatabase.getItem("length")) || 0;
+    yield ensureAccountEditsDatabaseLayout(accountId);
+    const targetToIndices = (yield accountEditsDatabase.getItem(editsTargetToIndicesKey)) || {};
     const edits = {};
-    if (length === 0) {
+    const targets = Object.keys(targetToIndices);
+    if (targets.length === 0) {
         return edits;
     }
-    let promises = [];
-    let i = 0;
-    while (i < length) {
-        promises.push(accountEditsDatabase.getItem(String(i++)));
-    }
-    const editsArray = yield Promise.all(promises);
-    for (const edit of editsArray) {
-        // TODO: must change this logic for community edits
-        if (!edits[edit === null || edit === void 0 ? void 0 : edit.commentCid]) {
-            edits[edit === null || edit === void 0 ? void 0 : edit.commentCid] = [];
-        }
-        edits[edit === null || edit === void 0 ? void 0 : edit.commentCid].push(edit);
+    for (const target of targets) {
+        const targetIndices = targetToIndices[target];
+        const targetEdits = yield Promise.all(targetIndices.map((index) => accountEditsDatabase.getItem(String(index))));
+        edits[target] = targetEdits.filter(Boolean);
     }
     return edits;
+});
+const getAccountEditsSummary = (accountId) => __awaiter(void 0, void 0, void 0, function* () {
+    const accountEditsDatabase = getAccountEditsDatabase(accountId);
+    yield ensureAccountEditsDatabaseLayout(accountId);
+    return (yield accountEditsDatabase.getItem(editsSummaryKey)) || {};
 });
 const getAccountsEdits = (accountIds) => __awaiter(void 0, void 0, void 0, function* () {
     assert(Array.isArray(accountIds), `getAccountsEdits invalid accountIds '${accountIds}' not an array`);
@@ -510,6 +629,11 @@ const getAccountsEdits = (accountIds) => __awaiter(void 0, void 0, void 0, funct
         accountsEdits[accountId] = accountsEditsArray[i];
     }
     return accountsEdits;
+});
+const getAccountsEditsSummaries = (accountIds) => __awaiter(void 0, void 0, void 0, function* () {
+    assert(Array.isArray(accountIds), `getAccountsEditsSummaries invalid accountIds '${accountIds}' not an array`);
+    const accountsEditsSummaries = yield Promise.all(accountIds.map((accountId) => getAccountEditsSummary(accountId)));
+    return Object.fromEntries(accountIds.map((accountId, index) => [accountId, accountsEditsSummaries[index]]));
 });
 const database = {
     accountsDatabase,
@@ -531,9 +655,13 @@ const database = {
     getAccountsCommentsReplies,
     getAccountsEdits,
     getAccountEdits,
+    getAccountsEditsSummaries,
+    getAccountEditsSummary,
     addAccountEdit,
     deleteAccountEdit,
     accountVersion,
     migrate,
+    getAccountsDatabaseName,
+    getPerAccountDatabaseName,
 };
 export default database;

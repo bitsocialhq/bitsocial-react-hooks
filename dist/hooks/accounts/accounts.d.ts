@@ -29,6 +29,7 @@ export declare function useAccountCommunities(options?: UseAccountCommunitiesOpt
  * the active account's notifications.
  */
 export declare function useNotifications(options?: UseNotificationsOptions): UseNotificationsResult;
+export declare const haveAccountCommentStatesChanged: (nextStates: string[], previousStates: string[]) => boolean;
 export declare function useAccountComments(options?: UseAccountCommentsOptions): UseAccountCommentsResult;
 /**
  * Returns an account's single comment, e.g. a pending comment they published.

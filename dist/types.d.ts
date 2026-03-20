@@ -21,17 +21,37 @@ export interface UseAccountsResult extends Result {
 }
 export interface UseAccountCommentsOptions extends Options {
     filter?: AccountPublicationsFilter;
+    commentCid?: string;
+    commentIndices?: number[];
+    communityAddress?: string;
+    parentCid?: string;
+    newerThan?: number;
+    page?: number;
+    pageSize?: number;
+    sortType?: "new" | "old";
+    /** @deprecated use sortType */
+    order?: "asc" | "desc";
 }
 export interface UseAccountCommentsResult extends Result {
     accountComments: AccountComment[];
 }
 export interface UseAccountCommentOptions extends Options {
     commentIndex?: number;
+    commentCid?: string;
 }
 export interface UseAccountCommentResult extends Result, AccountComment {
 }
 export interface UseAccountVotesOptions extends Options {
     filter?: AccountPublicationsFilter;
+    vote?: number;
+    commentCid?: string;
+    communityAddress?: string;
+    newerThan?: number;
+    page?: number;
+    pageSize?: number;
+    sortType?: "new" | "old";
+    /** @deprecated use sortType */
+    order?: "asc" | "desc";
 }
 export interface UseAccountVotesResult extends Result {
     accountVotes: AccountVote[];
@@ -439,6 +459,17 @@ export type AccountComments = AccountComment[];
 export type AccountsComments = {
     [accountId: string]: AccountComments;
 };
+export type AccountCommentsIndex = {
+    byCommunityAddress: {
+        [communityAddress: string]: number[];
+    };
+    byParentCid: {
+        [parentCid: string]: number[];
+    };
+};
+export type AccountsCommentsIndexes = {
+    [accountId: string]: AccountCommentsIndex;
+};
 export type CommentCidsToAccountsComments = {
     [commentCid: string]: {
         accountId: string;
@@ -477,6 +508,18 @@ export type AccountsEdits = {
 };
 export type AccountEdits = {
     [commentCidOrCommunityAddress: string]: AccountEdit[];
+};
+export type AccountEditPropertySummary = {
+    timestamp: number;
+    value: any;
+};
+export type AccountEditsSummary = {
+    [commentCidOrCommunityAddress: string]: {
+        [propertyName: string]: AccountEditPropertySummary;
+    };
+};
+export type AccountsEditsSummaries = {
+    [accountId: string]: AccountEditsSummary;
 };
 export type AccountEdit = {
     [publishOption: string]: any;
