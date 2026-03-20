@@ -41,6 +41,7 @@ import {
   fetchCommentLinkDimensions,
   getAccountCommentDepth,
   addShortAddressesToAccountComment,
+  sanitizeAccountCommentForState,
   sanitizeStoredAccountComment,
 } from "./utils";
 import isEqual from "lodash.isequal";
@@ -57,6 +58,48 @@ type PublishSession = {
 // Active publish-session tracking for pending comments (Task 3)
 const activePublishSessions = new Map<string, PublishSession>();
 const abandonedPublishSessionIds = new Set<string>();
+
+const getClientsSnapshotForState = (clients: any): any => {
+  if (!clients || typeof clients !== "object") {
+    return undefined;
+  }
+  if (typeof clients.on === "function" || "state" in clients) {
+    return { state: clients.state };
+  }
+
+  const snapshot: Record<string, any> = {};
+  for (const key in clients) {
+    const childSnapshot = getClientsSnapshotForState(clients[key]);
+    if (childSnapshot !== undefined) {
+      snapshot[key] = childSnapshot;
+    }
+  }
+  return Object.keys(snapshot).length > 0 ? snapshot : undefined;
+};
+
+const syncCommentClientsSnapshot = (
+  publishSessionId: string,
+  accountId: string,
+  publication: any,
+) => {
+  const session = getPublishSession(publishSessionId);
+  if (session?.currentIndex === undefined) {
+    return;
+  }
+
+  const snapshot = getClientsSnapshotForState(publication?.clients);
+  accountsStore.setState(({ accountsComments }) =>
+    maybeUpdateAccountComment(accountsComments, accountId, session.currentIndex, (ac, acc) => {
+      const updatedAccountComment = { ...acc };
+      if (snapshot === undefined) {
+        delete updatedAccountComment.clients;
+      } else {
+        updatedAccountComment.clients = snapshot;
+      }
+      ac[session.currentIndex] = updatedAccountComment;
+    }),
+  );
+};
 
 const accountOwnsCommunityLocally = (account: Account, communityAddress: string) => {
   const localCommunityAddresses = getPlebbitCommunityAddresses(account.plebbit);
@@ -953,8 +996,11 @@ export const publishComment = async (
     const isUpdate = savedOnce;
     const session = getPublishSession(publishSessionId);
     const currentIndex = session?.currentIndex ?? accountCommentIndex;
-    const sanitizedAccountComment = addShortAddressesToAccountComment(
+    const persistedAccountComment = addShortAddressesToAccountComment(
       sanitizeStoredAccountComment(accountComment),
+    ) as AccountComment;
+    const liveAccountComment = addShortAddressesToAccountComment(
+      sanitizeAccountCommentForState(accountComment),
     ) as AccountComment;
     const liveAccountComments = accountsStore.getState().accountsComments[account.id] || [];
     if (isUpdate && !liveAccountComments[currentIndex]) {
@@ -962,7 +1008,7 @@ export const publishComment = async (
     }
     await accountsDatabase.addAccountComment(
       account.id,
-      sanitizedAccountComment,
+      persistedAccountComment,
       isUpdate ? currentIndex : undefined,
     );
     savedOnce = true;
@@ -972,7 +1018,7 @@ export const publishComment = async (
         return {};
       }
       accountComments[currentIndex] = {
-        ...sanitizedAccountComment,
+        ...liveAccountComment,
         index: currentIndex,
         accountId: account.id,
       };
@@ -992,7 +1038,7 @@ export const publishComment = async (
     accountId: account.id,
   };
   createdAccountComment = addShortAddressesToAccountComment(
-    sanitizeStoredAccountComment(createdAccountComment),
+    sanitizeAccountCommentForState(createdAccountComment),
   );
   await saveCreatedAccountComment(createdAccountComment);
   publishCommentOptions._onPendingCommentIndex?.(accountCommentIndex, createdAccountComment);
@@ -1014,6 +1060,7 @@ export const publishComment = async (
       await account.plebbit.createComment(createCommentOptions),
       createCommentOptions,
     );
+    syncCommentClientsSnapshot(publishSessionId, account.id, comment);
     publishAndRetryFailedChallengeVerification();
     log("accountsActions.publishComment", { createCommentOptions });
   })();
@@ -1043,6 +1090,7 @@ export const publishComment = async (
           await account.plebbit.createComment(createCommentOptions),
           createCommentOptions,
         );
+        syncCommentClientsSnapshot(publishSessionId, account.id, comment);
         lastChallenge = undefined;
         publishAndRetryFailedChallengeVerification();
       } else {
@@ -1053,19 +1101,30 @@ export const publishComment = async (
         if (!session || isPublishSessionAbandoned(publishSessionId)) return;
         queueMicrotask(() => cleanupPublishSessionOnTerminal(publishSessionId));
         if (challengeVerification?.commentUpdate?.cid) {
-          const commentWithCid = addShortAddressesToAccountComment(
+          const persistedCommentWithCid = addShortAddressesToAccountComment(
             sanitizeStoredAccountComment(normalizePublicationOptionsForStore(comment as any)),
           );
-          delete (commentWithCid as any).clients;
-          delete (commentWithCid as any).publishingState;
-          delete (commentWithCid as any).error;
-          delete (commentWithCid as any).errors;
-          await accountsDatabase.addAccountComment(account.id, commentWithCid, currentIndex);
+          const liveCommentWithCid = addShortAddressesToAccountComment(
+            sanitizeAccountCommentForState(normalizePublicationOptionsForStore(comment as any)),
+          );
+          delete (persistedCommentWithCid as any).clients;
+          delete (persistedCommentWithCid as any).publishingState;
+          delete (persistedCommentWithCid as any).error;
+          delete (persistedCommentWithCid as any).errors;
+          delete (liveCommentWithCid as any).clients;
+          delete (liveCommentWithCid as any).publishingState;
+          delete (liveCommentWithCid as any).error;
+          delete (liveCommentWithCid as any).errors;
+          await accountsDatabase.addAccountComment(
+            account.id,
+            persistedCommentWithCid,
+            currentIndex,
+          );
           accountsStore.setState(
             ({ accountsComments, accountsCommentsIndexes, commentCidsToAccountsComments }) => {
               const updatedAccountComments = [...accountsComments[account.id]];
               const updatedAccountComment = {
-                ...commentWithCid,
+                ...liveCommentWithCid,
                 index: currentIndex,
                 accountId: account.id,
               };
@@ -1140,7 +1199,7 @@ export const publishComment = async (
         const currentIndex = session.currentIndex;
         accountsStore.setState(({ accountsComments }) =>
           maybeUpdateAccountComment(accountsComments, account.id, currentIndex, (ac, acc) => {
-            const clients = { ...comment.clients };
+            const clients = getClientsSnapshotForState(comment.clients) || {};
             const client = { state: clientState };
             if (chainTicker) {
               const chainProviders = { ...clients[clientType][chainTicker], [clientUrl]: client };
