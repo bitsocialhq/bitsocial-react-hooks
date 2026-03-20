@@ -149,7 +149,7 @@ export const startUpdatingAccountCommentOnCommentUpdateEvents = async (
       updatedComment: storedUpdatedComment,
       account,
     });
-    accountsStore.setState(({ accountsComments }) => {
+    accountsStore.setState(({ accountsComments, accountsCommentsIndexes }) => {
       // account no longer exists
       if (!accountsComments[account.id]) {
         log.error(
@@ -175,8 +175,10 @@ export const startUpdatingAccountCommentOnCommentUpdateEvents = async (
       return {
         accountsComments: nextAccountsComments,
         accountsCommentsIndexes: {
-          ...accountsStore.getState().accountsCommentsIndexes,
-          [account.id]: getAccountsCommentsIndexes(nextAccountsComments)[account.id],
+          ...accountsCommentsIndexes,
+          [account.id]: getAccountsCommentsIndexes({
+            [account.id]: updatedAccountComments,
+          } as AccountsComments)[account.id],
         },
       };
     });
@@ -280,29 +282,32 @@ export const addCidToAccountComment = async (comment: Comment) => {
         accountCommentIndex: accountComment.index,
         accountComment: commentWithCid,
       });
-      accountsStore.setState(({ accountsComments, commentCidsToAccountsComments }) => {
-        const updatedAccountComments = [...accountsComments[accountComment.accountId]];
-        updatedAccountComments[accountComment.index] = commentWithCid;
-        const newAccountsComments = {
-          ...accountsComments,
-          [accountComment.accountId]: updatedAccountComments,
-        };
-        return {
-          accountsComments: newAccountsComments,
-          accountsCommentsIndexes: {
-            ...accountsStore.getState().accountsCommentsIndexes,
-            [accountComment.accountId]:
-              getAccountsCommentsIndexes(newAccountsComments)[accountComment.accountId],
-          },
-          commentCidsToAccountsComments: {
-            ...commentCidsToAccountsComments,
-            [comment.cid]: {
-              accountId: accountComment.accountId,
-              accountCommentIndex: accountComment.index,
+      accountsStore.setState(
+        ({ accountsComments, accountsCommentsIndexes, commentCidsToAccountsComments }) => {
+          const updatedAccountComments = [...accountsComments[accountComment.accountId]];
+          updatedAccountComments[accountComment.index] = commentWithCid;
+          const newAccountsComments = {
+            ...accountsComments,
+            [accountComment.accountId]: updatedAccountComments,
+          };
+          return {
+            accountsComments: newAccountsComments,
+            accountsCommentsIndexes: {
+              ...accountsCommentsIndexes,
+              [accountComment.accountId]: getAccountsCommentsIndexes({
+                [accountComment.accountId]: updatedAccountComments,
+              } as AccountsComments)[accountComment.accountId],
             },
-          },
-        };
-      });
+            commentCidsToAccountsComments: {
+              ...commentCidsToAccountsComments,
+              [comment.cid]: {
+                accountId: accountComment.accountId,
+                accountCommentIndex: accountComment.index,
+              },
+            },
+          };
+        },
+      );
 
       startUpdatingAccountCommentOnCommentUpdateEvents(
         comment,

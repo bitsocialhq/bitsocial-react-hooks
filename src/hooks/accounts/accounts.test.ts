@@ -1324,6 +1324,7 @@ describe("accounts", () => {
         const store = await import("../../stores/accounts");
         const accountId = store.default.getState().activeAccountId!;
         const internal = store.default.getState().accountsActionsInternal;
+        const previousLoaded = store.default.getState().accountsEditsLoaded[accountId];
         const mockedEnsure = vi.fn().mockRejectedValueOnce(new Error("lazy load failed"));
         store.default.setState({
           accountsEditsLoaded: {
@@ -1342,7 +1343,13 @@ describe("accounts", () => {
           await Promise.resolve();
           expect(mockedEnsure).toHaveBeenCalled();
         } finally {
-          store.default.setState({ accountsActionsInternal: internal });
+          store.default.setState({
+            accountsActionsInternal: internal,
+            accountsEditsLoaded: {
+              ...store.default.getState().accountsEditsLoaded,
+              [accountId]: previousLoaded,
+            },
+          });
         }
       });
 
@@ -1565,6 +1572,7 @@ describe("accounts", () => {
       await waitFor(() => rendered2.result.current.content === "content 1");
       expect(rendered2.result.current.content).toBe("content 1");
       expect(rendered2.result.current.index).toBe(0);
+      expect(rendered2.result.current.state).toBe("pending");
 
       rendered2.rerender({ commentIndex: 10 });
       await waitFor(() => rendered2.result.current.content === undefined);
@@ -2061,6 +2069,7 @@ describe("accounts", () => {
         "parent comment cid 1",
       );
       expect(rendered2.result.current.accountCommentByCid.cid).toBe("own-comment-cid");
+      expect(rendered2.result.current.accountCommentByCid.state).toBe("succeeded");
     });
 
     test("useAccountComments falls back to full scans when indexes are missing", () => {
@@ -2165,7 +2174,7 @@ describe("accounts", () => {
       });
 
       expect(rendered2.result.current.comments.accountComments[0].timestamp).toBe(now - 100);
-      expect(rendered2.result.current.votes.accountVotes[0].commentCid).toBe("comment cid 3");
+      expect(rendered2.result.current.votes.accountVotes[0].commentCid).toBe("comment cid 1");
     });
 
     test("useAccountVotes supports additive filters and pagination", () => {
@@ -2227,6 +2236,43 @@ describe("accounts", () => {
 
       expect(rendered2.result.current.voteByCid.accountVotes[0].commentCid).toBe("comment cid 1");
       expect(rendered2.result.current.allVotes.accountVotes.length).toBeGreaterThan(0);
+    });
+
+    test("useAccountVotes sorts by timestamp before applying sortType and pagination", () => {
+      const now = Math.floor(Date.now() / 1000);
+      const accountId = accountsStore.getState().activeAccountId!;
+      accountsStore.setState((state: any) => ({
+        ...state,
+        accountsVotes: {
+          ...state.accountsVotes,
+          [accountId]: {
+            "older-cid": {
+              ...state.accountsVotes[accountId]["comment cid 1"],
+              commentCid: "older-cid",
+              vote: 1,
+              timestamp: now,
+            },
+            "middle-cid": {
+              ...state.accountsVotes[accountId]["comment cid 2"],
+              commentCid: "middle-cid",
+              vote: 1,
+              timestamp: now - 100,
+            },
+            "newer-cid": {
+              ...state.accountsVotes[accountId]["comment cid 3"],
+              commentCid: "newer-cid",
+              vote: 1,
+              timestamp: now - 200,
+            },
+          },
+        },
+      }));
+
+      const rendered2 = renderHook<any, any>(() =>
+        useAccountVotes({ sortType: "new", page: 0, pageSize: 1 }),
+      );
+
+      expect(rendered2.result.current.accountVotes[0].commentCid).toBe("older-cid");
     });
 
     test(`get account vote on a specific comment`, () => {

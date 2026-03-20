@@ -88,13 +88,22 @@ const cloneWithoutFunctions = (value: any): any => {
 };
 
 export const sanitizeStoredAccountComment = (comment: Comment) => {
-  const sanitizedComment = cloneWithoutFunctions({ ...comment, signer: undefined });
+  const preprocessedComment = {
+    ...comment,
+    signer: undefined,
+    replies: comment?.replies
+      ? Object.fromEntries(
+          Object.entries(comment.replies).filter(([replyKey]) => replyKey !== "pages"),
+        )
+      : comment?.replies,
+  };
+  const sanitizedComment = cloneWithoutFunctions(preprocessedComment);
   if (sanitizedComment?.replies?.pages) {
     sanitizedComment.replies = { ...sanitizedComment.replies };
     delete sanitizedComment.replies.pages;
-    if (Object.keys(sanitizedComment.replies).length === 0) {
-      delete sanitizedComment.replies;
-    }
+  }
+  if (sanitizedComment?.replies && Object.keys(sanitizedComment.replies).length === 0) {
+    delete sanitizedComment.replies;
   }
   return sanitizedComment;
 };

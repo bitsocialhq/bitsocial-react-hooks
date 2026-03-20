@@ -642,10 +642,8 @@ const ensureAccountEditsDatabaseLayout = async (accountId: string) => {
 };
 
 const addAccountEdit = async (accountId: string, createEditOptions: CreateCommentOptions) => {
-  assert(
-    createEditOptions?.commentCid && typeof createEditOptions?.commentCid === "string",
-    `addAccountEdit createEditOptions.commentCid '${createEditOptions?.commentCid}' not a string`,
-  );
+  const editTarget = getAccountEditTarget(createEditOptions as AccountEdit);
+  assert(typeof editTarget === "string", `addAccountEdit target '${editTarget}' not a string`);
   const accountEditsDatabase = getAccountEditsDatabase(accountId);
   await ensureAccountEditsDatabaseLayout(accountId);
   const length = (await accountEditsDatabase.getItem("length")) || 0;
@@ -666,10 +664,8 @@ const doesStoredAccountEditMatch = (storedAccountEdit: any, targetStoredAccountE
     : isEqual(storedAccountEdit, targetStoredAccountEdit);
 
 const deleteAccountEdit = async (accountId: string, editToDelete: CreateCommentOptions) => {
-  assert(
-    editToDelete?.commentCid && typeof editToDelete?.commentCid === "string",
-    `deleteAccountEdit editToDelete.commentCid '${editToDelete?.commentCid}' not a string`,
-  );
+  const editTarget = getAccountEditTarget(editToDelete as AccountEdit);
+  assert(typeof editTarget === "string", `deleteAccountEdit target '${editTarget}' not a string`);
   const accountEditsDatabase = getAccountEditsDatabase(accountId);
   await ensureAccountEditsDatabaseLayout(accountId);
   const length = (await accountEditsDatabase.getItem("length")) || 0;

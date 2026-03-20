@@ -120,6 +120,7 @@ const initializeAccountsStore = async () => {
     commentCidsToAccountsComments,
     accountsVotes,
     accountsCommentsReplies,
+    // Keep accountsEditsSummaries hot while accountsEdits stays cold until accountsEditsLoaded flips true.
     accountsEdits: Object.fromEntries(accountIds.map((accountId) => [accountId, {}])),
     accountsEditsSummaries,
     accountsEditsLoaded: Object.fromEntries(accountIds.map((accountId) => [accountId, false])),

@@ -947,6 +947,29 @@ describe("accounts-database", () => {
       expect(edits[acc.id]["ec1"]).toHaveLength(1);
     });
 
+    test("addAccountEdit and deleteAccountEdit support community edit targets", async () => {
+      const acc = makeAccount({ id: "ge-community-edit", name: "GECommunityEdit" });
+      await accountsDatabase.addAccount(acc);
+      await accountsDatabase.addAccountEdit(acc.id, {
+        communityAddress: "community.eth",
+        title: "community edit",
+        timestamp: 1,
+      } as any);
+
+      let edits = await accountsDatabase.getAccountEdits(acc.id);
+      expect(edits["community.eth"]).toHaveLength(1);
+
+      const deleted = await accountsDatabase.deleteAccountEdit(acc.id, {
+        communityAddress: "community.eth",
+        title: "community edit",
+        timestamp: 1,
+      } as any);
+
+      expect(deleted).toBe(true);
+      edits = await accountsDatabase.getAccountEdits(acc.id);
+      expect(edits["community.eth"]).toBeUndefined();
+    });
+
     test("getAccountEdits accumulates multiple edits for same commentCid", async () => {
       const acc = makeAccount({ id: "ge-multi", name: "GEMulti" });
       await accountsDatabase.addAccount(acc);

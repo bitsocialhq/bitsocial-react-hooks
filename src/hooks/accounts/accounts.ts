@@ -521,21 +521,28 @@ export function useAccountComment(options?: UseAccountCommentOptions): UseAccoun
       : commentCidToAccountComment?.accountId === accountId
         ? commentCidToAccountComment.accountCommentIndex
         : undefined;
-  const accountComment: any = useMemo(() => {
+  const storedAccountComment = useMemo(() => {
     if (typeof resolvedCommentIndex !== "number") {
-      return {};
+      return undefined;
     }
-    return accountComments?.[resolvedCommentIndex] || {};
+    return accountComments?.[resolvedCommentIndex];
   }, [accountComments, resolvedCommentIndex]);
-  const state = accountComment.state || "initializing";
+  const accountComment = (storedAccountComment || {}) as Partial<AccountComment> & {
+    error?: Error;
+    errors?: Error[];
+  };
+  const state = storedAccountComment
+    ? getAccountCommentsStates([storedAccountComment])[0]
+    : "initializing";
 
   return useMemo(
-    () => ({
-      ...accountComment,
-      state,
-      error: accountComment.error,
-      errors: accountComment.errors || [],
-    }),
+    () =>
+      ({
+        ...accountComment,
+        state,
+        error: accountComment.error,
+        errors: accountComment.errors || [],
+      }) as UseAccountCommentResult,
     [accountComment, state],
   );
 }
@@ -601,6 +608,9 @@ export function useAccountVotes(options?: UseAccountVotesOptions): UseAccountVot
     if (filter) {
       accountVotesArray = accountVotesArray.filter(filter);
     }
+    accountVotesArray = [...accountVotesArray].sort(
+      (firstVote, secondVote) => (firstVote.timestamp || 0) - (secondVote.timestamp || 0),
+    );
     if (accountHistorySortType === "new") {
       accountVotesArray = [...accountVotesArray].reverse();
     }

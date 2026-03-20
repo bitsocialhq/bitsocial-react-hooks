@@ -344,6 +344,23 @@ describe("accounts-actions", () => {
       );
       expect(result.accountsEditsSummaries.acc1["cid-1"].spoiler.value).toBe(true);
     });
+
+    test("removeStoredAccountEditSummaryFromState recalculates summary after removing one edit", () => {
+      const result = accountsActions.removeStoredAccountEditSummaryFromState(
+        { acc1: { "cid-1": { spoiler: { timestamp: 2, value: false } } } } as any,
+        {
+          acc1: {
+            "cid-1": [
+              { commentCid: "cid-1", spoiler: true, timestamp: 1, clientId: "older" },
+              { commentCid: "cid-1", spoiler: false, timestamp: 2, clientId: "newer" },
+            ],
+          },
+        } as any,
+        "acc1",
+        { commentCid: "cid-1", spoiler: false, timestamp: 2, clientId: "newer" },
+      );
+      expect(result.accountsEditsSummaries.acc1["cid-1"].spoiler.value).toBe(true);
+    });
   });
 
   describe("edit helper branches", () => {
@@ -367,6 +384,14 @@ describe("accounts-actions", () => {
         spoiler: true,
       });
       expect(nextState.accountsEdits.acc1["cid-1"][0].spoiler).toBe(true);
+    });
+
+    test("addStoredAccountEditToState uses community edit targets when commentCid is missing", () => {
+      const nextState = accountsActions.addStoredAccountEditToState({} as any, "acc1", {
+        communityAddress: "community.eth",
+        title: "updated",
+      });
+      expect(nextState.accountsEdits.acc1["community.eth"][0].title).toBe("updated");
     });
 
     test("removeStoredAccountEditFromState handles missing account and comment buckets", () => {
@@ -527,6 +552,37 @@ describe("accounts-actions", () => {
 
       const { accountNamesToAccountIds } = accountsStore.getState();
       expect(accountNamesToAccountIds["ToDelete"]).toBeUndefined();
+    });
+
+    test("deleteAccount removes comment cid mappings for the deleted account", async () => {
+      await act(async () => {
+        await accountsActions.createAccount("ToDeleteWithComment");
+      });
+
+      await act(async () => {
+        await accountsActions.publishComment(
+          {
+            communityAddress: "sub.eth",
+            content: "delete-account-comment",
+            onChallenge: (challenge: any, comment: any) => comment.publishChallengeAnswers(),
+            onChallengeVerification: () => {},
+          },
+          "ToDeleteWithComment",
+        );
+      });
+
+      await new Promise((r) => setTimeout(r, 150));
+      expect(
+        accountsStore.getState().commentCidsToAccountsComments["delete-account-comment cid"],
+      ).toBeDefined();
+
+      await act(async () => {
+        await accountsActions.deleteAccount("ToDeleteWithComment");
+      });
+
+      expect(
+        accountsStore.getState().commentCidsToAccountsComments["delete-account-comment cid"],
+      ).toBeUndefined();
     });
 
     test("publishComment with accountName uses named account", async () => {
@@ -1425,6 +1481,56 @@ describe("accounts-actions", () => {
       expect(rendered.result.current.comments?.length).toBe(0);
     });
 
+    test("deleteComment does not recreate a deleted pending comment after delayed link metadata save", async () => {
+      let resolveDimensions: ((value: any) => void) | undefined;
+      const utilsMod = await import("./utils");
+      vi.spyOn(utilsMod, "fetchCommentLinkDimensions").mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveDimensions = resolve;
+          }) as any,
+      );
+
+      const rendered = renderHook(() => {
+        const { accountsComments, activeAccountId } = accountsStore.getState();
+        const comments =
+          activeAccountId && accountsComments ? accountsComments?.[activeAccountId] || [] : [];
+        return {
+          comments,
+          publishComment: accountsActions.publishComment,
+          deleteComment: accountsActions.deleteComment,
+        };
+      });
+      const waitFor = testUtils.createWaitFor(rendered);
+
+      await act(async () => {
+        await accountsActions.publishComment({
+          communityAddress: "sub.eth",
+          content: "link-delete",
+          link: "https://example.com/image.png",
+          onChallenge: (challenge: any, comment: any) => comment.publishChallengeAnswers(),
+          onChallengeVerification: () => {},
+        });
+      });
+
+      await waitFor(() => (rendered.result.current.comments?.length ?? 0) >= 1);
+
+      await act(async () => {
+        await accountsActions.deleteComment(0);
+      });
+
+      await act(async () => {
+        resolveDimensions?.({
+          linkWidth: 100,
+          linkHeight: 50,
+          linkHtmlTagName: "img",
+        });
+      });
+
+      await new Promise((r) => setTimeout(r, 100));
+      expect(rendered.result.current.comments?.length).toBe(0);
+    });
+
     test("subscribe already subscribed throws", async () => {
       await act(async () => {
         await accountsActions.subscribe("sub1.eth");
@@ -1687,6 +1793,51 @@ describe("accounts-actions", () => {
       });
 
       expect(accountsStore.getState().accountsEdits[account.id].cid).toHaveLength(1);
+      expect(accountsStore.getState().accountsEditsSummaries[account.id]?.cid).toBeDefined();
+    });
+
+    test("publishCommentEdit keeps accountsEditsLoaded false until lazy hydration completes", async () => {
+      const account = Object.values(accountsStore.getState().accounts)[0];
+      accountsStore.setState(({ accountsEditsLoaded }) => ({
+        accountsEditsLoaded: {
+          ...accountsEditsLoaded,
+          [account.id]: false,
+        },
+      }));
+
+      await act(async () => {
+        await accountsActions.publishCommentEdit({
+          communityAddress: "sub.eth",
+          commentCid: "cold-history-cid",
+          spoiler: true,
+          onChallenge: (challenge: any, edit: any) => edit.publishChallengeAnswers(),
+          onChallengeVerification: () => {},
+        } as any);
+      });
+
+      expect(accountsStore.getState().accountsEditsLoaded[account.id]).toBe(false);
+    });
+
+    test("publishCommentModeration keeps accountsEditsLoaded false until lazy hydration completes", async () => {
+      const account = Object.values(accountsStore.getState().accounts)[0];
+      accountsStore.setState(({ accountsEditsLoaded }) => ({
+        accountsEditsLoaded: {
+          ...accountsEditsLoaded,
+          [account.id]: false,
+        },
+      }));
+
+      await act(async () => {
+        await accountsActions.publishCommentModeration({
+          communityAddress: "sub.eth",
+          commentCid: "cold-history-moderation-cid",
+          commentModeration: { removed: true },
+          onChallenge: (challenge: any, moderation: any) => moderation.publishChallengeAnswers(),
+          onChallengeVerification: () => {},
+        } as any);
+      });
+
+      expect(accountsStore.getState().accountsEditsLoaded[account.id]).toBe(false);
     });
 
     test("publishComment with link fetches dimensions and onPublishingStateChange", async () => {
