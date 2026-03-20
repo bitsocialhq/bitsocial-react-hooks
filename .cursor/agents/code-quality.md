@@ -1,6 +1,6 @@
 ---
 name: code-quality
-model: composer-1.5
+model: composer-2
 description: Code quality specialist that runs build and tests, then fixes any errors it finds. Use proactively after code changes to verify nothing is broken.
 ---
 
