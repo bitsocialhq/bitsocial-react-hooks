@@ -1080,6 +1080,14 @@ export const publishComment = async (
     }
     return session;
   };
+  const queueCleanupFailedPublishSession = (activeComment: any) => {
+    if (!getActiveSessionForComment(activeComment)) return;
+    queueMicrotask(() => {
+      if (getActiveSessionForComment(activeComment)) {
+        cleanupPublishSessionOnTerminal(publishSessionId);
+      }
+    });
+  };
   const recordPublishCommentError = (rawError: unknown, activeComment: any) => {
     const error = normalizePublishError(rawError);
     if (lastReportedPublishError === error) {
@@ -1101,6 +1109,12 @@ export const publishComment = async (
       }),
     );
     return error;
+  };
+  const reportActivePublishCommentError = (rawError: unknown, activeComment: any) => {
+    if (!getActiveSessionForComment(activeComment)) return;
+    const error = recordPublishCommentError(rawError, activeComment);
+    queueCleanupFailedPublishSession(activeComment);
+    publishCommentOptions.onError?.(error, activeComment);
   };
   async function publishAndRetryFailedChallengeVerification() {
     if (isPublishSessionAbandoned(publishSessionId)) {
@@ -1208,30 +1222,43 @@ export const publishComment = async (
     );
 
     activeComment.on("error", (error: Error) => {
-      publishCommentOptions.onError?.(
-        recordPublishCommentError(error, activeComment),
-        activeComment,
-      );
+      reportActivePublishCommentError(error, activeComment);
     });
     activeComment.on("statechange", (state: string) => {
       const session = getActiveSessionForComment(activeComment);
       if (!session) return;
       const currentIndex = session.currentIndex;
+      let hasTerminalFailedState = false;
       accountsStore.setState(({ accountsComments }) =>
         maybeUpdateAccountComment(accountsComments, account.id, currentIndex, (ac, acc) => {
-          ac[currentIndex] = { ...acc, state };
+          const nextAccountComment = { ...acc, state };
+          ac[currentIndex] = nextAccountComment;
+          hasTerminalFailedState =
+            nextAccountComment.state === "stopped" &&
+            nextAccountComment.publishingState === "failed";
         }),
       );
+      if (hasTerminalFailedState) {
+        queueCleanupFailedPublishSession(activeComment);
+      }
     });
     activeComment.on("publishingstatechange", async (publishingState: string) => {
       const session = getActiveSessionForComment(activeComment);
       if (!session) return;
       const currentIndex = session.currentIndex;
+      let hasTerminalFailedState = false;
       accountsStore.setState(({ accountsComments }) =>
         maybeUpdateAccountComment(accountsComments, account.id, currentIndex, (ac, acc) => {
-          ac[currentIndex] = { ...acc, publishingState };
+          const nextAccountComment = { ...acc, publishingState };
+          ac[currentIndex] = nextAccountComment;
+          hasTerminalFailedState =
+            nextAccountComment.state === "stopped" &&
+            nextAccountComment.publishingState === "failed";
         }),
       );
+      if (hasTerminalFailedState) {
+        queueCleanupFailedPublishSession(activeComment);
+      }
       publishCommentOptions.onPublishingStateChange?.(publishingState);
     });
 
@@ -1264,10 +1291,7 @@ export const publishComment = async (
       // if it fails before, like failing to resolve ENS, we can emit the error
       await activeComment.publish();
     } catch (error) {
-      publishCommentOptions.onError?.(
-        recordPublishCommentError(error, activeComment),
-        activeComment,
-      );
+      reportActivePublishCommentError(error, activeComment);
     }
   }
 
