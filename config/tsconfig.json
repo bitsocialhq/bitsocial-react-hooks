@@ -5,9 +5,11 @@
     "module": "ES2020",
     "declaration": true,
     "moduleResolution": "Node",
+    "rootDir": "../src",
     "outDir": "../dist",
     "jsx": "react",
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "ignoreDeprecations": "6.0"
   },
   "exclude": ["../**/*.spec.ts", "../**/*.test.ts", "../**/*.donttest.ts"]
 }
