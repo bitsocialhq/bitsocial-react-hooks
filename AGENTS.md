@@ -38,10 +38,10 @@ This repo is a temporary fork of [plebbit/plebbit-react-hooks](https://github.co
 | New unrelated task started while another task branch is already checked out or being worked on by another agent | Create a separate worktree from `master`, create a new short-lived task branch there, and keep each agent on its own worktree/branch/PR |
 | User wants a tracked issue/PR for work already done | Use the `make-closed-issue` skill to create the issue, push the task branch, and open a PR that closes it on merge |
 | Open PR needs feedback triage or merge readiness check | Use the `review-and-merge-pr` skill to inspect CI/reviewer feedback, fix valid findings, and merge only after verification |
-| Repo AI workflow files changed (`.codex/**`, `.cursor/**`) | Keep the Codex and Cursor copies aligned when they represent the same workflow; update `AGENTS.md` if the default agent policy changes |
+| Repo AI workflow files changed (`.codex/**`, `.cursor/**`, `.claude/**`) | Keep the Codex, Cursor, and Claude copies aligned when they represent the same workflow; update `AGENTS.md` if the default agent policy changes |
 | GitHub operation needed | Use `gh` CLI, not GitHub MCP |
 | User asks for commit/issue phrasing | Use `docs/agent-playbooks/commit-issue-format.md` |
-| Repo AI workflow files changed (`.codex/**`, `.cursor/**`) | Keep the Codex and Cursor copies aligned when they represent the same workflow |
+| Repo AI workflow files changed (`.codex/**`, `.cursor/**`, `.claude/**`) | Keep the Codex, Cursor, and Claude copies aligned when they represent the same workflow |
 | Surprising/ambiguous repo behavior encountered | Alert developer and, once confirmed, document in `docs/agent-playbooks/known-surprises.md` |
 
 ## Stack
@@ -139,12 +139,12 @@ src/
 
 ### AI Tooling Rules
 
-- Treat `.codex/` and `.cursor/` as repo-managed contributor tooling, not private scratch space.
-- Keep equivalent workflow files aligned across both toolchains when both directories contain the same skill, hook, or agent.
-- When changing shared agent behavior, update the relevant files in `.codex/skills/`, `.cursor/skills/`, `.codex/agents/`, `.cursor/agents/`, `.codex/hooks/`, `.cursor/hooks/`, and their `hooks.json` or config entry points as needed.
-- If `AGENTS.md` references a skill, agent, or hook, prefer a tracked file under `.codex/` or `.cursor/` rather than an untracked local-only instruction.
-- When adding or changing repo-managed skills, agents, or hooks, commit the matching `.codex/` and `.cursor/` files in the same task so the workflow change is reviewable.
-- Review `.codex/hooks.json` and `.cursor/hooks.json` before changing agent orchestration or hook behavior, because they are the entry points contributors will actually load.
+- Treat `.codex/`, `.cursor/`, and `.claude/` as repo-managed contributor tooling, not private scratch space.
+- Keep equivalent workflow files aligned across all toolchains when their directories contain the same skill, hook, or agent.
+- When changing shared agent behavior, update the relevant files in `.codex/skills/`, `.cursor/skills/`, `.claude/skills/`, `.codex/agents/`, `.cursor/agents/`, `.claude/agents/`, `.codex/hooks/`, `.cursor/hooks/`, `.claude/hooks/`, and their `hooks.json` or config entry points as needed.
+- If `AGENTS.md` references a skill, agent, or hook, prefer a tracked file under `.codex/`, `.cursor/`, or `.claude/` rather than an untracked local-only instruction.
+- When adding or changing repo-managed skills, agents, or hooks, commit the matching `.codex/`, `.cursor/`, and `.claude/` files in the same task so the workflow change is reviewable.
+- Review `.codex/hooks.json`, `.cursor/hooks.json`, and `.claude/hooks.json` before changing agent orchestration or hook behavior, because they are the entry points contributors will actually load.
 
 ### Security and Boundaries
 
