@@ -13,8 +13,6 @@ React hooks for the Bitsocial protocol. Build decentralized, serverless social a
 
 This package is currently consumed directly from [`bitsocialnet/bitsocial-react-hooks`](https://github.com/bitsocialnet/bitsocial-react-hooks) and is used by [5chan](https://github.com/bitsocialnet/5chan) and other Bitsocial clients.
 
-> **Note:** This repo is a temporary [Bitsocial](https://github.com/bitsocialnet) fork of [plebbit/plebbit-react-hooks](https://github.com/plebbit/plebbit-react-hooks) for AI-aided development. Bug fixes, new features, and improvements made here will be merged upstream when the original maintainer is ready. The codebase still uses legacy naming (`plebbit`, `plebbit-js`, etc.) pending upstream rebranding of the protocol layer.
-
 ## Installation
 
 ```bash
@@ -49,7 +47,7 @@ Run `corepack enable` once per machine so plain `yarn` resolves to the pinned Ya
   - [Feeds Hooks](#feeds-hooks)
   - [Actions Hooks](#actions-hooks)
   - [States Hooks](#states-hooks)
-  - [Plebbit RPC Hooks](#plebbit-rpc-hooks)
+  - [RPC Hooks](#rpc-hooks)
   - [Actions with no hooks implementations yet](#actions-with-no-hooks-implementations-yet)
   - [Utility functions](#utility-functions)
 - [Recipes](#recipes)
@@ -87,8 +85,7 @@ Run `corepack enable` once per machine so plain `yarn` resolves to the pinned Ya
   - [View the status of a specific comment edit property](#view-the-status-of-a-specific-comment-edit-property)
   - [List all comment and community edits the account has performed](#list-all-comment-and-community-edits-the-account-has-performed)
   - [Get replies to a post (nested or flat)](#get-replies-to-a-post-nested-or-flat)
-  - [Get a shortCid or shortAddress (plebbit-js)](#get-a-shortcid-or-shortaddress-plebbit-js)
-  - [Get a shortCid or shortAddress (hooks)](#get-a-shortcid-or-shortaddress-hooks)
+  - [Format short CIDs and addresses](#format-short-cids-and-addresses)
   - [useBufferedFeeds with concurrency](#usebufferedfeeds-with-concurrency)
 
 ## Documentation Links
@@ -178,7 +175,7 @@ useClientsStates({comment?: Comment, community?: Community}): {states, peers}
 useCommunitiesStates({communityAddresses: string[]}): {states, peers}
 ```
 
-#### Plebbit RPC Hooks
+#### RPC Hooks
 
 ```
 usePlebbitRpcSettings(): {plebbitRpcSettings: {plebbitOptions, challenges}, setPlebbitRpcSettings: Function}
@@ -201,7 +198,7 @@ deleteComment(commentCidOrAccountCommentIndex: string | number, accountName?: st
 #### Utility functions
 
 ```
-setPlebbitJs(PlebbitJs) // set which plebbit-js version to use, e.g. to mock content for frontend dev or to use the node version in Electron
+setPlebbitJs(PlebbitJs) // swap the underlying protocol client implementation, e.g. for mocks or Electron
 deleteDatabases() // delete all databases, including all caches and accounts data
 deleteCaches() // delete the cached comments, cached communities and cached pages only, no accounts data
 ```
@@ -1287,17 +1284,7 @@ const repliesComponents = replies.map((reply, index) => (
 ));
 ```
 
-#### Get a shortCid or shortAddress (plebbit-js)
-
-```jsx
-// NOTE: not possible to do from bitsocial-react-hooks, needs plebbit-js
-import { getShortAddress, getShortCid } from "@plebbit/plebbit-js";
-
-const shortParentCid = getShortAddress(comment.parentCid);
-const shortAddress = getShortCid(address);
-```
-
-#### Get a shortCid or shortAddress (hooks)
+#### Format short CIDs and addresses
 
 ```jsx
 import { useShortAddress, useShortCid } from "@bitsocialnet/bitsocial-react-hooks";
