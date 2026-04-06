@@ -11,7 +11,7 @@ import { useMemo, useState, useEffect } from "react";
 // @ts-ignore
 import memoize from "memoizee";
 import PlebbitJs from "../../lib/plebbit-js";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:hooks");
 export const useCalculatedNotifications = (account, accountCommentsReplies) => {
     return useMemo(() => {

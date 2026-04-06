@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import assert from "assert";
 import QuickLru from "quick-lru";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 import { areEquivalentCommunityAddresses } from "../community-address";
 import { getCommentCommunityAddress, normalizePublicationOptionsForStore } from "../plebbit-compat";
 const log = Logger("bitsocial-react-hooks:utils");

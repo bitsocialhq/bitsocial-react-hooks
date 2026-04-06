@@ -8,7 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import utils from "../../lib/utils";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 // include replies pages store with feeds for debugging
 export const log = Logger("bitsocial-react-hooks:replies:stores");
 import accountsStore from "../accounts";

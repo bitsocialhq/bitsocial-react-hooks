@@ -1,6 +1,6 @@
 import repliesStore from "../replies";
 import repliesCommentsStore from "../replies/replies-comments-store";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 // include replies pages store with feeds for debugging
 const log = Logger("bitsocial-react-hooks:replies:stores");
 const getSortTypeFromPage = (page) => {

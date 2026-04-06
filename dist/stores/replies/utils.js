@@ -12,7 +12,7 @@ import repliesSorter from "../feeds/feed-sorter";
 import accountsStore from "../accounts";
 import { flattenCommentsPages, commentIsValid, removeInvalidComments } from "../../lib/utils";
 import { areEquivalentCommunityAddresses } from "../../lib/community-address";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:replies:stores");
 /**
  * Calculate the feeds from all the loaded replies pages, filter and sort them

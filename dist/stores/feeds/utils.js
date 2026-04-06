@@ -13,7 +13,7 @@ import feedSorter from "./feed-sorter";
 import { communityPostsCacheExpired, commentIsValid, removeInvalidComments } from "../../lib/utils";
 import { areEquivalentCommunityAddresses } from "../../lib/community-address";
 import { getCommentCommunityAddress, normalizeCommentCommunityAddress, } from "../../lib/plebbit-compat";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:feeds:stores");
 const getCommentFreshness = (comment) => { var _a, _b; return Math.max((_a = comment === null || comment === void 0 ? void 0 : comment.updatedAt) !== null && _a !== void 0 ? _a : 0, (_b = comment === null || comment === void 0 ? void 0 : comment.timestamp) !== null && _b !== void 0 ? _b : 0, 0); };
 const commentMatchesModQueue = (comment, modQueue) => {

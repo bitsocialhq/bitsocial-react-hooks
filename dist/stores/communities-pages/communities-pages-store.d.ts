@@ -1,4 +1,4 @@
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 export declare const log: Logger;
 import { Community, CommunityPage, CommunitiesPages, Comment, Comments } from "../../types";
 /** Freshness for comparison: max(updatedAt, timestamp, 0). Used to decide add vs replace per CID. Exported for coverage. */

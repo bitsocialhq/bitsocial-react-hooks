@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import accountsStore, { listeners } from "./accounts-store";
 import accountsDatabase from "./accounts-database";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 import assert from "assert";
 import isEqual from "lodash.isequal";
 const log = Logger("bitsocial-react-hooks:accounts:stores");

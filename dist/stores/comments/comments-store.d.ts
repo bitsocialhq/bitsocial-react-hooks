@@ -1,4 +1,4 @@
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 export declare const log: Logger;
 import { Comments } from "../../types";
 export declare const listeners: any;

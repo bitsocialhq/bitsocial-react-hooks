@@ -1,4 +1,4 @@
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 export declare const log: Logger;
 import { RepliesPages, Comment, Comments } from "../../types";
 type RepliesPagesState = {

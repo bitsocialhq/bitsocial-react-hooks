@@ -13,7 +13,7 @@ const communitiesDatabase = localForageLru.createInstance({
     name: "plebbitReactHooks-communities",
     size: 500,
 });
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:communities:stores");
 import utils from "../../lib/utils";
 import createStore from "zustand";
