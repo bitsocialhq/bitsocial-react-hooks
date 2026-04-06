@@ -4,7 +4,7 @@ import chain from "../../lib/chain";
 import { v4 as uuid } from "uuid";
 import accountsDatabase from "./accounts-database";
 import { Accounts, AccountCommunity, ChainProviders } from "../../types";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
 
 // default chain providers

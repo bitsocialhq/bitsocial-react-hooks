@@ -3,7 +3,7 @@ const commentsDatabase = localForageLru.createInstance({
   name: "plebbitReactHooks-comments",
   size: 5000,
 });
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 export const log = Logger("bitsocial-react-hooks:comments:stores");
 import { Comment, Comments, Account } from "../../types";
 import utils from "../../lib/utils";

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:states:hooks");
 import assert from "assert";
 import {

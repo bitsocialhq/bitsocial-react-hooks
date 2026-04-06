@@ -20,7 +20,7 @@ import {
 import utils from "../../lib/utils";
 import { getDefaultPlebbitOptions, overwritePlebbitOptions } from "./account-generator";
 import { getAccountsEditsSummary, sanitizeStoredAccountComment } from "./utils";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
 // Storage keeps the legacy namespace so existing installs reuse the same IndexedDB data.
 const accountsDatabaseNamespace = "plebbitReactHooks";

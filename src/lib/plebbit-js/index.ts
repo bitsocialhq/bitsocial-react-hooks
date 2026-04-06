@@ -1,7 +1,7 @@
 // NOTE: don't import plebbit-js directly to be able to replace the implementation
 
 import PlebbitJsMockContent from "./plebbit-js-mock-content";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 // @ts-ignore
 import Plebbit from "@plebbit/plebbit-js";
 import assert from "assert";

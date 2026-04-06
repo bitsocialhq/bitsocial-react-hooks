@@ -1,7 +1,7 @@
 import { useMemo, useState, useEffect } from "react";
 import isEqual from "lodash.isequal";
 import useAccountsStore from "../../stores/accounts";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:hooks");
 import assert from "assert";
 import { useListCommunities, useCommunities } from "../communities";

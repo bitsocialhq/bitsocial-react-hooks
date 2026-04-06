@@ -22,7 +22,7 @@ import {
   getCommentCommunityAddress,
   normalizeCommentCommunityAddress,
 } from "../../lib/plebbit-compat";
-import Logger from "@plebbit/plebbit-logger";
+import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:feeds:stores");
 
 const getCommentFreshness = (comment: Comment | undefined) =>
