@@ -60,7 +60,7 @@
     "react": ">=16.8"
   },
   "resolutions": {
-    "vite": "8.0.2",
+    "vite": "8.0.7",
     "tar": "7.5.11",
     "undici": "7.24.0",
     "minimatch": "3.1.4",
@@ -109,7 +109,7 @@
     "tcp-port-used": "1.0.2",
     "tempy": "1.0.1",
     "typescript": "6.0.2",
-    "vite": "8.0.2",
+    "vite": "8.0.7",
     "vitest": "4.0.18",
     "wait-on": "9.0.3"
   },

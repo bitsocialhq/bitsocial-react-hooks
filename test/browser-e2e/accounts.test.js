@@ -39,17 +39,20 @@ const pkcOptionsTypes = {
     // define pubsubKuboRpcClientsOptions with localPubsubProviderUrl because
     // localIpfsProviderUrl is offline node with no pubsub
     pubsubKuboRpcClientsOptions: [localPubsubProviderUrl],
+    resolveAuthorNames: false,
     resolveAuthorAddresses: false,
     validatePages: false,
   },
   "gateway and pubsub provider": {
     ipfsGatewayUrls: [localGatewayUrl],
     pubsubKuboRpcClientsOptions: [localPubsubProviderUrl],
+    resolveAuthorNames: false,
     resolveAuthorAddresses: false,
     validatePages: false,
   },
   "pkc rpc client": {
     pkcRpcClientsOptions: [localPkcRpcUrl],
+    resolveAuthorNames: false,
     resolveAuthorAddresses: false,
     validatePages: false,
   },
