@@ -1,0 +1,13 @@
+export declare const getPkcCreateCommunity: (pkc: any) => any;
+export declare const getPkcGetCommunity: (pkc: any) => any;
+export declare const getPkcCreateCommunityEdit: (pkc: any) => any;
+export declare const getPkcCommunityAddresses: (pkc: any) => string[];
+export declare const normalizePublicationOptionsForPkc: <T extends Record<string, any>>(_pkc: any, options: T) => T;
+export declare const normalizePublicationOptionsForStore: <T extends Record<string, any>>(options: T) => T;
+export declare const normalizeCommunityEditOptionsForPkc: <T extends Record<string, any>>(pkc: any, options: T) => T;
+export declare const getCommentCommunityAddress: (comment: any) => string | undefined;
+export declare const normalizeCommentCommunityAddress: <T extends Record<string, any> | undefined>(comment: T) => T;
+export declare const backfillPublicationCommunityAddress: <T extends Record<string, any> | undefined, O extends Record<string, any> | undefined>(publication: T, options: O) => T;
+export declare const createPkcCommunity: (pkc: any, options: any) => Promise<any>;
+export declare const getPkcCommunity: (pkc: any, options: any) => Promise<any>;
+export declare const createPkcCommunityEdit: (pkc: any, options: any) => Promise<any>;
