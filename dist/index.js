@@ -31,7 +31,7 @@ import { useClientsStates, useCommunitiesStates } from "./hooks/states";
 // pkc-rpc
 import { usePkcRpcSettings } from "./hooks/pkc-rpc";
 // chain
-import { getEthWalletFromPkcPrivateKey, getSolWalletFromPkcPrivateKey, getEthPrivateKeyFromPkcPrivateKey, getSolPrivateKeyFromPkcPrivateKey, validateEthWallet, validateSolWallet, } from "./lib/chain";
+import { getEthWalletFromPkcPrivateKey, getEthPrivateKeyFromPkcPrivateKey, validateEthWallet, } from "./lib/chain";
 // utils
 import { setPkcJs, restorePkcJs } from "./lib/pkc-js";
 import { deleteDatabases, deleteCaches } from "./lib/debug-utils";
@@ -60,7 +60,7 @@ useClientsStates, useCommunitiesStates,
 // pkc-rpc
 usePkcRpcSettings, 
 // chain
-getEthWalletFromPkcPrivateKey, getSolWalletFromPkcPrivateKey, getEthPrivateKeyFromPkcPrivateKey, getSolPrivateKeyFromPkcPrivateKey, validateEthWallet, validateSolWallet, 
+getEthWalletFromPkcPrivateKey, getEthPrivateKeyFromPkcPrivateKey, validateEthWallet, 
 // utils
 setPkcJs, restorePkcJs, deleteDatabases, deleteCaches, };
 // IMPORTANT: should be the same as 'export {}'
@@ -126,11 +126,8 @@ const hooks = {
     usePkcRpcSettings,
     // chain
     getEthWalletFromPkcPrivateKey,
-    getSolWalletFromPkcPrivateKey,
     getEthPrivateKeyFromPkcPrivateKey,
-    getSolPrivateKeyFromPkcPrivateKey,
     validateEthWallet,
-    validateSolWallet,
     // utils
     setPkcJs,
     restorePkcJs,

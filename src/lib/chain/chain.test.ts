@@ -1,11 +1,8 @@
 import { getNftImageUrl, validateEthWalletViem, getWalletMessageToSign } from ".";
 import {
   getEthWalletFromPkcPrivateKey,
-  getSolWalletFromPkcPrivateKey,
   getEthPrivateKeyFromPkcPrivateKey,
-  getSolPrivateKeyFromPkcPrivateKey,
   validateEthWallet,
-  validateSolWallet,
 } from "../..";
 
 const avatarNft1 = {
@@ -165,75 +162,6 @@ describe("chain", () => {
 
       await validateEthWallet(wallet, authorAddress);
       await validateEthWalletViem(wallet, authorAddress);
-    });
-  });
-
-  describe("sol wallet", () => {
-    let wallet, privateKey;
-    beforeAll(async () => {
-      privateKey = await getSolPrivateKeyFromPkcPrivateKey(pkcPrivateKey);
-      const dateNow = Date.now;
-      Date.now = () => walletTimestamp * 1000;
-      wallet = await getSolWalletFromPkcPrivateKey(pkcPrivateKey, authorAddress);
-      Date.now = dateNow;
-    });
-
-    test("getSolWalletFromPkcPrivateKey", async () => {
-      expect(wallet.timestamp).toBe(walletTimestamp);
-      expect(wallet.address).toBe("AzAfDLMxbptaq5Ppy4BK5aEsEzvTYNFAub5ffewbSdn9");
-      expect(wallet.privateKey).toBe(undefined);
-      expect(privateKey).toBe(
-        "44rJnvSKZwF6qMrc49MVe4KqcugR8zc8B4i1yo9iXrvKsf6FAFB7x1dSNdbAqqga4xvpU7VmnKRkwyvQWxrcBmGV",
-      );
-      expect(wallet.signature.type).toBe("sol");
-      expect(wallet.signature.signature).toBe(
-        "41oBEqrNWgebTxySit2s6nYsEf6feFW5xftLnDhaFx3hfsUuUMTTGvf5N8DJF8fqUrHqNVwhBqZyzRsp34PeDy7c",
-      );
-    });
-
-    test("validateSolWallet", async () => {
-      // good signature
-      await validateSolWallet(wallet, authorAddress);
-
-      // bad signatures
-      await expect(
-        validateSolWallet({ ...wallet, timestamp: wallet.timestamp + 1 }, authorAddress),
-      ).rejects.toThrow("signature invalid");
-      await expect(validateSolWallet(wallet, "invalidauthoraddress.eth")).rejects.toThrow(
-        "signature invalid",
-      );
-      await expect(
-        validateSolWallet({ ...wallet, timestamp: undefined }, authorAddress),
-      ).rejects.toThrow(`validateSolWallet invalid wallet.timestamp 'undefined' not a number`);
-      await expect(
-        validateSolWallet({ ...wallet, signature: undefined }, authorAddress),
-      ).rejects.toThrow(`validateSolWallet invalid wallet.signature 'undefined'`);
-      await expect(validateSolWallet({ ...wallet, signature: {} }, authorAddress)).rejects.toThrow(
-        `validateSolWallet invalid wallet.signature.signature 'undefined'`,
-      );
-      await expect(
-        validateSolWallet({ ...wallet, address: undefined }, authorAddress),
-      ).rejects.toThrow(`validateSolWallet invalid wallet.address 'undefined'`);
-      await expect(
-        validateSolWallet(
-          { ...wallet, address: "11111111111111111111111111111111" },
-          authorAddress,
-        ),
-      ).rejects.toThrow("signature invalid");
-    });
-
-    test("validateSolWallet fixture wallet", async () => {
-      const authorAddress = "authoraddress.eth";
-      const wallet = {
-        address: "AzAfDLMxbptaq5Ppy4BK5aEsEzvTYNFAub5ffewbSdn9",
-        timestamp: 1740000000,
-        signature: {
-          signature:
-            "41oBEqrNWgebTxySit2s6nYsEf6feFW5xftLnDhaFx3hfsUuUMTTGvf5N8DJF8fqUrHqNVwhBqZyzRsp34PeDy7c",
-          type: "sol",
-        },
-      };
-      await validateSolWallet(wallet, authorAddress);
     });
   });
 });

@@ -26,10 +26,6 @@ const chainProviders = {
         urls: ["https://polygon-rpc.com"],
         chainId: 137,
     },
-    sol: {
-        urls: ["https://solrpc.xyz"],
-        chainId: 1,
-    },
 };
 // force using these options or can cause bugs
 export const overwritePkcOptions = {

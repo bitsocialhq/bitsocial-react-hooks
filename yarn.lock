@@ -283,7 +283,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@bitsocialnet/bitsocial-react-hooks@workspace:."
   dependencies:
-    "@noble/ed25519": "npm:1.7.5"
     "@pkc/pkc-logger": "https://github.com/pkcprotocol/pkc-logger.git"
     "@pkcprotocol/pkc-js": "https://github.com/pkcprotocol/pkc-js.git#e63026e6cd33df5af3a3b5e6473b1e364d89fbdb"
     "@testing-library/dom": "npm:10.4.1"
@@ -2154,7 +2153,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@noble/ed25519@npm:1.7.5, @noble/ed25519@npm:^1.5.1":
+"@noble/ed25519@npm:^1.5.1":
   version: 1.7.5
   resolution: "@noble/ed25519@npm:1.7.5"
   checksum: 10c0/9ebcdf47e1cc986f270a82725ed4fdad1922fd63cca77f6bc0ba9575685db9cd73d45e66325fb62cc1d8a398010e953331b904961c1e9f18d170eebae783d5cb

@@ -220,70 +220,6 @@ export const getEthPrivateKeyFromPkcPrivateKey = async (
   return privateKeyHex;
 };
 
-import {
-  getPublicKey as ed25519GetPublicKey,
-  sign as ed25519Sign,
-  verify as ed25519Verify,
-} from "@noble/ed25519";
-import { toString as uint8ArrayToString, fromString as uint8ArrayFromString } from "uint8arrays";
-export const getSolWalletFromPkcPrivateKey = async (
-  privateKeyBase64: string,
-  authorAddress: string,
-) => {
-  // ignore private key used in pkc-js signer mock so tests run faster, also make sure nobody uses it
-  if (privateKeyBase64 === "private key") {
-    return;
-  }
-
-  const privateKeyBytes = Uint8Array.from(atob(privateKeyBase64), (c) => c.charCodeAt(0));
-  if (privateKeyBytes.length !== 32) {
-    throw Error("failed getting sol address from private key not 32 bytes");
-  }
-  const publicKeyBytes = await ed25519GetPublicKey(privateKeyBytes);
-  const solAddress = uint8ArrayToString(publicKeyBytes, "base58btc");
-
-  // generate signature (https://solscan.io/verifiedsignatures)
-  const timestamp = Math.floor(Date.now() / 1000);
-  const messageBytes = uint8ArrayFromString(
-    getWalletMessageToSign(authorAddress, timestamp),
-    "utf8",
-  );
-  const signatureBytes = await ed25519Sign(messageBytes, privateKeyBytes);
-  const signatureBase58 = uint8ArrayToString(signatureBytes, "base58btc");
-
-  return {
-    address: solAddress,
-    timestamp,
-    signature: {
-      signature: signatureBase58,
-      // solana has no signature standard so just call it 'sol' for now
-      // can't use just 'ed25519' because we use it for pkc signature with base64
-      type: "sol",
-    },
-  };
-};
-
-export const getSolPrivateKeyFromPkcPrivateKey = async (
-  privateKeyBase64: string,
-  authorAddress: string,
-) => {
-  // ignore private key used in pkc-js signer mock so tests run faster, also make sure nobody uses it
-  if (privateKeyBase64 === "private key") {
-    return;
-  }
-
-  const privateKeyBytes = Uint8Array.from(atob(privateKeyBase64), (c) => c.charCodeAt(0));
-  if (privateKeyBytes.length !== 32) {
-    throw Error("failed getting sol address from private key not 32 bytes");
-  }
-  const publicKeyBytes = await ed25519GetPublicKey(privateKeyBytes);
-  const bytes = new Uint8Array(64);
-  bytes.set(privateKeyBytes, 0);
-  bytes.set(publicKeyBytes, 32);
-  const privateKeyBase58 = uint8ArrayToString(bytes, "base58btc");
-  return privateKeyBase58;
-};
-
 export const validateEthWallet = async (wallet: Wallet, authorAddress: string) => {
   assert(
     wallet && typeof wallet === "object",
@@ -358,51 +294,13 @@ export const validateEthWalletViem = async (wallet: Wallet, authorAddress: strin
   }
 };
 
-export const validateSolWallet = async (wallet: Wallet, authorAddress: string) => {
-  assert(
-    wallet && typeof wallet === "object",
-    `validateSolWallet invalid wallet argument '${wallet}'`,
-  );
-  assert(wallet?.address, `validateSolWallet invalid wallet.address '${wallet?.address}'`);
-  assert(
-    typeof wallet?.timestamp === "number",
-    `validateSolWallet invalid wallet.timestamp '${wallet?.timestamp}' not a number`,
-  );
-  assert(wallet?.signature, `validateSolWallet invalid wallet.signature '${wallet?.signature}'`);
-  assert(
-    wallet?.signature?.signature,
-    `validateSolWallet invalid wallet.signature.signature '${wallet?.signature?.signature}'`,
-  );
-  assert(
-    authorAddress && typeof authorAddress === "string",
-    `validateSolWallet invalid authorAddress '${authorAddress}'`,
-  );
-  assert(
-    wallet?.timestamp <= Date.now() / 1000,
-    `validateSolWallet invalid wallet.timestamp '${wallet?.timestamp}' greater than current Date.now() / 1000`,
-  );
-  const signatureBytes = uint8ArrayFromString(wallet.signature.signature, "base58btc");
-  const messageBytes = uint8ArrayFromString(
-    getWalletMessageToSign(authorAddress, wallet.timestamp),
-    "utf8",
-  );
-  const publicKeyBytes = uint8ArrayFromString(wallet.address, "base58btc");
-  const verified = await ed25519Verify(signatureBytes, messageBytes, publicKeyBytes);
-  if (!verified) {
-    throw Error("signature invalid");
-  }
-};
-
 export default {
   getNftOwner,
   getNftMetadataUrl,
   getNftImageUrl,
   resolveEnsTxtRecord,
   getEthWalletFromPkcPrivateKey,
-  getSolWalletFromPkcPrivateKey,
   getEthPrivateKeyFromPkcPrivateKey,
-  getSolPrivateKeyFromPkcPrivateKey,
   validateEthWallet,
   validateEthWalletViem,
-  validateSolWallet,
 };

@@ -13,18 +13,8 @@ export declare const getEthWalletFromPkcPrivateKey: (privateKeyBase64: string, a
     };
 } | undefined>;
 export declare const getEthPrivateKeyFromPkcPrivateKey: (privateKeyBase64: string, authorAddress: string) => Promise<string | undefined>;
-export declare const getSolWalletFromPkcPrivateKey: (privateKeyBase64: string, authorAddress: string) => Promise<{
-    address: string;
-    timestamp: number;
-    signature: {
-        signature: string;
-        type: string;
-    };
-} | undefined>;
-export declare const getSolPrivateKeyFromPkcPrivateKey: (privateKeyBase64: string, authorAddress: string) => Promise<string | undefined>;
 export declare const validateEthWallet: (wallet: Wallet, authorAddress: string) => Promise<void>;
 export declare const validateEthWalletViem: (wallet: Wallet, authorAddress: string) => Promise<void>;
-export declare const validateSolWallet: (wallet: Wallet, authorAddress: string) => Promise<void>;
 declare const _default: {
     getNftOwner: (...args: any) => Promise<any>;
     getNftMetadataUrl: (...args: any) => Promise<any>;
@@ -38,18 +28,8 @@ declare const _default: {
             type: string;
         };
     } | undefined>;
-    getSolWalletFromPkcPrivateKey: (privateKeyBase64: string, authorAddress: string) => Promise<{
-        address: string;
-        timestamp: number;
-        signature: {
-            signature: string;
-            type: string;
-        };
-    } | undefined>;
     getEthPrivateKeyFromPkcPrivateKey: (privateKeyBase64: string, authorAddress: string) => Promise<string | undefined>;
-    getSolPrivateKeyFromPkcPrivateKey: (privateKeyBase64: string, authorAddress: string) => Promise<string | undefined>;
     validateEthWallet: (wallet: Wallet, authorAddress: string) => Promise<void>;
     validateEthWalletViem: (wallet: Wallet, authorAddress: string) => Promise<void>;
-    validateSolWallet: (wallet: Wallet, authorAddress: string) => Promise<void>;
 };
 export default _default;

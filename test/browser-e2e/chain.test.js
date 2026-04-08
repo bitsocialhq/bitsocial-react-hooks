@@ -1,10 +1,7 @@
 import {
   getEthWalletFromPkcPrivateKey,
-  getSolWalletFromPkcPrivateKey,
   getEthPrivateKeyFromPkcPrivateKey,
-  getSolPrivateKeyFromPkcPrivateKey,
   validateEthWallet,
-  validateSolWallet,
 } from "../../dist";
 
 const pkcPrivateKey = "mV8GRU5TGScen7UYZOuNQQ1CKe2G46DCc60moM1yLF4";
@@ -29,7 +26,7 @@ describe("chain", () => {
       expect(privateKey).toBe("0x995f06454e5319271e9fb51864eb8d410d4229ed86e3a0c273ad26a0cd722c5e");
       expect(wallet.signature.type).toBe("eip191");
       expect(wallet.signature.signature).toBe(
-        "0xea38d758767f746fa73761a0e5c60a810ee6762ab2d6fd0d9d3390d9e5e60f304c91aebb91f4f7337321cebbfbbf8206ee4ec92909f136ba5ff546322434a90c1b",
+        "0xd1a3c404b8143421026957982a47aa490b69bce1fcfcd96e5715cfcd6139196f2b616958a5a2febc1ee9601daeca4786c68bac583757818ef60786f0604d2d5b1b",
       );
     });
 
@@ -68,13 +65,13 @@ describe("chain", () => {
     });
 
     test("validateEthWallet fixture wallet", async () => {
-      const authorAddress = "12D3KooWRLHxva6Mrt2fxuL4hMeGJCs8erHAAoXCzPGLsdLpdvrF";
+      const authorAddress = "authoraddress.eth";
       const wallet = {
-        address: "0x172bb210Ebf51882b63d59609A7BC5c70ce84311",
-        timestamp: 1758422293,
+        address: "0x37BC48124fDf985DC3983E2e8414606D4a996ED7",
+        timestamp: 1740000000,
         signature: {
           signature:
-            "0x0d2a091975bcaa4895eb532a74bdef7060db7980ec7bed47812a3e26d5138ea712b890151c117d5e28739b40303b186dc58483065e7390238bd9902e88dbd1071c",
+            "0xd1a3c404b8143421026957982a47aa490b69bce1fcfcd96e5715cfcd6139196f2b616958a5a2febc1ee9601daeca4786c68bac583757818ef60786f0604d2d5b1b",
           type: "eip191",
         },
       };
@@ -89,7 +86,7 @@ describe("chain", () => {
         timestamp: 1759958639,
         signature: {
           signature:
-            "0x1212ac6953a8d5e5adfc6ec9964042d9b3fc4241a72bfabbccef26cd74d35be5029485b2c1187c3423f05acf7f49694dfa00480c5a203ba08c9773b4517054e71b",
+            "0xc0248dd8dd2273612de17eedda131bb0152c9751f21d0aa1f7306f52124ec6985cd1c0584d6d04adaf5856862001241758687d5f1fd7bd67c47d748be400a68b1b",
           type: "eip191",
         },
       };
@@ -104,75 +101,6 @@ describe("chain", () => {
       expect(wallet.signature.signature).toBe(generatedWallet.signature.signature);
 
       await validateEthWallet(wallet, authorAddress);
-    });
-  });
-
-  describe("sol wallet", () => {
-    let wallet, privateKey;
-    beforeAll(async () => {
-      privateKey = await getSolPrivateKeyFromPkcPrivateKey(pkcPrivateKey);
-      const dateNow = Date.now;
-      Date.now = () => walletTimestamp * 1000;
-      wallet = await getSolWalletFromPkcPrivateKey(pkcPrivateKey, authorAddress);
-      Date.now = dateNow;
-    });
-
-    test("getSolWalletFromPkcPrivateKey", async () => {
-      expect(wallet.timestamp).toBe(walletTimestamp);
-      expect(wallet.address).toBe("AzAfDLMxbptaq5Ppy4BK5aEsEzvTYNFAub5ffewbSdn9");
-      expect(wallet.privateKey).toBe(undefined);
-      expect(privateKey).toBe(
-        "44rJnvSKZwF6qMrc49MVe4KqcugR8zc8B4i1yo9iXrvKsf6FAFB7x1dSNdbAqqga4xvpU7VmnKRkwyvQWxrcBmGV",
-      );
-      expect(wallet.signature.type).toBe("sol");
-      expect(wallet.signature.signature).toBe(
-        "4A5VKfweqJMxj3mrFXDEgfxtQBJDYEgfg5BNKKaa7Aiq65ACC7rokBQXoRfBwERKRGQZryw8ZYrr9vuxnG8tnVnB",
-      );
-    });
-
-    test("validateSolWallet", async () => {
-      // good signature
-      await validateSolWallet(wallet, authorAddress);
-
-      // bad signatures
-      await expect(
-        validateSolWallet({ ...wallet, timestamp: wallet.timestamp + 1 }, authorAddress),
-      ).rejects.toThrow("signature invalid");
-      await expect(validateSolWallet(wallet, "invalidauthoraddress.eth")).rejects.toThrow(
-        "signature invalid",
-      );
-      await expect(
-        validateSolWallet({ ...wallet, timestamp: undefined }, authorAddress),
-      ).rejects.toThrow(`validateSolWallet invalid wallet.timestamp 'undefined' not a number`);
-      await expect(
-        validateSolWallet({ ...wallet, signature: undefined }, authorAddress),
-      ).rejects.toThrow(`validateSolWallet invalid wallet.signature 'undefined'`);
-      await expect(validateSolWallet({ ...wallet, signature: {} }, authorAddress)).rejects.toThrow(
-        `validateSolWallet invalid wallet.signature.signature 'undefined'`,
-      );
-      await expect(
-        validateSolWallet({ ...wallet, address: undefined }, authorAddress),
-      ).rejects.toThrow(`validateSolWallet invalid wallet.address 'undefined'`);
-      await expect(
-        validateSolWallet(
-          { ...wallet, address: "11111111111111111111111111111111" },
-          authorAddress,
-        ),
-      ).rejects.toThrow("signature invalid");
-    });
-
-    test("validateSolWallet fixture wallet", async () => {
-      const authorAddress = "12D3KooWRLHxva6Mrt2fxuL4hMeGJCs8erHAAoXCzPGLsdLpdvrF";
-      const wallet = {
-        address: "GWvoBSWefymBZ1pe4ktvXQnJAXEX97Sj2nuKVeBvjz8K",
-        timestamp: 1758422293,
-        signature: {
-          signature:
-            "duY6oPos8RdH31EKaE86g4Lh5oqTL22tVHTG1kTEW8F4eHLG3ynFrP7xVvDm4pFCevKczbLcik8VmH6yZ8mgfx8",
-          type: "sol",
-        },
-      };
-      await validateSolWallet(wallet, authorAddress);
     });
   });
 });

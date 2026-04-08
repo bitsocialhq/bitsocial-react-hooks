@@ -41,7 +41,6 @@
     "changelog": "conventional-changelog -p angular -i CHANGELOG.md -s -r 0"
   },
   "dependencies": {
-    "@noble/ed25519": "1.7.5",
     "@pkc/pkc-logger": "https://github.com/pkcprotocol/pkc-logger.git",
     "@pkcprotocol/pkc-js": "https://github.com/pkcprotocol/pkc-js.git#e63026e6cd33df5af3a3b5e6473b1e364d89fbdb",
     "assert": "2.0.0",

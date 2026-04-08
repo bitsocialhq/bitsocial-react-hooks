@@ -17,7 +17,6 @@ describe("account-generator", () => {
         expect(opts.chainProviders).toBeDefined();
         expect(opts.chainProviders.eth).toBeDefined();
         expect(opts.chainProviders.matic).toBeDefined();
-        expect(opts.chainProviders.sol).toBeDefined();
         expect(opts.resolveAuthorAddresses).toBe(false);
         expect(opts.validatePages).toBe(false);
       } finally {
@@ -51,7 +50,6 @@ describe("account-generator", () => {
       try {
         const opts = getDefaultPkcOptions();
         expect(opts.chainProviders.matic).toBeDefined();
-        expect(opts.chainProviders.sol).toBeDefined();
       } finally {
         delete (global as any).window.defaultPkcOptions;
       }

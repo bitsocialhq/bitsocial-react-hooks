@@ -8,11 +8,11 @@ import { useSubscribe, useBlock, usePublishComment, usePublishVote, useCreateCom
 import { createAccount, deleteAccount, deleteComment, setAccount, setActiveAccount, setAccountsOrder, importAccount, exportAccount, deleteCommunity } from "./stores/accounts/accounts-actions";
 import { useClientsStates, useCommunitiesStates } from "./hooks/states";
 import { usePkcRpcSettings } from "./hooks/pkc-rpc";
-import { getEthWalletFromPkcPrivateKey, getSolWalletFromPkcPrivateKey, getEthPrivateKeyFromPkcPrivateKey, getSolPrivateKeyFromPkcPrivateKey, validateEthWallet, validateSolWallet } from "./lib/chain";
+import { getEthWalletFromPkcPrivateKey, getEthPrivateKeyFromPkcPrivateKey, validateEthWallet } from "./lib/chain";
 import { setPkcJs, restorePkcJs } from "./lib/pkc-js";
 import { deleteDatabases, deleteCaches } from "./lib/debug-utils";
 export * from "./types";
-export { useAccount, useAccounts, useAccountComment, useAccountComments, useAccountVotes, useAccountVote, useAccountEdits, useAccountCommunities, useNotifications, usePubsubSubscribe, useComment, useComments, useEditedComment, useValidateComment, useReplies, useCommunity, useCommunities, useCommunityStats, useListCommunities, useResolvedCommunityAddress, useAuthor, useAuthorComments, useAuthorAvatar, useResolvedAuthorAddress, useAuthorAddress, setAuthorAvatarsWhitelistedTokenAddresses, resetAuthorAddressCacheForTesting, useFeed, useBufferedFeeds, useSubscribe, useBlock, usePublishComment, usePublishVote, usePublishCommentEdit, usePublishCommentModeration, usePublishCommunityEdit, useCreateCommunity, createAccount, deleteAccount, deleteComment, setAccount, setActiveAccount, setAccountsOrder, importAccount, exportAccount, deleteCommunity, useClientsStates, useCommunitiesStates, usePkcRpcSettings, getEthWalletFromPkcPrivateKey, getSolWalletFromPkcPrivateKey, getEthPrivateKeyFromPkcPrivateKey, getSolPrivateKeyFromPkcPrivateKey, validateEthWallet, validateSolWallet, setPkcJs, restorePkcJs, deleteDatabases, deleteCaches, };
+export { useAccount, useAccounts, useAccountComment, useAccountComments, useAccountVotes, useAccountVote, useAccountEdits, useAccountCommunities, useNotifications, usePubsubSubscribe, useComment, useComments, useEditedComment, useValidateComment, useReplies, useCommunity, useCommunities, useCommunityStats, useListCommunities, useResolvedCommunityAddress, useAuthor, useAuthorComments, useAuthorAvatar, useResolvedAuthorAddress, useAuthorAddress, setAuthorAvatarsWhitelistedTokenAddresses, resetAuthorAddressCacheForTesting, useFeed, useBufferedFeeds, useSubscribe, useBlock, usePublishComment, usePublishVote, usePublishCommentEdit, usePublishCommentModeration, usePublishCommunityEdit, useCreateCommunity, createAccount, deleteAccount, deleteComment, setAccount, setActiveAccount, setAccountsOrder, importAccount, exportAccount, deleteCommunity, useClientsStates, useCommunitiesStates, usePkcRpcSettings, getEthWalletFromPkcPrivateKey, getEthPrivateKeyFromPkcPrivateKey, validateEthWallet, setPkcJs, restorePkcJs, deleteDatabases, deleteCaches, };
 declare const hooks: {
     useAccount: typeof useAccount;
     useAccounts: typeof useAccounts;
@@ -71,18 +71,8 @@ declare const hooks: {
             type: string;
         };
     } | undefined>;
-    getSolWalletFromPkcPrivateKey: (privateKeyBase64: string, authorAddress: string) => Promise<{
-        address: string;
-        timestamp: number;
-        signature: {
-            signature: string;
-            type: string;
-        };
-    } | undefined>;
     getEthPrivateKeyFromPkcPrivateKey: (privateKeyBase64: string, authorAddress: string) => Promise<string | undefined>;
-    getSolPrivateKeyFromPkcPrivateKey: (privateKeyBase64: string, authorAddress: string) => Promise<string | undefined>;
     validateEthWallet: (wallet: import("./types").Wallet, authorAddress: string) => Promise<void>;
-    validateSolWallet: (wallet: import("./types").Wallet, authorAddress: string) => Promise<void>;
     setPkcJs: typeof setPkcJs;
     restorePkcJs: typeof restorePkcJs;
     deleteDatabases: () => Promise<[void, void, any, any, any]>;

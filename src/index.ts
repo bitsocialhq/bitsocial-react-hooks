@@ -89,11 +89,8 @@ import { usePkcRpcSettings } from "./hooks/pkc-rpc";
 // chain
 import {
   getEthWalletFromPkcPrivateKey,
-  getSolWalletFromPkcPrivateKey,
   getEthPrivateKeyFromPkcPrivateKey,
-  getSolPrivateKeyFromPkcPrivateKey,
   validateEthWallet,
-  validateSolWallet,
 } from "./lib/chain";
 
 // utils
@@ -166,11 +163,8 @@ export {
   usePkcRpcSettings,
   // chain
   getEthWalletFromPkcPrivateKey,
-  getSolWalletFromPkcPrivateKey,
   getEthPrivateKeyFromPkcPrivateKey,
-  getSolPrivateKeyFromPkcPrivateKey,
   validateEthWallet,
-  validateSolWallet,
   // utils
   setPkcJs,
   restorePkcJs,
@@ -241,11 +235,8 @@ const hooks = {
   usePkcRpcSettings,
   // chain
   getEthWalletFromPkcPrivateKey,
-  getSolWalletFromPkcPrivateKey,
   getEthPrivateKeyFromPkcPrivateKey,
-  getSolPrivateKeyFromPkcPrivateKey,
   validateEthWallet,
-  validateSolWallet,
   // utils
   setPkcJs,
   restorePkcJs,
