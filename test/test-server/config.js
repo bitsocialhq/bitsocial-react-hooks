@@ -1,3 +1,16 @@
+const getPort = (envName, fallback) => {
+  const value = process.env[envName];
+  if (!value) {
+    return fallback;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw Error(`${envName} '${value}' not a valid port`);
+  }
+  return parsed;
+};
+
 export const offlineIpfs = {
   apiPort: 14325,
   gatewayPort: 14326,
@@ -13,5 +26,5 @@ export const pubsubIpfs = {
 };
 
 export const pkcRpc = {
-  port: 48392,
+  port: getPort("TEST_PKC_RPC_PORT", 48392),
 };

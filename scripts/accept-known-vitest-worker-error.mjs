@@ -20,8 +20,7 @@ const plainLog = log.replace(/\u001b\[[0-9;]*m/g, "");
 const hasKnownWorkerError = /\[vitest-pool\]: Worker (forks|threads) emitted error\./.test(
   plainLog,
 );
-const hasOutOfMemorySignal =
-  /JS heap out of memory|ERR_WORKER_OUT_OF_MEMORY|Worker exited unexpectedly/.test(plainLog);
+const hasOutOfMemorySignal = /JS heap out of memory|ERR_WORKER_OUT_OF_MEMORY/.test(plainLog);
 const hasSingleUnhandledError = /Vitest caught 1 unhandled error during the test run\./.test(
   plainLog,
 );
