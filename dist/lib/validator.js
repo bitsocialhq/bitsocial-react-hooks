@@ -1,4 +1,5 @@
 import assert from "assert";
+import { assertCommunityRef } from "./community-ref";
 const toString = (value) => {
     if (typeof value === "string") {
         return value;
@@ -138,16 +139,37 @@ const validateUseCommentsArguments = (commentCids, account) => {
     }
     assert(getAccountProtocolClient(account) && typeof getAccountProtocolClient(account) === "object", `useComments account.pkc/account.pkc '${getAccountProtocolClient(account)}' not an object`);
 };
-const validateUseCommunityArguments = (communityAddress, account) => {
-    assert(typeof communityAddress === "string", `useCommunity communityAddress '${communityAddress}' not a string`);
-    assert(getAccountProtocolClient(account) && typeof getAccountProtocolClient(account) === "object", `useCommunity account.pkc/account.pkc '${getAccountProtocolClient(account)}' not an object`);
-};
-const validateUseCommunitiesArguments = (communityAddresses, account) => {
-    assert(Array.isArray(communityAddresses), `useCommunity communityAddresses '${toString(communityAddresses)}' not an array`);
-    for (const communityAddress of communityAddresses) {
-        assert(typeof communityAddress === "string", `useCommunities communityAddresses '${toString(communityAddresses)}' communityAddress '${toString(communityAddress)}' not a string`);
+const validateCommunityIdentifierArguments = (community, legacyCommunityAddress, scope) => {
+    assert(legacyCommunityAddress === undefined, `${scope} communityAddress has been removed, pass { community: { name, publicKey } }`);
+    if (community === undefined) {
+        return;
     }
-    assert(getAccountProtocolClient(account) && typeof getAccountProtocolClient(account) === "object", `useCommunity account.pkc/account.pkc '${getAccountProtocolClient(account)}' not an object`);
+    assertCommunityRef(community, `${scope} community`);
+};
+const validateUseCommunityArguments = ({ community, communityAddress, account }) => {
+    validateCommunityIdentifierArguments(community, communityAddress, "useCommunity");
+    if (account !== undefined && account !== null) {
+        assert(getAccountProtocolClient(account) && typeof getAccountProtocolClient(account) === "object", `useCommunity account.pkc/account.pkc '${getAccountProtocolClient(account)}' not an object`);
+    }
+};
+const validateUseCommunityStatsArguments = ({ community, communityAddress }) => {
+    validateCommunityIdentifierArguments(community, communityAddress, "useCommunityStats");
+};
+const validateCommunitiesArguments = (communities, communityRefs, communityAddresses, scope) => {
+    assert(communityRefs === undefined, `${scope} communityRefs has been removed, pass communities instead`);
+    assert(communityAddresses === undefined, `${scope} communityAddresses has been removed, pass communities instead`);
+    if (communities !== undefined) {
+        assert(Array.isArray(communities), `${scope} communities '${toString(communities)}' not an array`);
+        for (const community of communities) {
+            assertCommunityRef(community, `${scope} communities '${toString(communities)}' community '${toString(community)}'`);
+        }
+    }
+};
+const validateUseCommunitiesArguments = ({ communities, communityRefs, communityAddresses, account, }) => {
+    validateCommunitiesArguments(communities, communityRefs, communityAddresses, "useCommunities");
+    if (account !== undefined && account !== null) {
+        assert(getAccountProtocolClient(account) && typeof getAccountProtocolClient(account) === "object", `useCommunity account.pkc/account.pkc '${getAccountProtocolClient(account)}' not an object`);
+    }
 };
 const feedSortTypes = new Set([
     "hot",
@@ -169,13 +191,8 @@ const feedSortTypes = new Set([
 const validateFeedSortType = (sortType) => {
     assert(feedSortTypes.has(sortType), `invalid feed sort type '${sortType}'`);
 };
-const validateUseFeedArguments = (communityAddresses, sortType, accountName, postsPerPage, filter, newerThan, accountComments) => {
-    if (communityAddresses) {
-        assert(Array.isArray(communityAddresses), `useFeed communityAddresses argument '${toString(communityAddresses)}' not an array`);
-        for (const communityAddress of communityAddresses) {
-            assert(typeof communityAddress === "string", `useFeed communityAddresses argument '${toString(communityAddresses)}' communityAddress '${toString(communityAddress)}' not a string`);
-        }
-    }
+const validateUseFeedArguments = ({ communities, communityRefs, communityAddresses, sortType, accountName, postsPerPage, filter, newerThan, accountComments, }) => {
+    validateCommunitiesArguments(communities, communityRefs, communityAddresses, "useFeed");
     assert(feedSortTypes.has(sortType), `useFeed sortType argument '${sortType}' invalid`);
     if (accountName) {
         assert(typeof accountName === "string", `useFeed accountName argument '${accountName}' not a string`);
@@ -195,15 +212,10 @@ const validateUseFeedArguments = (communityAddresses, sortType, accountName, pos
         assert(typeof accountComments.newerThan === "number", `useFeed accountComments.newerThan argument '${accountComments}' not a number`);
     }
 };
-const validateUseBufferedFeedsArguments = (feedsOptions, accountName) => {
+const validateUseBufferedFeedsArguments = ({ feedsOptions, accountName, }) => {
     assert(Array.isArray(feedsOptions), `useBufferedFeeds feedsOptions argument '${toString(feedsOptions)}' not an array`);
-    for (const { communityAddresses, sortType, postsPerPage, filter, newerThan } of feedsOptions) {
-        if (communityAddresses) {
-            assert(Array.isArray(communityAddresses), `useBufferedFeeds feedOptions.communityAddresses argument '${toString(communityAddresses)}' not an array`);
-            for (const communityAddress of communityAddresses) {
-                assert(typeof communityAddress === "string", `useBufferedFeeds feedOptions.communityAddresses argument '${toString(communityAddresses)}' communityAddress '${toString(communityAddress)}' not a string`);
-            }
-        }
+    for (const { communities, communityRefs, communityAddresses, sortType, postsPerPage, filter, newerThan, } of feedsOptions) {
+        validateCommunitiesArguments(communities, communityRefs, communityAddresses, "useBufferedFeeds feedOptions");
         if (sortType) {
             assert(feedSortTypes.has(sortType), `useBufferedFeeds feedOptions.sortType argument '${sortType}' invalid`);
         }
@@ -221,6 +233,9 @@ const validateUseBufferedFeedsArguments = (feedsOptions, accountName) => {
     if (accountName) {
         assert(typeof accountName === "string", `useBufferedFeeds accountName argument '${accountName}' not a string`);
     }
+};
+const validateUseCommunitiesStatesArguments = ({ communities, communityRefs, communityAddresses, }) => {
+    validateCommunitiesArguments(communities, communityRefs, communityAddresses, "useCommunitiesStates");
 };
 const repliesSortTypes = new Set([
     "best",
@@ -279,7 +294,9 @@ const validator = {
     validateUseCommentArguments,
     validateUseCommentsArguments,
     validateUseCommunityArguments,
+    validateUseCommunityStatsArguments,
     validateUseCommunitiesArguments,
+    validateUseCommunitiesStatesArguments,
     validateFeedSortType,
     validateUseFeedArguments,
     validateUseBufferedFeedsArguments,

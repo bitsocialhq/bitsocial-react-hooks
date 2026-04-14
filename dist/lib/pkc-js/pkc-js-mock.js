@@ -80,9 +80,11 @@ export class PKC extends EventEmitter {
             if (!createCommunityOptions) {
                 createCommunityOptions = {};
             }
+            const communityIdentifier = createCommunityOptions.address ||
+                createCommunityOptions.name ||
+                createCommunityOptions.publicKey;
             // no address provided so probably a user creating an owner community
-            if (!createCommunityOptions.address &&
-                !createdOwnerCommunities[createCommunityOptions.address]) {
+            if (!communityIdentifier) {
                 createCommunityOptions = Object.assign(Object.assign({}, createCommunityOptions), { address: "created community address" });
                 // createdCommunityAddresses.push('created community address')
                 createdOwnerCommunities[createCommunityOptions.address] = Object.assign({}, createCommunityOptions);
@@ -282,7 +284,10 @@ export class Community extends EventEmitter {
         this.updateCalledTimes = 0;
         this.updating = false;
         this.firstUpdate = true;
-        this.address = createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.address;
+        this.address =
+            (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.address) ||
+                (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.name) ||
+                (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.publicKey);
         this.title = createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.title;
         this.description = createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.description;
         this.statsCid = "statscid";
@@ -315,8 +320,16 @@ export class Community extends EventEmitter {
                 }
             }
         }
-        // only trigger a first update if argument is only ({address})
-        if (!(createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.address) || Object.keys(createCommunityOptions).length !== 1) {
+        const lookupKeys = ["address", "name", "publicKey"];
+        const createCommunityOptionKeys = Object.keys(createCommunityOptions || {});
+        const hasLookupIdentifier = Boolean((createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.address) ||
+            (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.name) ||
+            (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.publicKey));
+        const lookupOnly = hasLookupIdentifier &&
+            createCommunityOptionKeys.length > 0 &&
+            createCommunityOptionKeys.every((key) => lookupKeys.includes(key));
+        // only trigger a first update for lookup-only remote community instances
+        if (!lookupOnly) {
             this.firstUpdate = false;
         }
     }

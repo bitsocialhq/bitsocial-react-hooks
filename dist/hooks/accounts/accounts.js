@@ -10,6 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import { useMemo, useState, useEffect } from "react";
 import isEqual from "lodash.isequal";
 import useAccountsStore from "../../stores/accounts";
+import useCommunitiesStore from "../../stores/communities";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:hooks");
 import assert from "assert";
@@ -115,10 +116,11 @@ export function useAccountCommunities(options) {
     const uniqueCommunityAddresses = useMemo(() => groupedCommunityAddresses.map(({ preferredAddress }) => preferredAddress), [groupedCommunityAddresses]);
     // fetch all community data
     const { communities: communitiesArray, state: communitiesState, error: communitiesError, errors: communitiesErrors, } = useCommunities({
-        communityAddresses: uniqueCommunityAddresses,
+        communities: uniqueCommunityAddresses.map((communityAddress) => ({ name: communityAddress })),
         accountName,
         onlyIfCached,
     });
+    const communityFetchErrors = useCommunitiesStore((state) => uniqueCommunityAddresses.flatMap((communityAddress) => state.errors[communityAddress] || []));
     const canonicalAddressByGroupKey = useMemo(() => {
         var _a;
         const canonicalAddresses = {};
@@ -165,13 +167,22 @@ export function useAccountCommunities(options) {
     if (accountId) {
         log("useAccountCommunities", { accountCommunities });
     }
-    const state = accountId ? communitiesState : "initializing";
+    const pendingAccountCommunities = Object.values(accountCommunities).some((community) => (community === null || community === void 0 ? void 0 : community.address) && !(community === null || community === void 0 ? void 0 : community.updatedAt));
+    const errors = communityFetchErrors.length ? communityFetchErrors : communitiesErrors;
+    const error = communitiesError || errors[errors.length - 1];
+    const state = !accountId
+        ? "initializing"
+        : error
+            ? "failed"
+            : pendingAccountCommunities
+                ? "fetching-ipns"
+                : communitiesState;
     return useMemo(() => ({
         accountCommunities,
         state,
-        error: communitiesError,
-        errors: communitiesErrors,
-    }), [accountCommunities, state, communitiesError, communitiesErrors]);
+        error,
+        errors,
+    }), [accountCommunities, state, error, errors]);
 }
 /**
  * Returns an account's notifications in an array. Unread notifications have a field markedAsRead: false.

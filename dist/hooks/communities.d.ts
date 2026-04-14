@@ -1,18 +1,18 @@
 import { ChainProviders, UseResolvedCommunityAddressOptions, UseResolvedCommunityAddressResult, UseCommunityOptions, UseCommunityResult, UseCommunitiesOptions, UseCommunitiesResult, UseCommunityStatsOptions, UseCommunityStatsResult } from "../types";
 /**
- * @param communityAddress - The address of the community, e.g. 'memes.eth', '12D3KooW...', etc
+ * @param community - The community identifier, e.g. {name: 'memes.eth'} or {publicKey: '12D3KooW...'}
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use
  * the active account.
  */
 export declare function useCommunity(options?: UseCommunityOptions): UseCommunityResult;
 /**
- * @param communityAddress - The address of the community, e.g. 'memes.eth', '12D3KooW...', etc
+ * @param community - The community identifier, e.g. {name: 'memes.eth'} or {publicKey: '12D3KooW...'}
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use
  * the active account.
  */
 export declare function useCommunityStats(options?: UseCommunityStatsOptions): UseCommunityStatsResult;
 /**
- * @param communityAddresses - The addresses of the communities, e.g. ['memes.eth', '12D3KooWA...']
+ * @param communities - The communities to fetch, e.g. [{name: 'memes.eth'}, {publicKey: '12D3KooW...'}]
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use
  * the active account.
  */

@@ -14,10 +14,11 @@ import createStore from "zustand";
 import localForageLru from "../../lib/localforage-lru";
 import { communityPostsCacheExpired } from "../../lib/utils";
 import { getPkcGetCommunity } from "../../lib/pkc-compat";
+import { getCommunityRefKeys } from "../../lib/community-ref";
 import accountsStore from "../accounts";
 import communitiesStore from "../communities";
 import communitiesPagesStore from "../communities-pages";
-import { getFeedsCommunitiesFirstPageCids, getLoadedFeeds, getUpdatedFeeds, getBufferedFeedsWithoutLoadedFeeds, getFeedsCommunitiesPostCounts, getFeedsHaveMore, getAccountsBlockedAddresses, feedsHaveChangedBlockedAddresses, accountsBlockedAddressesChanged, getAccountsBlockedCids, feedsHaveChangedBlockedCids, accountsBlockedCidsChanged, feedsCommunitiesChanged, getFeedsCommunities, getFeedsCommunitiesLoadedCount, getFeedsCommunitiesPostsPagesFirstUpdatedAts, getFilteredSortedFeeds, getFeedsCommunityAddressesWithNewerPosts, } from "./utils";
+import { getFeedsCommunitiesFirstPageCids, getLoadedFeeds, getUpdatedFeeds, getBufferedFeedsWithoutLoadedFeeds, getFeedsCommunitiesPostCounts, getFeedsHaveMore, getAccountsBlockedAddresses, feedsHaveChangedBlockedAddresses, accountsBlockedAddressesChanged, getAccountsBlockedCids, feedsHaveChangedBlockedCids, accountsBlockedCidsChanged, feedsCommunitiesChanged, getFeedsCommunities, getFeedsCommunitiesLoadedCount, getFeedsCommunitiesPostsPagesFirstUpdatedAts, getFilteredSortedFeeds, getFeedsCommunityKeysWithNewerPosts, } from "./utils";
 // reddit loads approximately 25 posts per page
 // while infinite scrolling
 export const defaultPostsPerPage = 25;
@@ -33,13 +34,17 @@ const feedsStore = createStore((setState, getState) => ({
     updatedFeeds: {},
     bufferedFeedsCommunitiesPostCounts: {},
     feedsHaveMore: {},
-    feedsCommunityAddressesWithNewerPosts: {},
-    addFeedToStore(feedName, communityAddresses, sortType, account, isBufferedFeed, postsPerPage, filter, newerThan, accountComments, modQueue) {
+    feedsCommunityKeysWithNewerPosts: {},
+    addFeedToStore(feedName, communities, communityKeys, sortType, account, isBufferedFeed, postsPerPage, filter, newerThan, accountComments, modQueue) {
         return __awaiter(this, void 0, void 0, function* () {
             // init here because must be called after async accounts store finished initializing
             initializeFeedsStore();
             assert(feedName && typeof feedName === "string", `feedsStore.addFeedToStore feedName '${feedName}' invalid`);
-            assert(Array.isArray(communityAddresses), `addFeedToStore.addFeedToStore communityAddresses '${communityAddresses}' invalid`);
+            assert(Array.isArray(communities), `addFeedToStore.addFeedToStore communities '${communities}' invalid`);
+            assert(Array.isArray(communityKeys), `addFeedToStore.addFeedToStore communityKeys '${communityKeys}' invalid`);
+            const derivedCommunityKeys = getCommunityRefKeys(communities);
+            assert(communityKeys.length === derivedCommunityKeys.length &&
+                communityKeys.every((communityKey, index) => communityKey === derivedCommunityKeys[index]), `addFeedToStore.addFeedToStore communityKeys '${communityKeys}' do not match communities`);
             assert(sortType && typeof sortType === "string", `addFeedToStore.addFeedToStore sortType '${sortType}' invalid`);
             assert(typeof getPkcGetCommunity(account === null || account === void 0 ? void 0 : account.pkc) === "function", `addFeedToStore.addFeedToStore account '${account}' invalid`);
             assert(typeof isBufferedFeed === "boolean" ||
@@ -60,7 +65,8 @@ const feedsStore = createStore((setState, getState) => ({
             }
             // to add a buffered feed, add a feed with pageNumber 0
             const feedOptions = {
-                communityAddresses,
+                communities,
+                communityKeys,
                 sortType,
                 accountId: account.id,
                 pageNumber: isBufferedFeed === true ? 0 : 1,
@@ -75,7 +81,7 @@ const feedsStore = createStore((setState, getState) => ({
             setState(({ feedsOptions }) => ({
                 feedsOptions: Object.assign(Object.assign({}, feedsOptions), { [feedName]: feedOptions }),
             }));
-            addCommunitiesToCommunitiesStore(communityAddresses, account);
+            addCommunitiesToCommunitiesStore(communities, account);
             // update feeds right away to use the already loaded communities and pages
             // if no new communities are added by the feed, like for a sort type change,
             // a feed update will never be triggered, so must be triggered it manually
@@ -102,7 +108,7 @@ const feedsStore = createStore((setState, getState) => ({
             assert(feedsOptions[feedName], `feedsActions.resetFeed feed name '${feedName}' does not exist in feeds store`);
             assert(feedsOptions[feedName].pageNumber >= 1, `feedsActions.resetFeed cannot reset feed page number '${feedsOptions[feedName].pageNumber}' lower than 1`);
             log("feedsActions.resetFeed", { feedName });
-            const { modQueue, sortType, communityAddresses, accountId } = feedsOptions[feedName];
+            const { modQueue, sortType, communities, communityKeys, accountId } = feedsOptions[feedName];
             const account = accountsStore.getState().accounts[accountId];
             assert(account, `feedsActions.resetFeed account id '${accountId}' does not exist in accounts store`);
             setState(({ feedsOptions, loadedFeeds, updatedFeeds }) => {
@@ -116,17 +122,18 @@ const feedsStore = createStore((setState, getState) => ({
             if (modQueue === null || modQueue === void 0 ? void 0 : modQueue[0]) {
                 const { communities } = communitiesStore.getState();
                 const { invalidateCommunityPages } = communitiesPagesStore.getState();
-                const loadedCommunities = communityAddresses
-                    .map((communityAddress) => communities[communityAddress])
+                const loadedCommunities = communityKeys
+                    .map((communityKey) => communities[communityKey])
                     .filter((community) => Boolean(community));
                 yield Promise.all(loadedCommunities.map((community) => invalidateCommunityPages(community, sortType, modQueue, account.id)));
             }
-            yield Promise.all(communityAddresses.map((communityAddress) => communitiesStore
+            yield Promise.all(communities.map((communityRef, communityIndex) => communitiesStore
                 .getState()
-                .refreshCommunity(communityAddress, account)
+                .refreshCommunity(communityRef, account)
                 .catch((error) => log.error("feedsStore.resetFeed refreshCommunity error", {
                 feedName,
-                communityAddress,
+                community: communityRef,
+                communityKey: communityKeys[communityIndex],
                 error,
             }))));
             updateFeeds();
@@ -155,7 +162,7 @@ const feedsStore = createStore((setState, getState) => ({
             const bufferedFeeds = getBufferedFeedsWithoutLoadedFeeds(bufferedFeedsWithoutPreviousLoadedFeeds, loadedFeeds);
             const bufferedFeedsCommunitiesPostCounts = getFeedsCommunitiesPostCounts(feedsOptions, bufferedFeeds);
             const feedsHaveMore = getFeedsHaveMore(feedsOptions, bufferedFeeds, communities, communitiesPages, accounts);
-            const feedsCommunityAddressesWithNewerPosts = getFeedsCommunityAddressesWithNewerPosts(filteredSortedFeeds, loadedFeeds, previousState.feedsCommunityAddressesWithNewerPosts);
+            const feedsCommunityKeysWithNewerPosts = getFeedsCommunityKeysWithNewerPosts(feedsOptions, filteredSortedFeeds, loadedFeeds, previousState.feedsCommunityKeysWithNewerPosts);
             const updatedFeeds = yield getUpdatedFeeds(feedsOptions, filteredSortedFeeds, previousState.updatedFeeds, loadedFeeds, accounts);
             // set new feeds
             setState((state) => ({
@@ -164,7 +171,7 @@ const feedsStore = createStore((setState, getState) => ({
                 updatedFeeds,
                 bufferedFeedsCommunitiesPostCounts,
                 feedsHaveMore,
-                feedsCommunityAddressesWithNewerPosts,
+                feedsCommunityKeysWithNewerPosts,
             }));
             log.trace("feedsStore.updateFeeds", {
                 feedsOptions,
@@ -175,7 +182,7 @@ const feedsStore = createStore((setState, getState) => ({
                 feedsHaveMore,
                 communities,
                 communitiesPages,
-                feedsCommunityAddressesWithNewerPosts,
+                feedsCommunityKeysWithNewerPosts,
             });
             // TODO: if updateFeeds was called while updateFeedsPending = true, maybe we should recall updateFeeds here
             updateFeedsPending = false;
@@ -383,11 +390,11 @@ const updateFeedsOnAccountsCommentsChange = (accountsStoreState) => {
     // TODO: only update the feeds that are relevant to the new accountComment.parentCid/postCid
     feedsStore.getState().updateFeeds();
 };
-const addCommunitiesToCommunitiesStore = (communityAddresses, account) => {
+const addCommunitiesToCommunitiesStore = (communityRefs, account) => {
     const addCommunityToStore = communitiesStore.getState().addCommunityToStore;
-    for (const communityAddress of communityAddresses) {
-        addCommunityToStore(communityAddress, account).catch((error) => log.error("feedsStore communitiesActions.addCommunityToStore error", {
-            communityAddress,
+    for (const communityRef of communityRefs) {
+        addCommunityToStore(communityRef, account).catch((error) => log.error("feedsStore communitiesActions.addCommunityToStore error", {
+            communityRef,
             error,
         }));
     }

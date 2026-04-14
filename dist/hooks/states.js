@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:states:hooks");
 import assert from "assert";
+import validator from "../lib/validator";
 import { getPageRpcClients } from "../lib/pkc-compat";
 import { useCommunities } from "./communities";
 import { communityPostsCacheExpired } from "../lib/utils";
@@ -103,18 +104,20 @@ export function useClientsStates(options) {
     }), [states, peers]);
 }
 /**
- * @param communityAddresses - The community addresses to get the states from
+ * @param communities - The communities to get the states from
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use
  * the active account.
  */
 export function useCommunitiesStates(options) {
     assert(options == null || typeof options === "object", `useCommunitiesStates options argument '${options}' not an object`);
-    const { communityAddresses } = options !== null && options !== void 0 ? options : {};
-    assert(communityAddresses == null || Array.isArray(communityAddresses), `useCommunitiesStates communityAddresses '${communityAddresses}' not an array`);
-    for (const communityAddress of communityAddresses !== null && communityAddresses !== void 0 ? communityAddresses : []) {
-        assert(typeof communityAddress === "string", `useCommunitiesStates communityAddresses '${communityAddresses}' communityAddress '${communityAddress}' not a string`);
-    }
-    const { communities } = useCommunities({ communityAddresses });
+    const opts = options !== null && options !== void 0 ? options : {};
+    const { communities: communitiesInput } = opts;
+    validator.validateUseCommunitiesStatesArguments({
+        communities: communitiesInput,
+        communityRefs: opts.communityRefs,
+        communityAddresses: opts.communityAddresses,
+    });
+    const { communities } = useCommunities({ communities: communitiesInput });
     const states = useMemo(() => {
         var _a;
         const states = {};
@@ -193,7 +196,7 @@ export function useCommunitiesStates(options) {
             };
         }
         log("useCommunitiesStates", {
-            communityAddresses,
+            requestedCommunities: communitiesInput,
             states: _states,
             communities,
         });

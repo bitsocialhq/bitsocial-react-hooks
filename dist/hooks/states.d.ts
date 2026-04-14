@@ -7,7 +7,7 @@ import { UseClientsStatesOptions, UseClientsStatesResult, UseCommunitiesStatesOp
  */
 export declare function useClientsStates(options?: UseClientsStatesOptions): UseClientsStatesResult;
 /**
- * @param communityAddresses - The community addresses to get the states from
+ * @param communities - The communities to get the states from
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use
  * the active account.
  */

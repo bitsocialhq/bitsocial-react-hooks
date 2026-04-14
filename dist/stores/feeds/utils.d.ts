@@ -9,7 +9,7 @@ export declare const getLoadedFeeds: (feedsOptions: FeedsOptions, filteredSorted
 export declare const addAccountsComments: (feedsOptions: FeedsOptions, loadedFeeds: Feeds) => boolean;
 export declare const getBufferedFeedsWithoutLoadedFeeds: (bufferedFeeds: Feeds, loadedFeeds: Feeds) => Feeds;
 export declare const getUpdatedFeeds: (feedsOptions: FeedsOptions, filteredSortedFeeds: Feeds, updatedFeeds: Feeds, loadedFeeds: Feeds, accounts: Accounts) => Promise<Feeds>;
-export declare const getFeedsCommunityAddressesWithNewerPosts: (filteredSortedFeeds: Feeds, loadedFeeds: Feeds, previousFeedsCommunityAddressesWithNewerPosts: {
+export declare const getFeedsCommunityKeysWithNewerPosts: (feedsOptions: FeedsOptions, filteredSortedFeeds: Feeds, loadedFeeds: Feeds, previousFeedsCommunityKeysWithNewerPosts: {
     [feedName: string]: string[];
 }) => {
     [feedName: string]: string[];

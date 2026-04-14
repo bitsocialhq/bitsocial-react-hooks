@@ -9,7 +9,7 @@ type FeedsState = {
     feedsHaveMore: {
         [feedName: string]: boolean;
     };
-    feedsCommunityAddressesWithNewerPosts: {
+    feedsCommunityKeysWithNewerPosts: {
         [feedName: string]: string[];
     };
     addFeedToStore: Function;

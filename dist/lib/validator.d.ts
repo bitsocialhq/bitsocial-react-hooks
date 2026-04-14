@@ -13,11 +13,16 @@ declare const validator: {
     validateAccountsDatabaseAccountNames: (accountNames: any) => void;
     validateUseCommentArguments: (commentCid: any, account: any) => void;
     validateUseCommentsArguments: (commentCids: any, account: any) => void;
-    validateUseCommunityArguments: (communityAddress: any, account: any) => void;
-    validateUseCommunitiesArguments: (communityAddresses: any, account: any) => void;
+    validateUseCommunityArguments: ({ community, communityAddress, account }: any) => void;
+    validateUseCommunityStatsArguments: ({ community, communityAddress }: any) => void;
+    validateUseCommunitiesArguments: ({ communities, communityRefs, communityAddresses, account, }: any) => void;
+    validateUseCommunitiesStatesArguments: ({ communities, communityRefs, communityAddresses, }: any) => void;
     validateFeedSortType: (sortType: any) => void;
-    validateUseFeedArguments: (communityAddresses?: any, sortType?: any, accountName?: any, postsPerPage?: any, filter?: any, newerThan?: any, accountComments?: any) => void;
-    validateUseBufferedFeedsArguments: (feedsOptions?: any, accountName?: any) => void;
+    validateUseFeedArguments: ({ communities, communityRefs, communityAddresses, sortType, accountName, postsPerPage, filter, newerThan, accountComments, }: any) => void;
+    validateUseBufferedFeedsArguments: ({ feedsOptions, accountName, }: {
+        feedsOptions?: any;
+        accountName?: any;
+    }) => void;
     validateRepliesSortType: (sortType: any) => void;
     validateUseRepliesArguments: (comment?: any, sortType?: any, accountName?: any, onlyIfCached?: any, flat?: any, accountComments?: any, postsPerPage?: any, filter?: any) => void;
 };

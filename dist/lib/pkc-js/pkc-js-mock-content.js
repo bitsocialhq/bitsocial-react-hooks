@@ -752,6 +752,9 @@ class PKC extends EventEmitter {
     }
     createCommunity(createCommunityOptions) {
         return __awaiter(this, void 0, void 0, function* () {
+            const communityIdentifier = (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.address) ||
+                (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.name) ||
+                (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.publicKey);
             // if the only argument is {address}, the user didn't create the sub, it's a fetched sub
             if ((createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.address) && Object.keys(createCommunityOptions).length === 1) {
                 return new Community(createCommunityOptions);
@@ -759,7 +762,7 @@ class PKC extends EventEmitter {
             const signer = yield this.createSigner();
             const community = new Community(Object.assign({ signer }, createCommunityOptions));
             // keep a list of communities the user probably created himself to use with pkc.communities
-            if (!(createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.address)) {
+            if (!communityIdentifier) {
                 createdCommunities[community.address || ""] = community;
             }
             return community;
@@ -913,7 +916,10 @@ class Community extends EventEmitter {
         var _a, _b, _c, _d, _e, _f, _g;
         super();
         this._getCommunityOnFirstUpdate = false;
-        this.address = createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.address;
+        this.address =
+            (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.address) ||
+                (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.name) ||
+                (createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.publicKey);
         this.pubsubTopic = createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.pubsubTopic;
         this.createdAt = createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.createdAt;
         this.updatedAt = createCommunityOptions === null || createCommunityOptions === void 0 ? void 0 : createCommunityOptions.updatedAt;
