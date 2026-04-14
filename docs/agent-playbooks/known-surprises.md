@@ -72,7 +72,7 @@ If uncertain, ask the developer before adding an entry.
 
 - **Date:** 2026-03-16
 - **Observed by:** Codex
-- **Context:** posting PR review updates with `gh pr comment` during `review-and-merge-pr`
+- **Context:** posting PR review updates with `gh pr comment` during `review-and-merge-pr`; reconfirmed on PR #49 on 2026-04-14
 - **What was surprising:** shell command substitution from backticks in a comment body can inject raw local command output, including absolute filesystem paths like the contributor's workspace path.
 - **Impact:** agents can leak local directory names and dump noisy verification logs into public GitHub comments.
 - **Mitigation:** when using `gh` to create comments/issues/PR bodies in this repo, always pass content via a single-quoted heredoc or body file and summarize verification results instead of pasting raw command output or absolute local paths.
