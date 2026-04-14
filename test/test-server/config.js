@@ -1,5 +1,21 @@
-const getPort = (envName, fallback) => {
-  const value = process.env[envName];
+const getEnvValue = (envNames) => {
+  for (const envName of envNames) {
+    const nodeValue = typeof process !== "undefined" ? process.env?.[envName] : undefined;
+    if (nodeValue) {
+      return nodeValue;
+    }
+
+    const browserValue = import.meta.env?.[envName];
+    if (browserValue) {
+      return browserValue;
+    }
+  }
+
+  return undefined;
+};
+
+const getPort = (envNames, fallback) => {
+  const value = getEnvValue(envNames);
   if (!value) {
     return fallback;
   }
@@ -26,5 +42,5 @@ export const pubsubIpfs = {
 };
 
 export const pkcRpc = {
-  port: getPort("TEST_PKC_RPC_PORT", 48392),
+  port: getPort(["TEST_PKC_RPC_PORT", "VITE_TEST_PKC_RPC_PORT"], 48392),
 };

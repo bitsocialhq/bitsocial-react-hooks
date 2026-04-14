@@ -84,6 +84,7 @@ jobs:
     timeout-minutes: 20
     env:
       TEST_PKC_RPC_PORT: ${{ matrix.pkc_rpc_port }}
+      VITE_TEST_PKC_RPC_PORT: ${{ matrix.pkc_rpc_port }}
     strategy:
       fail-fast: false
       matrix:
