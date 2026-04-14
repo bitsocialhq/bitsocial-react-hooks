@@ -53,8 +53,8 @@ jobs:
           set -o pipefail
           mkdir -p .tmp
           LOG_FILE=.tmp/vitest-coverage.log
-          yarn test:coverage 2>&1 | tee "$LOG_FILE"
-          status=${PIPESTATUS[0]}
+          status=0
+          yarn test:coverage 2>&1 | tee "$LOG_FILE" || status=$?
           if [ "$status" -eq 0 ]; then
             exit 0
           fi
