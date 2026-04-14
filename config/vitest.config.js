@@ -18,7 +18,10 @@ const config = {
     reporter: isCoverageRun ? ["default"] : ["default", "json"],
     outputFile: isCoverageRun ? undefined : "./.vitest-reports/tests.json",
     server: { deps: { inline: true } },
-    // Coverage runs are more stable when the large hooks/stores suite stays on one worker.
+    // Coverage runs are more stable when the large hooks/stores suite avoids fork teardown
+    // and stays on a single worker.
+    pool: isCoverageRun ? "threads" : undefined,
+    fileParallelism: isCoverageRun ? false : undefined,
     maxWorkers: isCoverageRun ? 1 : undefined,
     coverage: {
       exclude: ["lib/pkc-js/pkc-js-mock-content.ts"],
