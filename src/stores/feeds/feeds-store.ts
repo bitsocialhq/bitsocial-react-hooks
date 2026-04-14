@@ -216,7 +216,7 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
     );
     log("feedsActions.resetFeed", { feedName });
 
-    const { modQueue, sortType, communityKeys, accountId } = feedsOptions[feedName];
+    const { modQueue, sortType, communities, communityKeys, accountId } = feedsOptions[feedName];
     const account = accountsStore.getState().accounts[accountId];
     assert(
       account,
@@ -249,14 +249,15 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
     }
 
     await Promise.all(
-      communityKeys.map((communityKey: string) =>
+      communities.map((communityRef: CommunityLookupRef, communityIndex: number) =>
         communitiesStore
           .getState()
-          .refreshCommunity(communityKey, account)
+          .refreshCommunity(communityRef, account)
           .catch((error: unknown) =>
             log.error("feedsStore.resetFeed refreshCommunity error", {
               feedName,
-              communityAddress: communityKey,
+              community: communityRef,
+              communityKey: communityKeys[communityIndex],
               error,
             }),
           ),

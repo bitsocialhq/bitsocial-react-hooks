@@ -93,6 +93,26 @@ describe("communities store", () => {
     }
   });
 
+  test("refreshCommunity uses structured community lookups and stores by publicKey", async () => {
+    const communityRef = { name: "refresh-name.eth", publicKey: "refresh-public-key" };
+    const getOrig = mockAccount.pkc.getCommunity;
+    mockAccount.pkc.getCommunity = vi.fn().mockImplementation(getOrig.bind(mockAccount.pkc));
+
+    try {
+      await act(async () => {
+        await communitiesStore.getState().refreshCommunity(communityRef, mockAccount);
+      });
+
+      expect(mockAccount.pkc.getCommunity).toHaveBeenCalledWith(communityRef);
+      expect(communitiesStore.getState().communities[communityRef.publicKey]).toBeDefined();
+      expect(communitiesStore.getState().communities[communityRef.publicKey]?.fetchedAt).toEqual(
+        expect.any(Number),
+      );
+    } finally {
+      mockAccount.pkc.getCommunity = getOrig;
+    }
+  });
+
   test("cached community create failure logs to console", async () => {
     const address = "cached-fail-address";
     const db = localForageLru.createInstance({ name: "bitsocialReactHooks-communities" });

@@ -249,10 +249,15 @@ const communitiesStore = createStore<CommunitiesState>(
       }
     },
 
-    async refreshCommunity(communityAddress: string, account: Account) {
+    async refreshCommunity(communityAddressOrRef: string | CommunityIdentifier, account: Account) {
+      const communityLookupOptions = getCommunityLookupOptions(communityAddressOrRef);
+      const communityKey =
+        typeof communityAddressOrRef === "string"
+          ? communityAddressOrRef
+          : getCommunityRefKey(communityAddressOrRef);
       assert(
-        communityAddress !== "" && typeof communityAddress === "string",
-        `communitiesStore.refreshCommunity invalid communityAddress argument '${communityAddress}'`,
+        communityKey !== "" && typeof communityKey === "string",
+        `communitiesStore.refreshCommunity invalid communityAddress argument '${communityAddressOrRef}'`,
       );
       assert(
         typeof getPkcGetCommunity(account?.pkc) === "function",
@@ -260,18 +265,19 @@ const communitiesStore = createStore<CommunitiesState>(
       );
 
       const refreshedCommunity = utils.clone(
-        await getPkcCommunity(account.pkc, { address: communityAddress }),
+        await getPkcCommunity(account.pkc, communityLookupOptions),
       );
       refreshedCommunity.fetchedAt = Math.floor(Date.now() / 1000);
 
-      await communitiesDatabase.setItem(communityAddress, refreshedCommunity);
+      await communitiesDatabase.setItem(communityKey, refreshedCommunity);
       log("communitiesStore.refreshCommunity", {
-        communityAddress,
+        communityAddressOrRef,
+        communityKey,
         refreshedCommunity,
         account,
       });
       setState((state: any) => ({
-        communities: { ...state.communities, [communityAddress]: refreshedCommunity },
+        communities: { ...state.communities, [communityKey]: refreshedCommunity },
       }));
 
       communitiesPagesStore.getState().addCommunityPageCommentsToStore(refreshedCommunity);

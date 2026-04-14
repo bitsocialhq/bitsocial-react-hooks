@@ -562,6 +562,65 @@ describe("feeds store", () => {
     getCommunitySpy.mockRestore();
   });
 
+  test("resetFeed refreshes publicKey-keyed communities with their original refs", async () => {
+    const community = { name: "community-ref.eth", publicKey: "community-public-key-reset" };
+    const feedName = JSON.stringify([mockAccount?.id, "new", [community.publicKey]]);
+    const refreshCommunity = communitiesStore.getState().refreshCommunity;
+    const updateFeeds = useFeedsStore.getState().updateFeeds;
+    const refreshSpy = vi.fn().mockResolvedValue(undefined);
+    const updateFeedsSpy = vi.fn();
+
+    communitiesStore.setState((state: any) => ({
+      ...state,
+      refreshCommunity: refreshSpy,
+    }));
+    useFeedsStore.setState((state: any) => ({
+      ...state,
+      updateFeeds: updateFeedsSpy,
+      feedsOptions: {
+        ...state.feedsOptions,
+        [feedName]: {
+          communities: [community],
+          communityKeys: [community.publicKey],
+          sortType: "new",
+          accountId: mockAccount.id,
+          pageNumber: 2,
+          postsPerPage,
+          filter: undefined,
+        },
+      },
+      loadedFeeds: {
+        ...state.loadedFeeds,
+        [feedName]: [{ cid: "comment-1", timestamp: 1, communityAddress: community.name }],
+      },
+      updatedFeeds: {
+        ...state.updatedFeeds,
+        [feedName]: [{ cid: "comment-1", timestamp: 1, communityAddress: community.name }],
+      },
+    }));
+
+    try {
+      await act(async () => {
+        await useFeedsStore.getState().resetFeed(feedName);
+      });
+
+      expect(refreshSpy).toHaveBeenCalledWith(
+        community,
+        expect.objectContaining({ id: mockAccount.id }),
+      );
+      expect(updateFeedsSpy).toHaveBeenCalled();
+    } finally {
+      communitiesStore.setState((state: any) => ({
+        ...state,
+        refreshCommunity,
+      }));
+      useFeedsStore.setState((state: any) => ({
+        ...state,
+        updateFeeds,
+      }));
+    }
+  });
+
   test("updateFeedsOnAccountsBlockedCidsChange calls updateFeeds when blocked cid is in feed", async () => {
     const communityAddresses = ["community address 1"];
     const feedName = JSON.stringify([mockAccount?.id, "new", communityAddresses]);
@@ -648,7 +707,7 @@ describe("feeds store", () => {
     });
 
     expect(refreshSpy).toHaveBeenCalledWith(
-      communityAddresses[0],
+      { name: communityAddresses[0] },
       expect.objectContaining({ id: mockAccount.id }),
     );
 
