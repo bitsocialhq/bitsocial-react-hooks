@@ -42,6 +42,27 @@ describe("communities store", () => {
     expect(communitiesStore.getState().communities[address].address).toBe(address);
   });
 
+  test("addCommunityToStore keys community refs by publicKey", async () => {
+    const communityRef = { name: "community-name.eth", publicKey: "community-public-key" };
+    const createOrig = mockAccount.pkc.createCommunity;
+    mockAccount.pkc.createCommunity = vi.fn().mockImplementation(createOrig.bind(mockAccount.pkc));
+
+    await act(async () => {
+      await communitiesStore.getState().addCommunityToStore(communityRef, mockAccount);
+    });
+
+    expect(mockAccount.pkc.createCommunity).toHaveBeenCalledWith(communityRef);
+    expect(communitiesStore.getState().communities[communityRef.publicKey]).toBeDefined();
+    expect(communitiesStore.getState().communities[communityRef.publicKey]?.address).toBe(
+      communityRef.name,
+    );
+    expect(communitiesStore.getState().communities[communityRef.publicKey]?.publicKey).toBe(
+      communityRef.publicKey,
+    );
+
+    mockAccount.pkc.createCommunity = createOrig;
+  });
+
   test("cached community create failure logs to console", async () => {
     const address = "cached-fail-address";
     const db = localForageLru.createInstance({ name: "bitsocialReactHooks-communities" });

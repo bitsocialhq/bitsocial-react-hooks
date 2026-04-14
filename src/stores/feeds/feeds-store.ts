@@ -18,6 +18,7 @@ import createStore from "zustand";
 import localForageLru from "../../lib/localforage-lru";
 import { communityPostsCacheExpired } from "../../lib/utils";
 import { getPkcGetCommunity } from "../../lib/pkc-compat";
+import { CommunityLookupRef, normalizeCommunityRefs } from "../../lib/community-ref";
 import accountsStore from "../accounts";
 import communitiesStore from "../communities";
 import communitiesPagesStore from "../communities-pages";
@@ -78,16 +79,51 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
 
   async addFeedToStore(
     feedName: string,
-    communityAddresses: string[],
-    sortType: string,
-    account: Account,
-    isBufferedFeed?: boolean,
-    postsPerPage?: number,
-    filter?: CommentsFilter,
-    newerThan?: number,
-    accountComments?: FeedOptionsAccountComments,
+    communityRefsOrAddresses: CommunityLookupRef[] | string[],
+    communityKeysOrSortType: string[] | string,
+    sortTypeOrAccount: string | Account,
+    accountOrIsBuffered?: Account | boolean,
+    isBufferedFeedOrPostsPerPage?: boolean | number,
+    postsPerPageOrFilter?: number | CommentsFilter,
+    filterOrNewerThan?: CommentsFilter | number,
+    newerThanOrAccountComments?: number | FeedOptionsAccountComments,
+    accountCommentsOrModQueue?: FeedOptionsAccountComments | string[],
     modQueue?: string[],
   ) {
+    let communityRefs: CommunityLookupRef[];
+    let communityKeys: string[];
+    let sortType: string;
+    let account: Account;
+    let isBufferedFeed: boolean | undefined;
+    let postsPerPage: number | undefined;
+    let filter: CommentsFilter | undefined;
+    let newerThan: number | undefined;
+    let accountComments: FeedOptionsAccountComments | undefined;
+
+    if (Array.isArray(communityKeysOrSortType)) {
+      communityRefs = communityRefsOrAddresses as CommunityLookupRef[];
+      communityKeys = communityKeysOrSortType;
+      sortType = sortTypeOrAccount as string;
+      account = accountOrIsBuffered as Account;
+      isBufferedFeed = isBufferedFeedOrPostsPerPage as boolean | undefined;
+      postsPerPage = postsPerPageOrFilter as number | undefined;
+      filter = filterOrNewerThan as CommentsFilter | undefined;
+      newerThan = newerThanOrAccountComments as number | undefined;
+      accountComments = accountCommentsOrModQueue as FeedOptionsAccountComments | undefined;
+    } else {
+      const communityAddresses = communityRefsOrAddresses as string[];
+      communityRefs = normalizeCommunityRefs(undefined, communityAddresses);
+      communityKeys = communityAddresses;
+      sortType = communityKeysOrSortType;
+      account = sortTypeOrAccount as Account;
+      isBufferedFeed = accountOrIsBuffered as boolean | undefined;
+      postsPerPage = isBufferedFeedOrPostsPerPage as number | undefined;
+      filter = postsPerPageOrFilter as CommentsFilter | undefined;
+      newerThan = filterOrNewerThan as number | undefined;
+      accountComments = newerThanOrAccountComments as FeedOptionsAccountComments | undefined;
+      modQueue = accountCommentsOrModQueue as string[] | undefined;
+    }
+
     // init here because must be called after async accounts store finished initializing
     initializeFeedsStore();
 
@@ -96,8 +132,12 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
       `feedsStore.addFeedToStore feedName '${feedName}' invalid`,
     );
     assert(
-      Array.isArray(communityAddresses),
-      `addFeedToStore.addFeedToStore communityAddresses '${communityAddresses}' invalid`,
+      Array.isArray(communityRefs),
+      `addFeedToStore.addFeedToStore communityRefs '${communityRefs}' invalid`,
+    );
+    assert(
+      Array.isArray(communityKeys),
+      `addFeedToStore.addFeedToStore communityKeys '${communityKeys}' invalid`,
     );
     assert(
       sortType && typeof sortType === "string",
@@ -147,7 +187,10 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
     }
     // to add a buffered feed, add a feed with pageNumber 0
     const feedOptions = {
-      communityAddresses,
+      communities: communityRefs,
+      communityRefs,
+      communityKeys,
+      communityAddresses: communityKeys,
       sortType,
       accountId: account.id,
       pageNumber: isBufferedFeed === true ? 0 : 1,
@@ -163,7 +206,7 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
       feedsOptions: { ...feedsOptions, [feedName]: feedOptions },
     }));
 
-    addCommunitiesToCommunitiesStore(communityAddresses, account);
+    addCommunitiesToCommunitiesStore(communityRefs, account);
 
     // update feeds right away to use the already loaded communities and pages
     // if no new communities are added by the feed, like for a sort type change,
@@ -209,7 +252,7 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
     );
     log("feedsActions.resetFeed", { feedName });
 
-    const { modQueue, sortType, communityAddresses, accountId } = feedsOptions[feedName];
+    const { modQueue, sortType, communityKeys, accountId } = feedsOptions[feedName];
     const account = accountsStore.getState().accounts[accountId];
     assert(
       account,
@@ -231,8 +274,8 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
     if (modQueue?.[0]) {
       const { communities } = communitiesStore.getState();
       const { invalidateCommunityPages } = communitiesPagesStore.getState();
-      const loadedCommunities = communityAddresses
-        .map((communityAddress: string) => communities[communityAddress])
+      const loadedCommunities = communityKeys
+        .map((communityKey: string) => communities[communityKey])
         .filter((community: Community | undefined): community is Community => Boolean(community));
       await Promise.all(
         loadedCommunities.map((community: Community) =>
@@ -242,14 +285,14 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
     }
 
     await Promise.all(
-      communityAddresses.map((communityAddress: string) =>
+      communityKeys.map((communityKey: string) =>
         communitiesStore
           .getState()
-          .refreshCommunity(communityAddress, account)
+          .refreshCommunity(communityKey, account)
           .catch((error: unknown) =>
             log.error("feedsStore.resetFeed refreshCommunity error", {
               feedName,
-              communityAddress,
+              communityAddress: communityKey,
               error,
             }),
           ),
@@ -313,6 +356,7 @@ const feedsStore = createStore<FeedsState>((setState: Function, getState: Functi
         accounts,
       );
       const feedsCommunityAddressesWithNewerPosts = getFeedsCommunityAddressesWithNewerPosts(
+        feedsOptions,
         filteredSortedFeeds,
         loadedFeeds,
         previousState.feedsCommunityAddressesWithNewerPosts,
@@ -627,12 +671,15 @@ const updateFeedsOnAccountsCommentsChange = (accountsStoreState: any) => {
   feedsStore.getState().updateFeeds();
 };
 
-const addCommunitiesToCommunitiesStore = (communityAddresses: string[], account: Account) => {
+const addCommunitiesToCommunitiesStore = (
+  communityRefs: CommunityLookupRef[],
+  account: Account,
+) => {
   const addCommunityToStore = communitiesStore.getState().addCommunityToStore;
-  for (const communityAddress of communityAddresses) {
-    addCommunityToStore(communityAddress, account).catch((error: unknown) =>
+  for (const communityRef of communityRefs) {
+    addCommunityToStore(communityRef, account).catch((error: unknown) =>
       log.error("feedsStore communitiesActions.addCommunityToStore error", {
-        communityAddress,
+        communityRef,
         error,
       }),
     );
