@@ -47,6 +47,8 @@ jobs:
       - run: yarn type-check
       - name: Run unit tests with coverage
         id: run_unit_tests
+        env:
+          NODE_OPTIONS: --max-old-space-size=12288
         run: yarn test:coverage
       - name: Print failed unit tests
         if: ${{ failure() && steps.run_unit_tests.outcome == 'failure' }}
