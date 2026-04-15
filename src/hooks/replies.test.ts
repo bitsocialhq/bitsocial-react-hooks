@@ -291,23 +291,18 @@ describe("replies", () => {
         cid: "comment cid 1",
         depth: 0,
         postCid: "p",
+        updatedAt: 1,
+        timestamp: 1,
         communityAddress: "sub",
-        replies: { pages: {} },
+        replies: { pages: {} as any, pageCids: {} as any },
       };
-      const rendered = renderHook(() => useReplies({ comment }));
-      const waitFor = testUtils.createWaitFor(rendered);
-      await waitFor(() => Object.keys(repliesStore.getState().feedsOptions).length > 0);
-      const feedName = Object.keys(repliesStore.getState().feedsOptions).find((fn) =>
-        fn.includes(comment.cid),
-      );
-      expect(feedName).toBeDefined();
+      comment.replies.pages.best = Pages.prototype.pageToGet.apply({ comment }, [
+        `${comment.cid} page cid best`,
+      ]);
+      comment.replies.pages.best.comments = [];
+      comment.replies.pages.best.nextCid = undefined;
 
-      await act(async () => {
-        repliesStore.setState((s: any) => ({
-          ...s,
-          feedsHaveMore: { ...s.feedsHaveMore, [feedName!]: false },
-        }));
-      });
+      rendered.rerender({ comment, validateOptimistically: false });
 
       await waitFor(() => rendered.result.current.hasMore === false);
       expect(rendered.result.current.hasMore).toBe(false);
