@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import { useMemo, useState, useEffect } from "react";
 // @ts-ignore
 import memoize from "memoizee";
-import PkcJs from "../../lib/pkc-js";
+import PkcJs from "../../lib/pkc-js/index.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:hooks");
 export const useCalculatedNotifications = (account, accountCommentsReplies) => {

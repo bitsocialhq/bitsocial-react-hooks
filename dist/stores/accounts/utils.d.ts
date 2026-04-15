@@ -1,4 +1,4 @@
-import { Account, Communities, AccountComment, AccountsComments, AccountsCommentsIndexes, AccountCommentsIndex, CommentCidsToAccountsComments, Comment, AccountEdit, AccountEditsSummary } from "../../types";
+import { Account, Communities, AccountComment, AccountsComments, AccountsCommentsIndexes, AccountCommentsIndex, CommentCidsToAccountsComments, Comment, AccountEdit, AccountEditsSummary } from "../../types.js";
 export declare const getAccountCommunities: (account: Account, communities: Communities) => any;
 export declare const getCommentCidsToAccountsComments: (accountsComments: AccountsComments) => CommentCidsToAccountsComments;
 export declare const sanitizeAccountCommentForState: (comment: Comment) => any;
@@ -6,7 +6,7 @@ export declare const sanitizeStoredAccountComment: (comment: Comment) => any;
 export declare const getAccountCommentsIndex: (accountComments: AccountComment[] | undefined) => AccountCommentsIndex;
 export declare const getAccountsCommentsIndexes: (accountsComments: AccountsComments) => AccountsCommentsIndexes;
 export declare const getAccountEditPropertySummary: (accountEdits: AccountEdit[] | undefined) => {
-    [propertyName: string]: import("../../types").AccountEditPropertySummary;
+    [propertyName: string]: import("../../types.js").AccountEditPropertySummary;
 };
 export declare const getAccountsEditsSummary: (accountEdits: {
     [commentCidOrCommunityAddress: string]: AccountEdit[];
@@ -31,7 +31,7 @@ declare const utils: {
     sanitizeAccountCommentForState: (comment: Comment) => any;
     sanitizeStoredAccountComment: (comment: Comment) => any;
     getAccountEditPropertySummary: (accountEdits: AccountEdit[] | undefined) => {
-        [propertyName: string]: import("../../types").AccountEditPropertySummary;
+        [propertyName: string]: import("../../types.js").AccountEditPropertySummary;
     };
     getAccountsEditsSummary: (accountEdits: {
         [commentCidOrCommunityAddress: string]: AccountEdit[];

@@ -1,4 +1,4 @@
-import { ChainProviders, UseResolvedCommunityAddressOptions, UseResolvedCommunityAddressResult, UseCommunityOptions, UseCommunityResult, UseCommunitiesOptions, UseCommunitiesResult, UseCommunityStatsOptions, UseCommunityStatsResult } from "../types";
+import { ChainProviders, UseResolvedCommunityAddressOptions, UseResolvedCommunityAddressResult, UseCommunityOptions, UseCommunityResult, UseCommunitiesOptions, UseCommunitiesResult, UseCommunityStatsOptions, UseCommunityStatsResult } from "../types.js";
 /**
  * @param community - The community identifier, e.g. {name: 'memes.eth'} or {publicKey: '12D3KooW...'}
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use

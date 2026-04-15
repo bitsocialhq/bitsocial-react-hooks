@@ -8,13 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { useEffect, useState, useMemo } from "react";
-import { useAccount } from "./accounts";
-import validator from "../lib/validator";
+import { useAccount } from "./accounts/index.js";
+import validator from "../lib/validator.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:replies:hooks");
 import assert from "assert";
-import { addCommentModerationToComments } from "../lib/utils/comment-moderation";
-import useRepliesStore, { feedOptionsToFeedName, getRepliesFirstPageSkipValidation, } from "../stores/replies";
+import { addCommentModerationToComments } from "../lib/utils/comment-moderation.js";
+import useRepliesStore, { feedOptionsToFeedName, getRepliesFirstPageSkipValidation, } from "../stores/replies/index.js";
 /** Pure helper to append an error to the errors array; used for deterministic coverage of reset/loadMore catch paths. */
 export function appendErrorToErrors(prevErrors, e) {
     return [...prevErrors, e];

@@ -1,5 +1,5 @@
-import { commentsPerPage } from "./authors-comments-store";
-import commentsStore from "../comments";
+import { commentsPerPage } from "./authors-comments-store.js";
+import commentsStore from "../comments/index.js";
 export const getUpdatedLoadedAndBufferedComments = (loadedComments, bufferedComments, pageNumber, filter, comments) => {
     const newBufferedComments = getUpdatedBufferedComments(loadedComments, bufferedComments, filter, comments);
     // create new loaded comments using the page number and buffered comments

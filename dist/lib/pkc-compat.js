@@ -127,4 +127,4 @@ export const withProtocolAliases = (account, protocolClient, protocolOptions) =>
     }
     return nextAccount;
 };
-export * from "./protocol-compat";
+export * from "./protocol-compat.js";

@@ -1,3 +1,3 @@
-import commentsStore from "./comments-store";
-export * from "./comments-store";
+import commentsStore from "./comments-store.js";
+export * from "./comments-store.js";
 export default commentsStore;

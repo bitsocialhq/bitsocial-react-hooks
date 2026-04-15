@@ -7,11 +7,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { getRepliesPages, getRepliesFirstPageCid } from "../replies-pages";
-import repliesSorter from "../feeds/feed-sorter";
-import accountsStore from "../accounts";
-import { flattenCommentsPages, commentIsValid, removeInvalidComments } from "../../lib/utils";
-import { areEquivalentCommunityAddresses } from "../../lib/community-address";
+import { getRepliesPages, getRepliesFirstPageCid } from "../replies-pages/index.js";
+import repliesSorter from "../feeds/feed-sorter.js";
+import accountsStore from "../accounts/index.js";
+import { flattenCommentsPages, commentIsValid, removeInvalidComments } from "../../lib/utils/index.js";
+import { areEquivalentCommunityAddresses } from "../../lib/community-address.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:replies:stores");
 /**

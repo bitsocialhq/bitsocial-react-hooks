@@ -7,12 +7,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import { getCommunityPages, getCommunityFirstPageCid } from "../communities-pages";
-import accountsStore from "../accounts";
-import feedSorter from "./feed-sorter";
-import { communityPostsCacheExpired, commentIsValid, removeInvalidComments } from "../../lib/utils";
-import { getCommentCommunityAddress, normalizeCommentCommunityAddress } from "../../lib/pkc-compat";
-import { doesAddressMatchCommunityRef, getCommunityRefKeys, getMatchingCommunityRefKeys, } from "../../lib/community-ref";
+import { getCommunityPages, getCommunityFirstPageCid } from "../communities-pages/index.js";
+import accountsStore from "../accounts/index.js";
+import feedSorter from "./feed-sorter.js";
+import { communityPostsCacheExpired, commentIsValid, removeInvalidComments } from "../../lib/utils/index.js";
+import { getCommentCommunityAddress, normalizeCommentCommunityAddress } from "../../lib/pkc-compat.js";
+import { doesAddressMatchCommunityRef, getCommunityRefKeys, getMatchingCommunityRefKeys, } from "../../lib/community-ref.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:feeds:stores");
 const getFeedCommunityRefs = (feedOptions) => feedOptions.communities || [];

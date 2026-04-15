@@ -1,5 +1,5 @@
-import repliesStore from "../replies";
-import repliesCommentsStore from "../replies/replies-comments-store";
+import repliesStore from "../replies/index.js";
+import repliesCommentsStore from "../replies/replies-comments-store.js";
 import Logger from "@pkc/pkc-logger";
 // include replies pages store with feeds for debugging
 const log = Logger("bitsocial-react-hooks:replies:stores");

@@ -1,4 +1,4 @@
-import { Comment, Feeds, FeedsOptions, Community, Communities, Accounts, CommunitiesPages, FeedsCommunitiesPostCounts } from "../../types";
+import { Comment, Feeds, FeedsOptions, Community, Communities, Accounts, CommunitiesPages, FeedsCommunitiesPostCounts } from "../../types.js";
 /**
  * Calculate the feeds from all the loaded community pages, filter and sort them
  */

@@ -21,4 +21,4 @@ export declare const normalizeOptionsForPkcClient: <T extends Record<string, any
 export declare const getPkcClientOptions: <T extends Record<string, any> | undefined>(account: any, options: T) => T;
 export declare const normalizeAccountProtocolConfig: <T extends Record<string, any> | undefined>(account: T, defaultChainProviders?: Record<string, any>) => T;
 export declare const withProtocolAliases: <T extends Record<string, any>>(account: T, protocolClient?: any, protocolOptions?: any) => T;
-export * from "./protocol-compat";
+export * from "./protocol-compat.js";

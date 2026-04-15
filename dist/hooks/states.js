@@ -2,10 +2,10 @@ import { useMemo } from "react";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:states:hooks");
 import assert from "assert";
-import validator from "../lib/validator";
-import { getPageRpcClients } from "../lib/pkc-compat";
-import { useCommunities } from "./communities";
-import { communityPostsCacheExpired } from "../lib/utils";
+import validator from "../lib/validator.js";
+import { getPageRpcClients } from "../lib/pkc-compat.js";
+import { useCommunities } from "./communities.js";
+import { communityPostsCacheExpired } from "../lib/utils/index.js";
 // TODO: implement getting peers
 const peers = {};
 /**

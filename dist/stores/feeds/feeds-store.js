@@ -11,14 +11,14 @@ import assert from "assert";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:feeds:stores");
 import createStore from "zustand";
-import localForageLru from "../../lib/localforage-lru";
-import { communityPostsCacheExpired } from "../../lib/utils";
-import { getPkcGetCommunity } from "../../lib/pkc-compat";
-import { getCommunityRefKeys } from "../../lib/community-ref";
-import accountsStore from "../accounts";
-import communitiesStore from "../communities";
-import communitiesPagesStore from "../communities-pages";
-import { getFeedsCommunitiesFirstPageCids, getLoadedFeeds, getUpdatedFeeds, getBufferedFeedsWithoutLoadedFeeds, getFeedsCommunitiesPostCounts, getFeedsHaveMore, getAccountsBlockedAddresses, feedsHaveChangedBlockedAddresses, accountsBlockedAddressesChanged, getAccountsBlockedCids, feedsHaveChangedBlockedCids, accountsBlockedCidsChanged, feedsCommunitiesChanged, getFeedsCommunities, getFeedsCommunitiesLoadedCount, getFeedsCommunitiesPostsPagesFirstUpdatedAts, getFilteredSortedFeeds, getFeedsCommunityKeysWithNewerPosts, } from "./utils";
+import localForageLru from "../../lib/localforage-lru/index.js";
+import { communityPostsCacheExpired } from "../../lib/utils/index.js";
+import { getPkcGetCommunity } from "../../lib/pkc-compat.js";
+import { getCommunityRefKeys } from "../../lib/community-ref.js";
+import accountsStore from "../accounts/index.js";
+import communitiesStore from "../communities/index.js";
+import communitiesPagesStore from "../communities-pages/index.js";
+import { getFeedsCommunitiesFirstPageCids, getLoadedFeeds, getUpdatedFeeds, getBufferedFeedsWithoutLoadedFeeds, getFeedsCommunitiesPostCounts, getFeedsHaveMore, getAccountsBlockedAddresses, feedsHaveChangedBlockedAddresses, accountsBlockedAddressesChanged, getAccountsBlockedCids, feedsHaveChangedBlockedCids, accountsBlockedCidsChanged, feedsCommunitiesChanged, getFeedsCommunities, getFeedsCommunitiesLoadedCount, getFeedsCommunitiesPostsPagesFirstUpdatedAts, getFilteredSortedFeeds, getFeedsCommunityKeysWithNewerPosts, } from "./utils.js";
 // reddit loads approximately 25 posts per page
 // while infinite scrolling
 export const defaultPostsPerPage = 25;

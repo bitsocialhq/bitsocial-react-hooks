@@ -10,9 +10,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import assert from "assert";
 import QuickLru from "quick-lru";
 import Logger from "@pkc/pkc-logger";
-import { areEquivalentCommunityAddresses } from "../community-address";
-import { getCommentCommunityAddress, normalizePublicationOptionsForStore } from "../pkc-compat";
-import { getPageRpcClients } from "../pkc-compat";
+import { areEquivalentCommunityAddresses } from "../community-address.js";
+import { getCommentCommunityAddress, normalizePublicationOptionsForStore } from "../pkc-compat.js";
+import { getPageRpcClients } from "../pkc-compat.js";
 const log = Logger("bitsocial-react-hooks:utils");
 const merge = (...args) => {
     // @ts-ignore

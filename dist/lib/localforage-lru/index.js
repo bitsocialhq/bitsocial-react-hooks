@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import localForageLru from "./localforage-lru";
+import localForageLru from "./localforage-lru.js";
 try {
     // for debugging without caching
     if (process.env.REACT_APP_BITSOCIAL_REACT_HOOKS_NO_CACHE) {

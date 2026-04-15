@@ -10,13 +10,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import assert from "assert";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
-import accountsDatabase from "./accounts-database";
-import accountGenerator from "./account-generator";
+import accountsDatabase from "./accounts-database.js";
+import accountGenerator from "./account-generator.js";
 import createStore from "zustand";
-import * as accountsActions from "./accounts-actions";
-import * as accountsActionsInternal from "./accounts-actions-internal";
+import * as accountsActions from "./accounts-actions.js";
+import * as accountsActionsInternal from "./accounts-actions-internal.js";
 import localForage from "localforage";
-import { getAccountsCommentsIndexes, getCommentCidsToAccountsComments, getInitAccountCommentsToUpdate, } from "./utils";
+import { getAccountsCommentsIndexes, getCommentCidsToAccountsComments, getInitAccountCommentsToUpdate, } from "./utils.js";
 // reset all event listeners in between tests
 export const listeners = [];
 const accountsStore = createStore((setState, getState) => ({

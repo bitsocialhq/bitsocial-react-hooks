@@ -8,13 +8,13 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { useEffect, useState } from "react";
-import { useAccount } from "../accounts";
+import { useAccount } from "../accounts/index.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:authors:hooks");
 import assert from "assert";
 import { ethers } from "ethers";
-import { getNftMetadataUrl, getNftImageUrl, getNftOwner } from "../../lib/chain";
-import { getChainProviders } from "../../lib/pkc-compat";
+import { getNftMetadataUrl, getNftImageUrl, getNftOwner } from "../../lib/chain/index.js";
+import { getChainProviders } from "../../lib/pkc-compat.js";
 import createStore from "zustand";
 const noMediaIpfsGatewayUrl = "http://no-media-ipfs-gateway-url";
 /**

@@ -1,3 +1,3 @@
-import accountsStore from "./accounts-store";
-export * from "./accounts-store";
+import accountsStore from "./accounts-store.js";
+export * from "./accounts-store.js";
 export default accountsStore;

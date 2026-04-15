@@ -1,4 +1,4 @@
-import { Comment, UseCommentsOptions, UseCommentsResult, UseCommentOptions, UseCommentResult, UseValidateCommentOptions, UseValidateCommentResult } from "../types";
+import { Comment, UseCommentsOptions, UseCommentsResult, UseCommentOptions, UseCommentResult, UseValidateCommentOptions, UseValidateCommentResult } from "../types.js";
 export declare function getCommentFreshness(comment: Comment | undefined): number;
 export declare function preferFresher(current: Comment | undefined, candidate: Comment | undefined): Comment | undefined;
 /**

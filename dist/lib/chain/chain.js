@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import assert from "assert";
 import { ethers } from "ethers";
-import utils from "../utils";
+import utils from "../utils/index.js";
 import { verifyMessage } from "viem";
 // NOTE: getNftImageUrl tests are skipped, if changes are made they must be tested manually
 const getNftImageUrlNoCache = (nftMetadataUrl, ipfsGatewayUrl) => __awaiter(void 0, void 0, void 0, function* () {

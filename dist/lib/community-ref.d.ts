@@ -1,4 +1,4 @@
-import { Community, CommunityIdentifier } from "../types";
+import { Community, CommunityIdentifier } from "../types.js";
 type LegacyCommunityRef = {
     address: string;
     name?: string;

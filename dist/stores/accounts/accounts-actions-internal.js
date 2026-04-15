@@ -8,15 +8,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import accountsStore, { listeners } from "./accounts-store";
-import accountsDatabase from "./accounts-database";
+import accountsStore, { listeners } from "./accounts-store.js";
+import accountsDatabase from "./accounts-database.js";
 import Logger from "@pkc/pkc-logger";
 import assert from "assert";
 import isEqual from "lodash.isequal";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
-import utils from "../../lib/utils";
-import { backfillPublicationCommunityAddress, getCommentCommunityAddress, normalizePublicationOptionsForPkc, normalizePublicationOptionsForStore, } from "../../lib/pkc-compat";
-import { addShortAddressesToAccountComment, getAccountsCommentsIndexes, sanitizeStoredAccountComment, } from "./utils";
+import utils from "../../lib/utils/index.js";
+import { backfillPublicationCommunityAddress, getCommentCommunityAddress, normalizePublicationOptionsForPkc, normalizePublicationOptionsForStore, } from "../../lib/pkc-compat.js";
+import { addShortAddressesToAccountComment, getAccountsCommentsIndexes, sanitizeStoredAccountComment, } from "./utils.js";
 const accountEditsLoadPromises = new Map();
 const doesStoredAccountEditMatch = (storedAccountEdit, targetStoredAccountEdit) => (storedAccountEdit === null || storedAccountEdit === void 0 ? void 0 : storedAccountEdit.clientId) && (targetStoredAccountEdit === null || targetStoredAccountEdit === void 0 ? void 0 : targetStoredAccountEdit.clientId)
     ? storedAccountEdit.clientId === targetStoredAccountEdit.clientId

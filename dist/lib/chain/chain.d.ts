@@ -1,4 +1,4 @@
-import { Wallet } from "../../types";
+import { Wallet } from "../../types.js";
 export declare const getNftImageUrl: (...args: any) => Promise<any>;
 export declare const getNftMetadataUrl: (...args: any) => Promise<any>;
 export declare const getNftOwner: (...args: any) => Promise<any>;

@@ -1,3 +1,3 @@
-import repliesPagesStore from "./replies-pages-store";
-export * from "./replies-pages-store";
+import repliesPagesStore from "./replies-pages-store.js";
+export * from "./replies-pages-store.js";
 export default repliesPagesStore;

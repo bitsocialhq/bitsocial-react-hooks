@@ -1,4 +1,4 @@
-import { UseBufferedFeedsOptions, UseBufferedFeedsResult, UseFeedOptions, UseFeedResult } from "../../types";
+import { UseBufferedFeedsOptions, UseBufferedFeedsResult, UseFeedOptions, UseFeedResult } from "../../types.js";
 /**
  * @param communities - The communities to fetch, e.g. [{name: 'memes.eth'}, {publicKey: '12D3KooW...'}]
  * @param sortType - The sorting algo for the feed: 'hot' | 'new' | 'active' | 'topHour' | 'topDay' | 'topWeek' | 'topMonth' | 'topYear' | 'topAll' | 'controversialHour' | 'controversialDay' | 'controversialWeek' | 'controversialMonth' | 'controversialYear' | 'controversialAll'

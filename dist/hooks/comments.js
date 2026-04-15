@@ -8,17 +8,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAccount } from "./accounts";
-import validator from "../lib/validator";
+import { useAccount } from "./accounts/index.js";
+import validator from "../lib/validator.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:comments:hooks");
 import assert from "assert";
-import useCommentsStore from "../stores/comments";
-import useAccountsStore from "../stores/accounts";
-import { commentIsValid } from "../lib/utils";
-import { addCommentModeration, addCommentModerationToComments, } from "../lib/utils/comment-moderation";
-import useCommunitiesPagesStore from "../stores/communities-pages";
-import useRepliesPagesStore from "../stores/replies-pages";
+import useCommentsStore from "../stores/comments/index.js";
+import useAccountsStore from "../stores/accounts/index.js";
+import { commentIsValid } from "../lib/utils/index.js";
+import { addCommentModeration, addCommentModerationToComments, } from "../lib/utils/comment-moderation.js";
+import useCommunitiesPagesStore from "../stores/communities-pages/index.js";
+import useRepliesPagesStore from "../stores/replies-pages/index.js";
 import shallow from "zustand/shallow";
 export function getCommentFreshness(comment) {
     var _a, _b;

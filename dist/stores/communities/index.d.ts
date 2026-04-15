@@ -1,3 +1,3 @@
-import communitiesStore from "./communities-store";
-export * from "./communities-store";
+import communitiesStore from "./communities-store.js";
+export * from "./communities-store.js";
 export default communitiesStore;

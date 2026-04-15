@@ -8,9 +8,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { useState, useMemo, useEffect } from "react";
-import { useAccount } from "./accounts";
+import { useAccount } from "./accounts/index.js";
 import assert from "assert";
-import { getProtocolClient, getRpcClients } from "../lib/pkc-compat";
+import { getProtocolClient, getRpcClients } from "../lib/pkc-compat.js";
 const getFirstRpcClient = (protocolClient) => Object.values(getRpcClients(protocolClient) || {})[0];
 /**
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use

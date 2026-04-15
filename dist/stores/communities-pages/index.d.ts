@@ -1,3 +1,3 @@
-import communitiesPagesStore from "./communities-pages-store";
-export * from "./communities-pages-store";
+import communitiesPagesStore from "./communities-pages-store.js";
+export * from "./communities-pages-store.js";
 export default communitiesPagesStore;

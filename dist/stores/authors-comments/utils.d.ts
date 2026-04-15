@@ -1,4 +1,4 @@
-import { Comment, Comments, CommentsFilter } from "../../types";
+import { Comment, Comments, CommentsFilter } from "../../types.js";
 export declare const getUpdatedLoadedAndBufferedComments: (loadedComments: Comment[], bufferedComments: Comment[], pageNumber: number, filter: CommentsFilter | undefined, comments: Comments) => {
     loadedComments: Comment[];
     bufferedComments: Comment[];

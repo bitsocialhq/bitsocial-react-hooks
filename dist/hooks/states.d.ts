@@ -1,4 +1,4 @@
-import { UseClientsStatesOptions, UseClientsStatesResult, UseCommunitiesStatesOptions, UseCommunitiesStatesResult } from "../types";
+import { UseClientsStatesOptions, UseClientsStatesResult, UseCommunitiesStatesOptions, UseCommunitiesStatesResult } from "../types.js";
 /**
  * @param comment - The comment to get the states from
  * @param community - The community to get the states from

@@ -1,5 +1,5 @@
 import assert from "assert";
-import { areEquivalentCommunityAddresses } from "./community-address";
+import { areEquivalentCommunityAddresses } from "./community-address.js";
 const getLegacyCommunityAddress = (communityRef) => communityRef.address;
 export const getCommunityRefKey = (communityRef) => {
     const communityKey = communityRef.publicKey || getLegacyCommunityAddress(communityRef) || communityRef.name;

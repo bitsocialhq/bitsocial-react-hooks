@@ -19,11 +19,11 @@ var __rest = (this && this.__rest) || function (s, e) {
     return t;
 };
 import { useMemo, useRef, useState } from "react";
-import useAccountsStore from "../../stores/accounts";
+import useAccountsStore from "../../stores/accounts/index.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:actions:hooks");
 import assert from "assert";
-import { useAccount, useAccountId } from "../accounts";
+import { useAccount, useAccountId } from "../accounts/index.js";
 /** Wraps a callback to no-op when guard returns false. Exported for coverage. */
 export function withGuardActive(guardActive, fn) {
     return ((...args) => {

@@ -8,19 +8,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { useEffect, useState, useMemo } from "react";
-import { useAccount } from "./accounts";
-import validator from "../lib/validator";
+import { useAccount } from "./accounts/index.js";
+import validator from "../lib/validator.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:communities:hooks");
 import assert from "assert";
-import useInterval from "./utils/use-interval";
+import useInterval from "./utils/use-interval.js";
 import createStore from "zustand";
-import { resolveEnsTxtRecord } from "../lib/chain";
-import useCommunitiesStore from "../stores/communities";
-import useAccountsStore from "../stores/accounts";
+import { resolveEnsTxtRecord } from "../lib/chain/index.js";
+import useCommunitiesStore from "../stores/communities/index.js";
+import useAccountsStore from "../stores/accounts/index.js";
 import shallow from "zustand/shallow";
-import { getChainProviders, getPkcCommunityAddresses } from "../lib/pkc-compat";
-import { getCommunityRefKey, getUniqueSortedCommunityRefs } from "../lib/community-ref";
+import { getChainProviders, getPkcCommunityAddresses } from "../lib/pkc-compat.js";
+import { getCommunityRefKey, getUniqueSortedCommunityRefs } from "../lib/community-ref.js";
 /**
  * @param community - The community identifier, e.g. {name: 'memes.eth'} or {publicKey: '12D3KooW...'}
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use

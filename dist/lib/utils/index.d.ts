@@ -1,3 +1,3 @@
-import utils from "./utils";
-export * from "./utils";
+import utils from "./utils.js";
+export * from "./utils.js";
 export default utils;

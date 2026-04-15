@@ -1,4 +1,4 @@
-import { Communities } from "../../types";
+import { Communities } from "../../types.js";
 export type CommunitiesState = {
     communities: Communities;
     errors: {

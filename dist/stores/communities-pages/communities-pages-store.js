@@ -7,16 +7,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import utils from "../../lib/utils";
+import utils from "../../lib/utils/index.js";
 import Logger from "@pkc/pkc-logger";
 // include communities pages store with feeds for debugging
 export const log = Logger("bitsocial-react-hooks:feeds:stores");
-import accountsStore from "../accounts";
-import communitiesStore from "../communities";
-import localForageLru from "../../lib/localforage-lru";
+import accountsStore from "../accounts/index.js";
+import communitiesStore from "../communities/index.js";
+import localForageLru from "../../lib/localforage-lru/index.js";
 import createStore from "zustand";
 import assert from "assert";
-import { createPkcCommunity, getPkcCreateCommunity, normalizeCommentCommunityAddress, } from "../../lib/pkc-compat";
+import { createPkcCommunity, getPkcCreateCommunity, normalizeCommentCommunityAddress, } from "../../lib/pkc-compat.js";
 const communitiesPagesDatabase = localForageLru.createInstance({
     name: "bitsocialReactHooks-communitiesPages",
     size: 500,
@@ -281,7 +281,7 @@ export const getCommunityPages = (community, sortType, communitiesPages, pageTyp
 };
 export const getCommunityFirstPageCid = (community, sortType, pageType = "posts") => {
     var _a, _b, _c, _d, _e, _f, _g, _h;
-    assert(community === null || community === void 0 ? void 0 : community.address, `getCommunityFirstPageCid community '${community}' invalid`);
+    assert(community && typeof community === "object", `getCommunityFirstPageCid community '${community}' invalid`);
     assert(sortType && typeof sortType === "string", `getCommunityFirstPageCid sortType '${sortType}' invalid`);
     // community has preloaded posts for sort type
     if ((_c = (_b = (_a = community[pageType]) === null || _a === void 0 ? void 0 : _a.pages) === null || _b === void 0 ? void 0 : _b[sortType]) === null || _c === void 0 ? void 0 : _c.comments) {

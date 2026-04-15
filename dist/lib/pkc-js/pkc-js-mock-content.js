@@ -7,7 +7,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import markdownExample from "./fixtures/markdown-example";
+import markdownExample from "./fixtures/markdown-example.js";
 import EventEmitter from "events";
 import assert from "assert";
 import { fromString as uint8ArrayFromString } from "uint8arrays/from-string";

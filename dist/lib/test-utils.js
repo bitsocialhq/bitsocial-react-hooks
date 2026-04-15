@@ -20,14 +20,14 @@ var __rest = (this && this.__rest) || function (s, e) {
 };
 import { render, act as tlAct } from "@testing-library/react";
 import React from "react";
-import { resetCommentsStore, resetCommentsDatabaseAndStore } from "../stores/comments";
-import { resetCommunitiesStore, resetCommunitiesDatabaseAndStore } from "../stores/communities";
-import { resetAccountsStore, resetAccountsDatabaseAndStore } from "../stores/accounts";
-import { resetFeedsStore, resetFeedsDatabaseAndStore } from "../stores/feeds";
-import { resetCommunitiesPagesStore, resetCommunitiesPagesDatabaseAndStore, } from "../stores/communities-pages";
-import { resetAuthorsCommentsStore, resetAuthorsCommentsDatabaseAndStore, } from "../stores/authors-comments";
-import { resetRepliesStore, resetRepliesDatabaseAndStore } from "../stores/replies";
-import { resetRepliesPagesStore, resetRepliesPagesDatabaseAndStore } from "../stores/replies-pages";
+import { resetCommentsStore, resetCommentsDatabaseAndStore } from "../stores/comments/index.js";
+import { resetCommunitiesStore, resetCommunitiesDatabaseAndStore } from "../stores/communities/index.js";
+import { resetAccountsStore, resetAccountsDatabaseAndStore } from "../stores/accounts/index.js";
+import { resetFeedsStore, resetFeedsDatabaseAndStore } from "../stores/feeds/index.js";
+import { resetCommunitiesPagesStore, resetCommunitiesPagesDatabaseAndStore, } from "../stores/communities-pages/index.js";
+import { resetAuthorsCommentsStore, resetAuthorsCommentsDatabaseAndStore, } from "../stores/authors-comments/index.js";
+import { resetRepliesStore, resetRepliesDatabaseAndStore } from "../stores/replies/index.js";
+import { resetRepliesPagesStore, resetRepliesPagesDatabaseAndStore } from "../stores/replies-pages/index.js";
 // Custom renderHook that sets result.current synchronously during render,
 // matching @testing-library/react-hooks behavior. RTL v16's renderHook defers
 // result.current via useEffect, which breaks polling-based waitFor patterns

@@ -1,4 +1,4 @@
-import { UsePkcRpcSettingsOptions, UsePkcRpcSettingsResult } from "../types";
+import { UsePkcRpcSettingsOptions, UsePkcRpcSettingsResult } from "../types.js";
 /**
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use
  * the active account.

@@ -1,4 +1,4 @@
-import { Feed, Feeds, Comment, RepliesFeedOptions, RepliesFeedsOptions } from "../../types";
+import { Feed, Feeds, Comment, RepliesFeedOptions, RepliesFeedsOptions } from "../../types.js";
 export declare const defaultRepliesPerPage = 25;
 export type RepliesState = {
     feedsOptions: RepliesFeedsOptions;

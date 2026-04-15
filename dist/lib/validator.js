@@ -1,5 +1,5 @@
 import assert from "assert";
-import { assertCommunityRef } from "./community-ref";
+import { assertCommunityRef } from "./community-ref.js";
 const toString = (value) => {
     if (typeof value === "string") {
         return value;

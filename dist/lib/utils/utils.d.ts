@@ -1,4 +1,4 @@
-import { Comment } from "../../types";
+import { Comment } from "../../types.js";
 export declare const flattenCommentsPages: (pageInstanceOrPagesInstance: any) => any[];
 export declare const communityPostsCacheExpired: (community: any) => boolean;
 export declare const removeInvalidComments: (comments: Comment[], { validateReplies, blockCommunity }: any, pkc: any) => Promise<Comment[]>;

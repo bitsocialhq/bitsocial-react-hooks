@@ -7,17 +7,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import PkcJs from "../../lib/pkc-js";
-import validator from "../../lib/validator";
-import chain from "../../lib/chain";
+import PkcJs from "../../lib/pkc-js/index.js";
+import validator from "../../lib/validator.js";
+import chain from "../../lib/chain/index.js";
 import assert from "assert";
 import localForage from "localforage";
 import isEqual from "lodash.isequal";
-import localForageLru from "../../lib/localforage-lru";
-import utils from "../../lib/utils";
-import { getDefaultChainProviders, getDefaultPkcOptions, overwritePkcOptions, } from "./account-generator";
-import { getAccountsEditsSummary, sanitizeStoredAccountComment } from "./utils";
-import { getPkcClientOptions, normalizeAccountProtocolConfig, withProtocolAliases, } from "../../lib/pkc-compat";
+import localForageLru from "../../lib/localforage-lru/index.js";
+import utils from "../../lib/utils/index.js";
+import { getDefaultChainProviders, getDefaultPkcOptions, overwritePkcOptions, } from "./account-generator.js";
+import { getAccountsEditsSummary, sanitizeStoredAccountComment } from "./utils.js";
+import { getPkcClientOptions, normalizeAccountProtocolConfig, withProtocolAliases, } from "../../lib/pkc-compat.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
 // Storage keeps the existing namespace so current installs reuse the same IndexedDB data.

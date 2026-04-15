@@ -8,19 +8,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import assert from "assert";
-import localForageLru from "../../lib/localforage-lru";
+import localForageLru from "../../lib/localforage-lru/index.js";
 const communitiesDatabase = localForageLru.createInstance({
     name: "bitsocialReactHooks-communities",
     size: 500,
 });
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:communities:stores");
-import utils from "../../lib/utils";
+import utils from "../../lib/utils/index.js";
 import createStore from "zustand";
-import accountsStore from "../accounts";
-import communitiesPagesStore from "../communities-pages";
-import { getCommunityLookupOptions, getCommunityRefKey } from "../../lib/community-ref";
-import { createPkcCommunity, getPkcCommunity, getPkcCommunityAddresses, getPkcCreateCommunity, getPkcGetCommunity, } from "../../lib/pkc-compat";
+import accountsStore from "../accounts/index.js";
+import communitiesPagesStore from "../communities-pages/index.js";
+import { getCommunityLookupOptions, getCommunityRefKey } from "../../lib/community-ref.js";
+import { createPkcCommunity, getPkcCommunity, getPkcCommunityAddresses, getPkcCreateCommunity, getPkcGetCommunity, } from "../../lib/pkc-compat.js";
 let pkcGetCommunityPending = {};
 const createCommunityWithLookupFallback = (pkc, communityLookupOptions, communityKey) => __awaiter(void 0, void 0, void 0, function* () {
     const supportsAddressLookup = "address" in communityLookupOptions;

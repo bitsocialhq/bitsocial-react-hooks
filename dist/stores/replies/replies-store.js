@@ -11,11 +11,11 @@ import assert from "assert";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:replies:stores");
 import createStore from "zustand";
-import localForageLru from "../../lib/localforage-lru";
-import accountsStore from "../accounts";
-import repliesCommentsStore from "./replies-comments-store";
-import repliesPagesStore from "../replies-pages";
-import { getFeedsCommentsFirstPageCids, getLoadedFeeds, getBufferedFeedsWithoutLoadedFeeds, getUpdatedFeeds, getFeedsReplyCounts, getFeedsHaveMore, feedsCommentsChanged, getFeedsComments, getFeedsCommentsLoadedCount, getFeedsCommentsRepliesPagesFirstUpdatedAts, getFilteredSortedFeeds, getSortTypeFromComment, addAccountsComments, } from "./utils";
+import localForageLru from "../../lib/localforage-lru/index.js";
+import accountsStore from "../accounts/index.js";
+import repliesCommentsStore from "./replies-comments-store.js";
+import repliesPagesStore from "../replies-pages/index.js";
+import { getFeedsCommentsFirstPageCids, getLoadedFeeds, getBufferedFeedsWithoutLoadedFeeds, getUpdatedFeeds, getFeedsReplyCounts, getFeedsHaveMore, feedsCommentsChanged, getFeedsComments, getFeedsCommentsLoadedCount, getFeedsCommentsRepliesPagesFirstUpdatedAts, getFilteredSortedFeeds, getSortTypeFromComment, addAccountsComments, } from "./utils.js";
 // reddit loads approximately 25 posts per page
 // while infinite scrolling
 export const defaultRepliesPerPage = 25;

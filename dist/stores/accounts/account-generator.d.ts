@@ -1,4 +1,4 @@
-import { AccountCommunity, ChainProviders } from "../../types";
+import { AccountCommunity, ChainProviders } from "../../types.js";
 export declare const overwritePkcOptions: {
     resolveAuthorNames: boolean;
     resolveAuthorAddresses: boolean;

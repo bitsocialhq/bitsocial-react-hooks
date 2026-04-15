@@ -9,17 +9,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import { useMemo, useState, useEffect } from "react";
 import isEqual from "lodash.isequal";
-import useAccountsStore from "../../stores/accounts";
-import useCommunitiesStore from "../../stores/communities";
+import useAccountsStore from "../../stores/accounts/index.js";
+import useCommunitiesStore from "../../stores/communities/index.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:hooks");
 import assert from "assert";
-import { useListCommunities, useCommunities } from "../communities";
-import { useAccountsWithCalculatedProperties, useAccountWithCalculatedProperties, useCalculatedNotifications, } from "./utils";
-import { getAccountEditPropertySummary } from "../../stores/accounts/utils";
-import { getCanonicalCommunityAddress, getEquivalentCommunityAddressGroupKey, pickPreferredEquivalentCommunityAddress, } from "../../lib/community-address";
-import { addCommentModeration } from "../../lib/utils/comment-moderation";
-import useInterval from "../utils/use-interval";
+import { useListCommunities, useCommunities } from "../communities.js";
+import { useAccountsWithCalculatedProperties, useAccountWithCalculatedProperties, useCalculatedNotifications, } from "./utils.js";
+import { getAccountEditPropertySummary } from "../../stores/accounts/utils.js";
+import { getCanonicalCommunityAddress, getEquivalentCommunityAddressGroupKey, pickPreferredEquivalentCommunityAddress, } from "../../lib/community-address.js";
+import { addCommentModeration } from "../../lib/utils/comment-moderation.js";
+import useInterval from "../utils/use-interval.js";
 /**
  * @param accountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, return
  * the active account id.

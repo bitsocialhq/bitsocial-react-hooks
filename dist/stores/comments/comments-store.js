@@ -7,18 +7,18 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import localForageLru from "../../lib/localforage-lru";
+import localForageLru from "../../lib/localforage-lru/index.js";
 const commentsDatabase = localForageLru.createInstance({
     name: "bitsocialReactHooks-comments",
     size: 5000,
 });
 import Logger from "@pkc/pkc-logger";
 export const log = Logger("bitsocial-react-hooks:comments:stores");
-import utils from "../../lib/utils";
+import utils from "../../lib/utils/index.js";
 import createStore from "zustand";
-import accountsStore from "../accounts";
-import repliesPagesStore from "../replies-pages";
-import { normalizeCommentCommunityAddress } from "../../lib/pkc-compat";
+import accountsStore from "../accounts/index.js";
+import repliesPagesStore from "../replies-pages/index.js";
+import { normalizeCommentCommunityAddress } from "../../lib/pkc-compat.js";
 let pkcGetCommentPending = {};
 const liveComments = {};
 const liveCommentPromises = {};

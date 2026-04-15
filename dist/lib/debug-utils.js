@@ -1,5 +1,5 @@
 import localForage from "localforage";
-import localForageLru from "../lib/localforage-lru";
+import localForageLru from "../lib/localforage-lru/index.js";
 const deleteDatabases = () => Promise.all([
     localForage.createInstance({ name: "bitsocialReactHooks-accountsMetadata" }).clear(),
     localForage.createInstance({ name: "bitsocialReactHooks-accounts" }).clear(),

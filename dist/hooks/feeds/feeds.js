@@ -8,15 +8,15 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { useEffect, useMemo, useState } from "react";
-import { useAccount } from "../accounts";
-import validator from "../../lib/validator";
+import { useAccount } from "../accounts/index.js";
+import validator from "../../lib/validator.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:feeds:hooks");
 import assert from "assert";
-import useFeedsStore from "../../stores/feeds";
-import { addCommentModerationToComments } from "../../lib/utils/comment-moderation";
+import useFeedsStore from "../../stores/feeds/index.js";
+import { addCommentModerationToComments } from "../../lib/utils/comment-moderation.js";
 import shallow from "zustand/shallow";
-import { getCommunityRefKeys, getUniqueSortedCommunityRefs, } from "../../lib/community-ref";
+import { getCommunityRefKeys, getUniqueSortedCommunityRefs, } from "../../lib/community-ref.js";
 /**
  * @param communities - The communities to fetch, e.g. [{name: 'memes.eth'}, {publicKey: '12D3KooW...'}]
  * @param sortType - The sorting algo for the feed: 'hot' | 'new' | 'active' | 'topHour' | 'topDay' | 'topWeek' | 'topMonth' | 'topYear' | 'topAll' | 'controversialHour' | 'controversialDay' | 'controversialWeek' | 'controversialMonth' | 'controversialYear' | 'controversialAll'

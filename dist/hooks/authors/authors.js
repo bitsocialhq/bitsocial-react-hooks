@@ -8,19 +8,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { useEffect, useState, useMemo } from "react";
-import useInterval from "../utils/use-interval";
-import { useAccount } from "../accounts";
+import useInterval from "../utils/use-interval.js";
+import { useAccount } from "../accounts/index.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:authors:hooks");
 import assert from "assert";
-import { useNftMetadataUrl, useNftImageUrl, useVerifiedAuthorAvatarSignature, useAuthorAvatarIsWhitelisted, } from "./author-avatars";
-import { useComment } from "../comments";
-import { useAuthorCommentsName, usePkcAddress } from "./utils";
-import useAuthorsCommentsStore from "../../stores/authors-comments";
-import PkcJs from "../../lib/pkc-js";
-import { getConfiguredNameResolverInfoByKey, getChainProviders, getMatchingNameResolvers, getProtocolClient, getProtocolNameResolverClients, resolveAuthorNameWithProtocol, } from "../../lib/pkc-compat";
+import { useNftMetadataUrl, useNftImageUrl, useVerifiedAuthorAvatarSignature, useAuthorAvatarIsWhitelisted, } from "./author-avatars.js";
+import { useComment } from "../comments.js";
+import { useAuthorCommentsName, usePkcAddress } from "./utils.js";
+import useAuthorsCommentsStore from "../../stores/authors-comments/index.js";
+import PkcJs from "../../lib/pkc-js/index.js";
+import { getConfiguredNameResolverInfoByKey, getChainProviders, getMatchingNameResolvers, getProtocolClient, getProtocolNameResolverClients, resolveAuthorNameWithProtocol, } from "../../lib/pkc-compat.js";
 import QuickLRU from "quick-lru";
-export { setAuthorAvatarsWhitelistedTokenAddresses } from "./author-avatars";
+export { setAuthorAvatarsWhitelistedTokenAddresses } from "./author-avatars.js";
 const cacheResolveAuthorAddressPromise = (address, promise) => {
     resolveAuthorAddressPromises[address] = promise;
     const clearCachedPromise = () => {

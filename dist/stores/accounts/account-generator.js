@@ -7,12 +7,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import PkcJs from "../../lib/pkc-js";
-import validator from "../../lib/validator";
-import chain from "../../lib/chain";
+import PkcJs from "../../lib/pkc-js/index.js";
+import validator from "../../lib/validator.js";
+import chain from "../../lib/chain/index.js";
 import { v4 as uuid } from "uuid";
-import accountsDatabase from "./accounts-database";
-import { getPkcClientOptions, normalizeAccountProtocolConfig, withProtocolAliases, } from "../../lib/pkc-compat";
+import accountsDatabase from "./accounts-database.js";
+import { getPkcClientOptions, normalizeAccountProtocolConfig, withProtocolAliases, } from "../../lib/pkc-compat.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
 // default chain providers

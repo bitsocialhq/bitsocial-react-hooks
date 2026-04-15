@@ -11,10 +11,10 @@ import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:authors:stores");
 import createStore from "zustand";
 import assert from "assert";
-import commentsStore from "../comments";
+import commentsStore from "../comments/index.js";
 import QuickLru from "quick-lru";
-import { getUpdatedLoadedAndBufferedComments, getNextCommentCidToFetchNotFetched, } from "./utils";
-import accountsStore from "../accounts";
+import { getUpdatedLoadedAndBufferedComments, getNextCommentCidToFetchNotFetched, } from "./utils.js";
+import accountsStore from "../accounts/index.js";
 // reddit loads approximately 25 posts per page while infinite scrolling
 export const commentsPerPage = 25;
 // keep large buffer because fetching cids is slow

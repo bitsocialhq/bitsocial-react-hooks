@@ -1,3 +1,3 @@
-import chain from "./chain";
-export * from "./chain";
+import chain from "./chain.js";
+export * from "./chain.js";
 export default chain;

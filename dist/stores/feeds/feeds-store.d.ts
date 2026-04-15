@@ -1,4 +1,4 @@
-import { Feeds, FeedsOptions, FeedsCommunitiesPostCounts } from "../../types";
+import { Feeds, FeedsOptions, FeedsCommunitiesPostCounts } from "../../types.js";
 export declare const defaultPostsPerPage = 25;
 type FeedsState = {
     feedsOptions: FeedsOptions;

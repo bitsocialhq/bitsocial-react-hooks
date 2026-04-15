@@ -1,4 +1,4 @@
-import { Comments } from "../../types";
+import { Comments } from "../../types.js";
 type RepliesCommentsState = {
     comments: Comments;
     addCommentsToStoreOrUpdateComments: Function;

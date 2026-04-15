@@ -10,10 +10,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import assert from "assert";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
-import commentsStore from "../comments";
-import repliesPagesStore from "../replies-pages";
-import communitiesPagesStore from "../communities-pages";
-import PkcJs from "../../lib/pkc-js";
+import commentsStore from "../comments/index.js";
+import repliesPagesStore from "../replies-pages/index.js";
+import communitiesPagesStore from "../communities-pages/index.js";
+import PkcJs from "../../lib/pkc-js/index.js";
 const getAuthorAddressRolesFromCommunities = (authorAddress, communities) => {
     var _a, _b;
     const roles = {};

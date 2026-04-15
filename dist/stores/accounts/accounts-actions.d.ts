@@ -1,4 +1,4 @@
-import { Account, PublishCommentOptions, PublishVoteOptions, PublishCommentEditOptions, PublishCommentModerationOptions, PublishCommunityEditOptions, CreateCommunityOptions } from "../../types";
+import { Account, PublishCommentOptions, PublishVoteOptions, PublishCommentEditOptions, PublishCommentModerationOptions, PublishCommunityEditOptions, CreateCommunityOptions } from "../../types.js";
 /** Returns state update or {} when accountComment not yet in state (no-op). Exported for coverage. */
 export declare const maybeUpdateAccountComment: (accountsComments: Record<string, any[]>, accountId: string, index: number, updater: (accountComments: any[], accountComment: any) => void) => {
     accountsComments?: undefined;

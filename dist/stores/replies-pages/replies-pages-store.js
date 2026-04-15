@@ -7,14 +7,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-import utils from "../../lib/utils";
+import utils from "../../lib/utils/index.js";
 import Logger from "@pkc/pkc-logger";
 // include replies pages store with feeds for debugging
 export const log = Logger("bitsocial-react-hooks:replies:stores");
-import accountsStore from "../accounts";
-import commentsStore from "../comments";
-import { addChildrenRepliesFeedsToAddToStore } from "./utils";
-import localForageLru from "../../lib/localforage-lru";
+import accountsStore from "../accounts/index.js";
+import commentsStore from "../comments/index.js";
+import { addChildrenRepliesFeedsToAddToStore } from "./utils.js";
+import localForageLru from "../../lib/localforage-lru/index.js";
 import createStore from "zustand";
 import assert from "assert";
 const repliesPagesDatabase = localForageLru.createInstance({

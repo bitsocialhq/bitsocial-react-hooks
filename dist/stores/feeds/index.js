@@ -1,3 +1,3 @@
-import feedsStore from "./feeds-store";
-export * from "./feeds-store";
+import feedsStore from "./feeds-store.js";
+export * from "./feeds-store.js";
 export default feedsStore;
