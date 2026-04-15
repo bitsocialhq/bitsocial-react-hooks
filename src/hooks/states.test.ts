@@ -672,19 +672,22 @@ describe("states", () => {
         timestamp: 1,
         clients: {
           nameResolvers: {
-            "eth-ethrpc.xyz": new Client(),
+            "eth-ethereum-rpc.publicnode.com": new Client(),
             "eth-viem": new Client(),
           },
         },
       };
-      (commentWithNameResolvers.clients.nameResolvers["eth-ethrpc.xyz"] as any).state =
-        "resolving-author-name";
+      (
+        commentWithNameResolvers.clients.nameResolvers["eth-ethereum-rpc.publicnode.com"] as any
+      ).state = "resolving-author-name";
       (commentWithNameResolvers.clients.nameResolvers["eth-viem"] as any).state =
         "resolving-author-name";
       const rendered = renderHook(() =>
         useClientsStates({ comment: commentWithNameResolvers as any }),
       );
-      expect(rendered.result.current.states["resolving-author-name"]).toContain("eth-ethrpc.xyz");
+      expect(rendered.result.current.states["resolving-author-name"]).toContain(
+        "eth-ethereum-rpc.publicnode.com",
+      );
       expect(rendered.result.current.states["resolving-author-name"]).toContain("eth-viem");
     });
 

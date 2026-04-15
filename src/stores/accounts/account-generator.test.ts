@@ -1,4 +1,5 @@
 import accountGenerator, {
+  DEFAULT_ETH_RPC_URL,
   getDefaultChainProviders,
   getDefaultPkcOptions,
 } from "./account-generator";
@@ -97,9 +98,10 @@ describe("account-generator", () => {
       expect(account.chainProviders?.eth).toBeDefined();
       expect(account.pkcOptions.chainProviders).toBeUndefined();
       expect(account.pkc.nameResolvers.map((resolver: any) => resolver.key)).toEqual([
-        "eth-ethrpc.xyz",
+        "eth-ethereum-rpc.publicnode.com",
         "eth-viem",
       ]);
+      expect(account.chainProviders?.eth?.urls).toEqual([DEFAULT_ETH_RPC_URL, "viem", "ethers.js"]);
       expect(account.version).toBe(accountsDatabase.accountVersion);
     });
 

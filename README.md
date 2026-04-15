@@ -880,10 +880,10 @@ const editedAccount = {
   author,
   chainProviders: {
     ...account.chainProviders,
-    eth: { urls: ['https://ethrpc.xyz', 'viem', 'ethers.js'], chainId: 1 },
+    eth: { urls: ['https://ethereum-rpc.publicnode.com', 'viem', 'ethers.js'], chainId: 1 },
   },
   nameResolversChainProviders: {
-    eth: { urls: ['https://ethrpc.xyz', 'viem'], chainId: 1 },
+    eth: { urls: ['https://ethereum-rpc.publicnode.com', 'viem'], chainId: 1 },
   },
 }
 

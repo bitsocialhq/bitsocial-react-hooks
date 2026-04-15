@@ -901,11 +901,11 @@ describe("authors", () => {
           rendered.result.current.ethChainProvider,
         );
         expect(rendered.result.current.nameResolver).toEqual({
-          key: "eth-ethrpc.xyz",
+          key: "eth-ethereum-rpc.publicnode.com",
           nameSystem: "eth",
           chainTicker: "eth",
-          provider: "https://ethrpc.xyz",
-          providerLabel: "ethrpc.xyz",
+          provider: "https://ethereum-rpc.publicnode.com",
+          providerLabel: "ethereum-rpc.publicnode.com",
         });
       } finally {
         PKC.prototype.resolveAuthorAddress = origResolve;
