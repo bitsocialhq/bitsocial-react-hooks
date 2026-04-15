@@ -15,11 +15,12 @@ import accountsDatabase from "./accounts-database.js";
 import { getPkcClientOptions, normalizeAccountProtocolConfig, withProtocolAliases, } from "../../lib/pkc-compat.js";
 import Logger from "@pkc/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
+export const DEFAULT_ETH_RPC_URL = "https://ethereum-rpc.publicnode.com";
 // default chain providers
 const chainProviders = {
     eth: {
         // default should not use a url, but rather ethers' default provider
-        urls: ["https://ethrpc.xyz", "viem", "ethers.js"],
+        urls: [DEFAULT_ETH_RPC_URL, "viem", "ethers.js"],
         chainId: 1,
     },
     matic: {

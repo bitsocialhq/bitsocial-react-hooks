@@ -1,4 +1,5 @@
 import { AccountCommunity, ChainProviders } from "../../types.js";
+export declare const DEFAULT_ETH_RPC_URL = "https://ethereum-rpc.publicnode.com";
 export declare const overwritePkcOptions: {
     resolveAuthorNames: boolean;
     resolveAuthorAddresses: boolean;
