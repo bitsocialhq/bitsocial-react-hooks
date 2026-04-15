@@ -135,6 +135,8 @@ src/
 - Use `gh` CLI for GitHub work (issues, PRs, actions, search).
 - Do not use GitHub MCP.
 - Do not use browser MCP servers.
+- Never paste raw logs, command output, or absolute local filesystem paths into GitHub comments, PR bodies, or issue bodies.
+- When sending any GitHub comment/body via `gh`, use `--body-file` with a single-quoted heredoc or a literal file. Do not inline shell-interpolated strings that contain backticks, command substitutions, or captured command output.
 - If many MCP tools are present in context, warn user and suggest disabling unused MCPs.
 
 ### AI Tooling Rules
