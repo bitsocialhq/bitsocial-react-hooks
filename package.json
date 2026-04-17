@@ -43,7 +43,7 @@
   "dependencies": {
     "@bitsocial/bso-resolver": "0.0.4",
     "@pkc/pkc-logger": "https://github.com/pkcprotocol/pkc-logger.git",
-    "@pkcprotocol/pkc-js": "https://github.com/pkcprotocol/pkc-js.git#e63026e6cd33df5af3a3b5e6473b1e364d89fbdb",
+    "@pkcprotocol/pkc-js": "0.0.16",
     "assert": "2.0.0",
     "ethers": "5.8.0",
     "localforage": "1.10.0",

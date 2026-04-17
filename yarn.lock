@@ -296,7 +296,7 @@ __metadata:
   dependencies:
     "@bitsocial/bso-resolver": "npm:0.0.4"
     "@pkc/pkc-logger": "https://github.com/pkcprotocol/pkc-logger.git"
-    "@pkcprotocol/pkc-js": "https://github.com/pkcprotocol/pkc-js.git#e63026e6cd33df5af3a3b5e6473b1e364d89fbdb"
+    "@pkcprotocol/pkc-js": "npm:0.0.16"
     "@testing-library/dom": "npm:10.4.1"
     "@testing-library/react": "npm:16.3.2"
     "@tsconfig/recommended": "npm:1.0.13"
@@ -3029,20 +3029,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@pkc/proper-lock-file@git+https://github.com/pkcprotocol/node-proper-lockfile.git#30564d7e0bd06d145c88a16896c779e97503a735":
-  version: 4.1.2
-  resolution: "@pkc/proper-lock-file@https://github.com/pkcprotocol/node-proper-lockfile.git#commit=30564d7e0bd06d145c88a16896c779e97503a735"
-  dependencies:
-    graceful-fs: "npm:4.2.11"
-    retry: "npm:0.13.1"
-    signal-exit: "npm:4.1.0"
-  checksum: 10c0/ed62d947029ba348c38ac34de20f2497e01302eff0325ea69f50d1225f0e76782067386f3f4d17b783d748536390409e8cbbcc2b312570b32c1c08fc37307b0b
-  languageName: node
-  linkType: hard
-
-"@pkcprotocol/pkc-js@https://github.com/pkcprotocol/pkc-js.git#e63026e6cd33df5af3a3b5e6473b1e364d89fbdb":
-  version: 0.0.11
-  resolution: "@pkcprotocol/pkc-js@https://github.com/pkcprotocol/pkc-js.git#commit=e63026e6cd33df5af3a3b5e6473b1e364d89fbdb"
+"@pkcprotocol/pkc-js@npm:0.0.16":
+  version: 0.0.16
+  resolution: "@pkcprotocol/pkc-js@npm:0.0.16"
   dependencies:
     "@enhances/with-resolvers": "npm:0.0.5"
     "@helia/block-brokers": "npm:5.1.2"
@@ -3057,8 +3046,8 @@ __metadata:
     "@libp2p/peer-id": "npm:6.0.4"
     "@libp2p/peer-id-factory": "npm:4.2.4"
     "@libp2p/websockets": "npm:10.1.3"
-    "@pkc/pkc-logger": "github:pkcprotocol/pkc-logger#cb494fbaf332ed5b2cfd9d9d0f90ca7fd0058b4a"
-    "@pkc/proper-lock-file": "git+https://github.com/pkcprotocol/node-proper-lockfile.git#30564d7e0bd06d145c88a16896c779e97503a735"
+    "@pkcprotocol/pkc-logger": "github:pkcprotocol/pkc-logger#cb494fbaf332ed5b2cfd9d9d0f90ca7fd0058b4a"
+    "@pkcprotocol/proper-lock-file": "git+https://github.com/pkcprotocol/node-proper-lockfile.git#30564d7e0bd06d145c88a16896c779e97503a735"
     assert: "npm:2.1.0"
     better-sqlite3: "npm:12.6.2"
     blockstore-core: "npm:6.1.2"
@@ -3072,7 +3061,6 @@ __metadata:
     helia: "npm:6.0.20"
     hpagent: "npm:1.2.0"
     it-all: "npm:3.0.6"
-    jose: "npm:4.11.0"
     js-sha256: "npm:0.11.1"
     js-sha512: "npm:0.9.0"
     kubo-rpc-client: "npm:6.1.0"
@@ -3097,7 +3085,27 @@ __metadata:
     typestub-ipfs-only-hash: "npm:4.0.0"
     uuid: "npm:13.0.0"
     zod: "npm:4.3.6"
-  checksum: 10c0/522ed96759ec79f994234ea29ad60c41d4b26f18eecd4efcabd67487ca5e822d5dde7b5aae168b614d175f4d00cf436388509b7b79c9fcd57b1119ad59841f97
+  checksum: 10c0/8b82ba3f9e3448155d0c004301ceb4abed9a179d9b0a73b56859b8a29f6551fed6cb1fc798fe4cdf0e26f1b47e5eb5028d7d9cb293211316baf9ead42c890457
+  languageName: node
+  linkType: hard
+
+"@pkcprotocol/pkc-logger@github:pkcprotocol/pkc-logger#cb494fbaf332ed5b2cfd9d9d0f90ca7fd0058b4a":
+  version: 0.0.1
+  resolution: "@pkcprotocol/pkc-logger@https://github.com/pkcprotocol/pkc-logger.git#commit=cb494fbaf332ed5b2cfd9d9d0f90ca7fd0058b4a"
+  dependencies:
+    debug: "npm:4.4.3"
+  checksum: 10c0/1729428ebdc977885dce554893894e7187fb460986119201fddc72e600a0ec07fb61129d884528a9feae83e05cdc71f7889c32d46d12f3292ce6765a96e927ef
+  languageName: node
+  linkType: hard
+
+"@pkcprotocol/proper-lock-file@git+https://github.com/pkcprotocol/node-proper-lockfile.git#30564d7e0bd06d145c88a16896c779e97503a735":
+  version: 4.1.2
+  resolution: "@pkcprotocol/proper-lock-file@https://github.com/pkcprotocol/node-proper-lockfile.git#commit=30564d7e0bd06d145c88a16896c779e97503a735"
+  dependencies:
+    graceful-fs: "npm:4.2.11"
+    retry: "npm:0.13.1"
+    signal-exit: "npm:4.1.0"
+  checksum: 10c0/0cd90d63f98b9863412073a4339d3bd3b9b4bd09573ec0b58ede1ce962ba361a805354f034734ac73f24e134920aaa9725bc6c358bde6dd5e256497fac7028ae
   languageName: node
   linkType: hard
 
@@ -7818,13 +7826,6 @@ __metadata:
     "@hapi/topo": "npm:^6.0.2"
     "@standard-schema/spec": "npm:^1.0.0"
   checksum: 10c0/e395e07df0051e7bd8da02436ef3f10d52561b0331b6c289de1725745f336a952b72672fc3687d4e81d3354f9b3580feb60ffca71281a585c48b63dade09e1fb
-  languageName: node
-  linkType: hard
-
-"jose@npm:4.15.5":
-  version: 4.15.5
-  resolution: "jose@npm:4.15.5"
-  checksum: 10c0/9f208492f55ae9c547fd407c36f67ec3385051b5ca390e24f5449740f17359640b3f96fabfd38bc132cc4292b964c31b921bf356253373b1bd3eb6df799b7433
   languageName: node
   linkType: hard
 
