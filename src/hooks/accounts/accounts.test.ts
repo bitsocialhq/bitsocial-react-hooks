@@ -3295,6 +3295,52 @@ describe("accounts", () => {
       expect(rendered.result.current.editedComment.pendingEdits.spoiler).toBe(true);
     });
 
+    test("useEditedComment fails stale moderation edits when the comment never received an update", async () => {
+      const commentCid = rendered.result.current.accountComments[0].cid;
+      const communityAddress = rendered.result.current.accountComments[0].communityAddress;
+      const now = Math.round(Date.now() / 1000);
+      const editTimestamp = now - 60 * 30;
+
+      commentsStore.setState((state: any) => ({
+        ...state,
+        comments: {
+          ...state.comments,
+          [commentCid]: {
+            cid: commentCid,
+            pendingApproval: true,
+            approved: undefined,
+            updatedAt: undefined,
+            communityAddress,
+          },
+        },
+      }));
+
+      accountsStore.setState((state: any) => {
+        const accountId = state.activeAccountId || Object.keys(state.accounts)[0];
+        const existing = state.accountsEdits?.[accountId] || {};
+        return {
+          ...state,
+          accountsEdits: {
+            ...state.accountsEdits,
+            [accountId]: {
+              ...existing,
+              [commentCid]: [
+                {
+                  timestamp: editTimestamp,
+                  commentModeration: { approved: true },
+                },
+              ],
+            },
+          },
+        };
+      });
+
+      rendered.rerender(commentCid);
+      await waitFor(() => rendered.result.current.editedComment.state === "failed");
+      expect(rendered.result.current.editedComment.failedEdits.approved).toBe(true);
+      expect(rendered.result.current.editedComment.editedComment.approved).toBe(undefined);
+    });
+
     test("comment moderation succeeded", async () => {
       const commentCid = rendered.result.current.accountComments[0].cid;
       expect(commentCid).not.toBe(undefined);

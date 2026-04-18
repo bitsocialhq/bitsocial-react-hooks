@@ -2113,6 +2113,7 @@ describe("accounts-actions", () => {
 
     test("publishCommentModeration publish throws: onError called", async () => {
       const account = Object.values(accountsStore.getState().accounts)[0];
+      const accountId = accountsStore.getState().activeAccountId!;
       const origCreate = account.pkc.createCommentModeration.bind(account.pkc);
       vi.spyOn(account.pkc, "createCommentModeration").mockImplementation(async (opts: any) => {
         const m = await origCreate(opts);
@@ -2134,6 +2135,58 @@ describe("accounts-actions", () => {
 
       await new Promise((r) => setTimeout(r, 50));
       expect(onError).toHaveBeenCalled();
+      expect(accountsStore.getState().accountsEdits[accountId]?.["cid"]).toBeUndefined();
+      expect(accountsStore.getState().accountsEditsSummaries[accountId]?.["cid"]).toBeUndefined();
+      const persistedEdits = await accountsDatabase.getAccountEdits(accountId);
+      expect(persistedEdits["cid"]).toBeUndefined();
+    });
+
+    test("publishCommentModeration rolls back optimistic edit on terminal challengeverification failure", async () => {
+      const account = Object.values(accountsStore.getState().accounts)[0];
+      const accountId = accountsStore.getState().activeAccountId!;
+      const origCreate = account.pkc.createCommentModeration.bind(account.pkc);
+      vi.spyOn(account.pkc, "createCommentModeration").mockImplementation(async (opts: any) => {
+        const publication = await origCreate(opts);
+        vi.spyOn(publication, "simulateChallengeVerificationEvent").mockImplementation(() => {
+          publication.emit("challengeverification", {
+            type: "CHALLENGEVERIFICATION",
+            challengeRequestId: publication.challengeRequestId,
+            challengeAnswerId: publication.challengeAnswerId,
+            challengeSuccess: false,
+            challengeErrors: {
+              lit: "CommentModerationPubsubPublication failed permanently",
+            },
+          });
+        });
+        return publication;
+      });
+
+      const onChallengeVerification = vi.fn();
+      await act(async () => {
+        await accountsActions.publishCommentModeration({
+          communityAddress: "sub.eth",
+          commentCid: "cid",
+          commentModeration: { approved: true },
+          onChallenge: (ch: any, publication: any) => publication.publishChallengeAnswers(["4"]),
+          onChallengeVerification,
+        });
+      });
+
+      await new Promise((r) => setTimeout(r, 250));
+
+      expect(onChallengeVerification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          challengeSuccess: false,
+          challengeErrors: expect.objectContaining({
+            lit: expect.stringContaining("failed permanently"),
+          }),
+        }),
+        expect.anything(),
+      );
+      expect(accountsStore.getState().accountsEdits[accountId]?.["cid"]).toBeUndefined();
+      expect(accountsStore.getState().accountsEditsSummaries[accountId]?.["cid"]).toBeUndefined();
+      const persistedEdits = await accountsDatabase.getAccountEdits(accountId);
+      expect(persistedEdits["cid"]).toBeUndefined();
     });
 
     test("publishCommunityEdit publish throws: onError called", async () => {

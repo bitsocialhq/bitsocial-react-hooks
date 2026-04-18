@@ -1610,15 +1610,43 @@ export const publishCommentModeration = async (
   delete createCommentModerationOptions.onChallengeVerification;
   delete createCommentModerationOptions.onError;
   delete createCommentModerationOptions.onPublishingStateChange;
-  const storedCreateCommentModerationOptions = normalizePublicationOptionsForStore(
-    createCommentModerationOptions,
-  );
+  const storedCreateCommentModerationOptions = {
+    ...normalizePublicationOptionsForStore(createCommentModerationOptions),
+    clientId: uuid(),
+  };
+  const storedCommentModeration = sanitizeStoredAccountEdit(storedCreateCommentModerationOptions);
 
   let commentModeration = backfillPublicationCommunityAddress(
     await account.pkc.createCommentModeration(createCommentModerationOptions),
     createCommentModerationOptions,
   );
   let lastChallenge: Challenge | undefined;
+  let challengeSucceeded = false;
+  let rollbackPendingEditPromise: Promise<void> | undefined;
+  const rollbackStoredCommentModeration = () => {
+    if (!rollbackPendingEditPromise && !challengeSucceeded) {
+      rollbackPendingEditPromise = Promise.all([
+        accountsDatabase.deleteAccountEdit(account.id, storedCommentModeration),
+        Promise.resolve(
+          accountsStore.setState(({ accountsEdits, accountsEditsSummaries }) => {
+            const nextState: any = removeStoredAccountEditSummaryFromState(
+              accountsEditsSummaries,
+              accountsEdits,
+              account.id,
+              storedCommentModeration,
+            );
+            Object.assign(
+              nextState,
+              removeStoredAccountEditFromState(accountsEdits, account.id, storedCommentModeration),
+            );
+            return nextState;
+          }),
+        ),
+      ]).then(() => {});
+    }
+    return rollbackPendingEditPromise;
+  };
+
   const publishAndRetryFailedChallengeVerification = async () => {
     commentModeration.once("challenge", async (challenge: Challenge) => {
       lastChallenge = challenge;
@@ -1631,6 +1659,14 @@ export const publishCommentModeration = async (
           challengeVerification,
           commentModeration,
         );
+        if (challengeVerification.challengeSuccess) {
+          challengeSucceeded = true;
+        }
+        if (hasTerminalChallengeVerificationError(challengeVerification)) {
+          lastChallenge = undefined;
+          await rollbackStoredCommentModeration();
+          return;
+        }
         if (!challengeVerification.challengeSuccess && lastChallenge) {
           // publish again automatically on fail
           createCommentModerationOptions = {
@@ -1646,9 +1682,10 @@ export const publishCommentModeration = async (
         }
       },
     );
-    commentModeration.on("error", (error: Error) =>
-      publishCommentModerationOptions.onError?.(error, commentModeration),
-    );
+    commentModeration.on("error", async (error: Error) => {
+      await rollbackStoredCommentModeration();
+      publishCommentModerationOptions.onError?.(error, commentModeration);
+    });
     // TODO: add publishingState to account edits
     commentModeration.on("publishingstatechange", (publishingState: string) =>
       publishCommentModerationOptions.onPublishingStateChange?.(publishingState),
@@ -1659,38 +1696,27 @@ export const publishCommentModeration = async (
       // if it fails before, like failing to resolve ENS, we can emit the error
       await commentModeration.publish();
     } catch (error) {
+      await rollbackStoredCommentModeration();
       publishCommentModerationOptions.onError?.(error, commentModeration);
     }
   };
 
-  publishAndRetryFailedChallengeVerification();
-
   await accountsDatabase.addAccountEdit(account.id, storedCreateCommentModerationOptions);
   log("accountsActions.publishCommentModeration", { createCommentModerationOptions });
   accountsStore.setState(({ accountsEdits, accountsEditsSummaries }) => {
-    // remove signer and author because not needed and they expose private key
-    const commentModeration = {
-      ...storedCreateCommentModerationOptions,
-      signer: undefined,
-      author: undefined,
-    };
     const nextState: any = addStoredAccountEditSummaryToState(
       accountsEditsSummaries,
       account.id,
-      commentModeration,
+      storedCommentModeration,
     );
-    let commentModerations =
-      accountsEdits[account.id]?.[storedCreateCommentModerationOptions.commentCid] || [];
-    commentModerations = [...commentModerations, commentModeration];
-    nextState.accountsEdits = {
-      ...accountsEdits,
-      [account.id]: {
-        ...(accountsEdits[account.id] || {}),
-        [storedCreateCommentModerationOptions.commentCid]: commentModerations,
-      },
-    };
+    Object.assign(
+      nextState,
+      addStoredAccountEditToState(accountsEdits, account.id, storedCommentModeration),
+    );
     return nextState;
   });
+
+  publishAndRetryFailedChallengeVerification();
 };
 
 export const publishCommunityEdit = async (
