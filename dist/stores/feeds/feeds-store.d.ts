@@ -14,6 +14,7 @@ type FeedsState = {
     };
     addFeedToStore: Function;
     incrementFeedPageNumber: Function;
+    expandFeedTimeWindow: Function;
     resetFeed: Function;
     updateFeeds: Function;
 };

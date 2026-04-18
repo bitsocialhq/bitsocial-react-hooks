@@ -14,6 +14,7 @@ import createStore from "zustand";
 import localForageLru from "../../lib/localforage-lru/index.js";
 import { communityPostsCacheExpired } from "../../lib/utils/index.js";
 import { getPkcGetCommunity } from "../../lib/pkc-compat.js";
+import { deriveFeedSortType } from "../../lib/feed-sort-type.js";
 import { getCommunityRefKeys } from "../../lib/community-ref.js";
 import accountsStore from "../accounts/index.js";
 import communitiesStore from "../communities/index.js";
@@ -35,7 +36,7 @@ const feedsStore = createStore((setState, getState) => ({
     bufferedFeedsCommunitiesPostCounts: {},
     feedsHaveMore: {},
     feedsCommunityKeysWithNewerPosts: {},
-    addFeedToStore(feedName, communities, communityKeys, sortType, account, isBufferedFeed, postsPerPage, filter, newerThan, accountComments, modQueue) {
+    addFeedToStore(feedName, communities, communityKeys, sortType, account, isBufferedFeed, postsPerPage, filter, newerThan, accountComments, modQueue, requestedSortType) {
         return __awaiter(this, void 0, void 0, function* () {
             // init here because must be called after async accounts store finished initializing
             initializeFeedsStore();
@@ -68,6 +69,7 @@ const feedsStore = createStore((setState, getState) => ({
                 communities,
                 communityKeys,
                 sortType,
+                requestedSortType: requestedSortType || sortType,
                 accountId: account.id,
                 pageNumber: isBufferedFeed === true ? 0 : 1,
                 postsPerPage,
@@ -100,6 +102,30 @@ const feedsStore = createStore((setState, getState) => ({
         });
         // do not update feed at the same time as increment a page number or it might cause
         // a race condition, rather schedule a feed update
+        updateFeeds();
+    },
+    expandFeedTimeWindow(feedName, newerThan) {
+        const { feedsOptions, loadedFeeds, updateFeeds } = getState();
+        assert(feedsOptions[feedName], `feedsActions.expandFeedTimeWindow feed name '${feedName}' does not exist in feeds store`);
+        assert(newerThan === undefined || typeof newerThan === "number", `feedsActions.expandFeedTimeWindow newerThan '${newerThan}' invalid`);
+        const currentFeedOptions = feedsOptions[feedName];
+        const currentNewerThan = currentFeedOptions.newerThan;
+        if (currentNewerThan === newerThan) {
+            return;
+        }
+        const isExpandedTimeWindow = typeof currentNewerThan === "number" &&
+            (newerThan === undefined || newerThan > currentNewerThan);
+        assert(isExpandedTimeWindow, `feedsActions.expandFeedTimeWindow newerThan '${newerThan}' must broaden the current window '${currentNewerThan}'`);
+        const nextSortType = deriveFeedSortType(currentFeedOptions.requestedSortType, newerThan);
+        assert(nextSortType === currentFeedOptions.sortType, `feedsActions.expandFeedTimeWindow cannot change sort type from '${currentFeedOptions.sortType}' to '${nextSortType}'`);
+        const loadedFeed = loadedFeeds[feedName] || [];
+        const shouldPrefetchExpandedPage = currentFeedOptions.pageNumber > 0 &&
+            loadedFeed.length >= currentFeedOptions.pageNumber * currentFeedOptions.postsPerPage;
+        setState(({ feedsOptions }) => ({
+            feedsOptions: Object.assign(Object.assign({}, feedsOptions), { [feedName]: Object.assign(Object.assign({}, currentFeedOptions), { newerThan, pageNumber: shouldPrefetchExpandedPage
+                        ? currentFeedOptions.pageNumber + 1
+                        : currentFeedOptions.pageNumber }) }),
+        }));
         updateFeeds();
     },
     resetFeed(feedName) {

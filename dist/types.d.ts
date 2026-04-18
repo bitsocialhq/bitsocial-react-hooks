@@ -201,6 +201,7 @@ export interface UseFeedResult extends Result {
     feed: Comment[];
     hasMore: boolean;
     loadMore(): Promise<void>;
+    expandTimeWindow(newerThan?: number): Promise<void>;
     communityKeysWithNewerPosts: string[];
     reset(): Promise<void>;
 }
@@ -551,6 +552,7 @@ export type FeedOptions = {
     communities: CommunityIdentifier[];
     communityKeys: string[];
     sortType: string;
+    requestedSortType: string;
     accountId: string;
     pageNumber: number;
     postsPerPage: number;
