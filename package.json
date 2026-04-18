@@ -6,7 +6,7 @@
     "bitsocial"
   ],
   "repository": "github:bitsocialnet/bitsocial-react-hooks",
-  "license": "GPL-2.0-only",
+  "license": "GPL-3.0-or-later",
   "publishConfig": {
     "access": "public"
   },
