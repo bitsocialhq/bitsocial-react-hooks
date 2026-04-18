@@ -11,6 +11,7 @@ import {
   useAccountCommunities,
   useCommunity,
   useFeed,
+  usePublishCommentModeration,
 } from "../../dist";
 import debugUtils from "../../dist/lib/debug-utils";
 
@@ -416,6 +417,212 @@ for (const pkcOptionsType in pkcOptionsTypes) {
             publishCommentOptions.content,
           );
           console.log(`after useFeed()`);
+        });
+
+        it("generic comment moderation updates even if the moderation hook unmounts immediately", async () => {
+          const title = "generic moderation community";
+          const pkcOptions = { ...pkcOptionsTypes[pkcOptionsType] };
+          let community;
+
+          await act(async () => {
+            community = await rendered.result.current.createCommunity({
+              title,
+              settings: {
+                challenges: [{ name: "text-math" }],
+              },
+            });
+            await community.start();
+            await new Promise((r) => setTimeout(r, 1000));
+          });
+          expect(typeof community.address).to.equal("string");
+
+          rendered.rerender(community.address);
+          await waitFor(() => rendered.result.current.community.address === community.address);
+
+          await act(async () => {
+            await rendered.result.current.createAccount("Poster");
+            await rendered.result.current.setActiveAccount("Poster");
+          });
+          await waitFor(() => rendered.result.current.account.name === "Poster");
+
+          await act(async () => {
+            await rendered.result.current.setAccount({
+              ...rendered.result.current.account,
+              pkcOptions,
+            });
+          });
+
+          let publishChallenge;
+          let publishCommentInstance;
+          let publishVerification;
+          await act(async () => {
+            await rendered.result.current.publishComment({
+              communityAddress: community.address,
+              title: "generic moderation title",
+              content: "generic moderation content",
+              onChallenge: (_challenge, _comment) => {
+                publishChallenge = _challenge;
+                publishCommentInstance = _comment;
+              },
+              onChallengeVerification: (_challengeVerification) => {
+                publishVerification = _challengeVerification;
+              },
+            });
+          });
+
+          await waitFor(() => !!publishChallenge);
+          expect(publishChallenge.type).to.equal("CHALLENGE");
+          const publishChallengeAnswer = String(eval(publishChallenge.challenges[0].challenge));
+          publishCommentInstance.publishChallengeAnswers([publishChallengeAnswer]);
+          await waitFor(() => publishVerification?.challengeSuccess === true);
+
+          await waitFor(() => rendered.result.current.feed.feed.length > 0);
+          const commentCid = rendered.result.current.feed.feed[0].cid;
+          expect(typeof commentCid).to.equal("string");
+
+          await act(async () => {
+            await rendered.result.current.setActiveAccount("Account 1");
+          });
+          await waitFor(() => rendered.result.current.account.name === "Account 1");
+          await act(async () => {
+            await community.edit({
+              roles: {
+                [rendered.result.current.account.author.address]: { role: "moderator" },
+              },
+            });
+          });
+
+          const observedComment = renderHook((observedCommentCid) =>
+            useComment({ commentCid: observedCommentCid }),
+          );
+          const waitForObservedComment = testUtils.createWaitFor(observedComment, { timeout });
+          observedComment.rerender(commentCid);
+          await waitForObservedComment(() => observedComment.result.current?.cid === commentCid);
+
+          const moderationEvents = [];
+          const moderationErrors = [];
+          let unmountedModerationChallenge;
+          let unmountedModerationInstance;
+          let mountedModerationChallenge;
+          let mountedModerationInstance;
+          let mountedModerationVerification;
+
+          const mountedModerationRendered = renderHook((options) =>
+            usePublishCommentModeration(options),
+          );
+          const waitForMountedModeration = testUtils.createWaitFor(mountedModerationRendered, {
+            timeout,
+          });
+          mountedModerationRendered.rerender({
+            communityAddress: community.address,
+            commentCid,
+            commentModeration: { removed: true },
+            onChallenge: (challenge, commentModeration) => {
+              mountedModerationChallenge = challenge;
+              mountedModerationInstance = commentModeration;
+            },
+            onChallengeVerification: (challengeVerification) => {
+              mountedModerationVerification = challengeVerification;
+            },
+            onError: (error) => {
+              moderationErrors.push(`mounted:${error.message}`);
+            },
+          });
+          await waitForMountedModeration(
+            () => mountedModerationRendered.result.current.state === "ready",
+          );
+
+          await act(async () => {
+            await mountedModerationRendered.result.current.publishCommentModeration();
+          });
+
+          await waitForMountedModeration(
+            () => mountedModerationChallenge || mountedModerationVerification,
+          );
+          if (mountedModerationChallenge) {
+            const moderationChallengeAnswer = String(
+              eval(mountedModerationChallenge.challenges[0].challenge),
+            );
+            mountedModerationInstance.publishChallengeAnswers([moderationChallengeAnswer]);
+          }
+          await waitForMountedModeration(() => !!mountedModerationVerification);
+          expect(mountedModerationVerification.challengeSuccess).to.equal(true);
+
+          await waitForObservedComment(
+            () => observedComment.result.current?.commentModeration?.removed === true,
+          );
+          expect(observedComment.result.current?.removed).to.equal(true);
+
+          mountedModerationRendered.unmount();
+
+          const refreshedComment = renderHook((observedCommentCid) =>
+            useComment({ commentCid: observedCommentCid }),
+          );
+          const waitForRefreshedComment = testUtils.createWaitFor(refreshedComment, { timeout });
+          refreshedComment.rerender(commentCid);
+          await waitForRefreshedComment(() => refreshedComment.result.current?.cid === commentCid);
+          await waitForRefreshedComment(() => refreshedComment.result.current?.removed === true);
+          refreshedComment.unmount();
+
+          const moderationRendered = renderHook((options) => usePublishCommentModeration(options));
+          const waitForModeration = testUtils.createWaitFor(moderationRendered, { timeout });
+          moderationRendered.rerender({
+            communityAddress: community.address,
+            commentCid,
+            commentModeration: { removed: false },
+            onChallenge: (challenge, commentModeration) => {
+              unmountedModerationChallenge = challenge;
+              unmountedModerationInstance = commentModeration;
+              moderationEvents.push(["challenge", challenge?.type]);
+            },
+            onChallengeVerification: (challengeVerification) => {
+              moderationEvents.push([
+                "challengeverification",
+                challengeVerification?.challengeSuccess,
+                challengeVerification?.reason,
+                challengeVerification?.challengeErrors,
+              ]);
+            },
+            onError: (error) => {
+              moderationErrors.push(error.message);
+            },
+          });
+          await waitForModeration(() => moderationRendered.result.current.state === "ready");
+
+          await act(async () => {
+            await moderationRendered.result.current.publishCommentModeration();
+          });
+          moderationRendered.unmount();
+
+          await waitFor(() => !!unmountedModerationChallenge);
+          const unmountedModerationChallengeAnswer = String(
+            eval(unmountedModerationChallenge.challenges[0].challenge),
+          );
+          await act(async () => {
+            await unmountedModerationInstance.publishChallengeAnswers([
+              unmountedModerationChallengeAnswer,
+            ]);
+          });
+
+          await waitForObservedComment(
+            () => observedComment.result.current?.commentModeration?.removed === false,
+          );
+          expect(observedComment.result.current?.removed).to.equal(false);
+          expect(observedComment.result.current?.commentModeration?.removed).to.equal(false);
+          await waitFor(() =>
+            moderationEvents.some(
+              ([eventName, challengeSuccess]) =>
+                eventName === "challengeverification" && challengeSuccess === true,
+            ),
+          );
+          expect(moderationErrors).to.deep.equal([]);
+
+          observedComment.unmount();
+
+          await act(async () => {
+            await rendered.result.current.deleteCommunity(community.address);
+            await rendered.result.current.deleteAccount("Poster");
+          });
         });
       });
     }

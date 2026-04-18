@@ -4,6 +4,9 @@
   "compilerOptions": {
     "module": "ES2020",
     "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "inlineSources": true,
     "moduleResolution": "Node",
     "baseUrl": ".",
     "paths": {
