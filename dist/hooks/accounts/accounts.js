@@ -586,10 +586,18 @@ export function useEditedComment(options) {
                     editedResult.state = "pending";
                 }
             };
-            // comment update hasn't been received, impossible to evaluate the status of a comment edit
-            // better to show pending than unedited, otherwise the editor might try to edit again
+            // Without a newer update we can only treat recent edits as pending. Older edits that never
+            // produced any update are effectively stale and should stop shadowing the live comment.
             if (!(comment === null || comment === void 0 ? void 0 : comment.updatedAt)) {
-                setPropertyNameEditState("pending");
+                if (isEqual(comment === null || comment === void 0 ? void 0 : comment[propertyName], propertyNameEdit.value)) {
+                    setPropertyNameEditState("succeeded");
+                }
+                else if (propertyNameEdit.timestamp > now - expiryTime) {
+                    setPropertyNameEditState("pending");
+                }
+                else {
+                    setPropertyNameEditState("failed");
+                }
                 continue;
             }
             // comment.updatedAt is older than propertyNameEdit, propertyNameEdit is pending

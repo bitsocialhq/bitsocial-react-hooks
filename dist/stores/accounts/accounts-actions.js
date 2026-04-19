@@ -1119,9 +1119,31 @@ export const publishCommentModeration = (publishCommentModerationOptions, accoun
     delete createCommentModerationOptions.onChallengeVerification;
     delete createCommentModerationOptions.onError;
     delete createCommentModerationOptions.onPublishingStateChange;
-    const storedCreateCommentModerationOptions = normalizePublicationOptionsForStore(createCommentModerationOptions);
+    const storedCreateCommentModerationOptions = Object.assign(Object.assign({}, normalizePublicationOptionsForStore(createCommentModerationOptions)), { clientId: uuid() });
+    const storedCommentModeration = sanitizeStoredAccountEdit(storedCreateCommentModerationOptions);
     let commentModeration = backfillPublicationCommunityAddress(yield account.pkc.createCommentModeration(createCommentModerationOptions), createCommentModerationOptions);
     let lastChallenge;
+    let challengeSucceeded = false;
+    let storedCommentModerationAdded = false;
+    let rollbackStoredCommentModerationRequested = false;
+    let rollbackPendingEditPromise;
+    const rollbackStoredCommentModeration = () => {
+        rollbackStoredCommentModerationRequested = true;
+        if (!storedCommentModerationAdded) {
+            return Promise.resolve();
+        }
+        if (!rollbackPendingEditPromise && !challengeSucceeded) {
+            rollbackPendingEditPromise = Promise.all([
+                accountsDatabase.deleteAccountEdit(account.id, storedCommentModeration),
+                Promise.resolve(accountsStore.setState(({ accountsEdits, accountsEditsSummaries }) => {
+                    const nextState = removeStoredAccountEditSummaryFromState(accountsEditsSummaries, accountsEdits, account.id, storedCommentModeration);
+                    Object.assign(nextState, removeStoredAccountEditFromState(accountsEdits, account.id, storedCommentModeration));
+                    return nextState;
+                })),
+            ]).then(() => { });
+        }
+        return rollbackPendingEditPromise || Promise.resolve();
+    };
     const publishAndRetryFailedChallengeVerification = () => __awaiter(void 0, void 0, void 0, function* () {
         var _a;
         commentModeration.once("challenge", (challenge) => __awaiter(void 0, void 0, void 0, function* () {
@@ -1130,6 +1152,14 @@ export const publishCommentModeration = (publishCommentModerationOptions, accoun
         }));
         commentModeration.once("challengeverification", (challengeVerification) => __awaiter(void 0, void 0, void 0, function* () {
             publishCommentModerationOptions.onChallengeVerification(challengeVerification, commentModeration);
+            if (challengeVerification.challengeSuccess) {
+                challengeSucceeded = true;
+            }
+            if (hasTerminalChallengeVerificationError(challengeVerification)) {
+                lastChallenge = undefined;
+                yield rollbackStoredCommentModeration();
+                return;
+            }
             if (!challengeVerification.challengeSuccess && lastChallenge) {
                 // publish again automatically on fail
                 createCommentModerationOptions = Object.assign(Object.assign({}, createCommentModerationOptions), { timestamp: Math.floor(Date.now() / 1000) });
@@ -1138,7 +1168,11 @@ export const publishCommentModeration = (publishCommentModerationOptions, accoun
                 publishAndRetryFailedChallengeVerification();
             }
         }));
-        commentModeration.on("error", (error) => { var _a; return (_a = publishCommentModerationOptions.onError) === null || _a === void 0 ? void 0 : _a.call(publishCommentModerationOptions, error, commentModeration); });
+        commentModeration.on("error", (error) => __awaiter(void 0, void 0, void 0, function* () {
+            var _a;
+            yield rollbackStoredCommentModeration();
+            (_a = publishCommentModerationOptions.onError) === null || _a === void 0 ? void 0 : _a.call(publishCommentModerationOptions, error, commentModeration);
+        }));
         // TODO: add publishingState to account edits
         commentModeration.on("publishingstatechange", (publishingState) => { var _a; return (_a = publishCommentModerationOptions.onPublishingStateChange) === null || _a === void 0 ? void 0 : _a.call(publishCommentModerationOptions, publishingState); });
         listeners.push(commentModeration);
@@ -1148,6 +1182,7 @@ export const publishCommentModeration = (publishCommentModerationOptions, accoun
             yield commentModeration.publish();
         }
         catch (error) {
+            yield rollbackStoredCommentModeration();
             (_a = publishCommentModerationOptions.onError) === null || _a === void 0 ? void 0 : _a.call(publishCommentModerationOptions, error, commentModeration);
         }
     });
@@ -1155,15 +1190,14 @@ export const publishCommentModeration = (publishCommentModerationOptions, accoun
     yield accountsDatabase.addAccountEdit(account.id, storedCreateCommentModerationOptions);
     log("accountsActions.publishCommentModeration", { createCommentModerationOptions });
     accountsStore.setState(({ accountsEdits, accountsEditsSummaries }) => {
-        var _a;
-        // remove signer and author because not needed and they expose private key
-        const commentModeration = Object.assign(Object.assign({}, storedCreateCommentModerationOptions), { signer: undefined, author: undefined });
-        const nextState = addStoredAccountEditSummaryToState(accountsEditsSummaries, account.id, commentModeration);
-        let commentModerations = ((_a = accountsEdits[account.id]) === null || _a === void 0 ? void 0 : _a[storedCreateCommentModerationOptions.commentCid]) || [];
-        commentModerations = [...commentModerations, commentModeration];
-        nextState.accountsEdits = Object.assign(Object.assign({}, accountsEdits), { [account.id]: Object.assign(Object.assign({}, (accountsEdits[account.id] || {})), { [storedCreateCommentModerationOptions.commentCid]: commentModerations }) });
+        const nextState = addStoredAccountEditSummaryToState(accountsEditsSummaries, account.id, storedCommentModeration);
+        Object.assign(nextState, addStoredAccountEditToState(accountsEdits, account.id, storedCommentModeration));
         return nextState;
     });
+    storedCommentModerationAdded = true;
+    if (rollbackStoredCommentModerationRequested) {
+        yield rollbackStoredCommentModeration();
+    }
 });
 export const publishCommunityEdit = (communityAddress, publishCommunityEditOptions, accountName) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
