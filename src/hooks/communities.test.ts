@@ -532,6 +532,76 @@ describe("communities", () => {
     expect(rendered.result.current.hourActiveUserCount).toBe(1);
   });
 
+  test("useCommunityStats unwraps fetchCid content responses", async () => {
+    const origFetch = PKC.prototype.fetchCid;
+    (PKC.prototype as any).fetchCid = () =>
+      Promise.resolve({
+        content: {
+          hourActiveUserCount: 3,
+          weekActiveUserCount: 33,
+          allPostCount: 333,
+        },
+      });
+    const rendered = renderHook<any, any>(() =>
+      useCommunityStats({ community: { name: "wrapped stats" } }),
+    );
+    const waitFor = testUtils.createWaitFor(rendered);
+    try {
+      await waitFor(() => rendered.result.current.state === "succeeded");
+      expect(rendered.result.current.hourActiveUserCount).toBe(3);
+      expect(rendered.result.current.weekActiveUserCount).toBe(33);
+      expect(rendered.result.current.allPostCount).toBe(333);
+    } finally {
+      (PKC.prototype as any).fetchCid = origFetch;
+    }
+  });
+
+  test("useCommunityStats parses string fetchCid content responses", async () => {
+    const origFetch = PKC.prototype.fetchCid;
+    (PKC.prototype as any).fetchCid = () =>
+      Promise.resolve({
+        content: JSON.stringify({
+          hourActiveUserCount: 4,
+          weekActiveUserCount: 44,
+          allPostCount: 444,
+        }),
+      });
+    const rendered = renderHook<any, any>(() =>
+      useCommunityStats({ community: { name: "string wrapped stats" } }),
+    );
+    const waitFor = testUtils.createWaitFor(rendered);
+    try {
+      await waitFor(() => rendered.result.current.state === "succeeded");
+      expect(rendered.result.current.hourActiveUserCount).toBe(4);
+      expect(rendered.result.current.weekActiveUserCount).toBe(44);
+      expect(rendered.result.current.allPostCount).toBe(444);
+    } finally {
+      (PKC.prototype as any).fetchCid = origFetch;
+    }
+  });
+
+  test("useCommunityStats accepts object fetchCid responses", async () => {
+    const origFetch = PKC.prototype.fetchCid;
+    (PKC.prototype as any).fetchCid = () =>
+      Promise.resolve({
+        hourActiveUserCount: 5,
+        weekActiveUserCount: 55,
+        allPostCount: 555,
+      });
+    const rendered = renderHook<any, any>(() =>
+      useCommunityStats({ community: { name: "object stats" } }),
+    );
+    const waitFor = testUtils.createWaitFor(rendered);
+    try {
+      await waitFor(() => rendered.result.current.state === "succeeded");
+      expect(rendered.result.current.hourActiveUserCount).toBe(5);
+      expect(rendered.result.current.weekActiveUserCount).toBe(55);
+      expect(rendered.result.current.allPostCount).toBe(555);
+    } finally {
+      (PKC.prototype as any).fetchCid = origFetch;
+    }
+  });
+
   test("useCommunityStats fetchCid error logs (stmt 110)", async () => {
     const origFetch = PKC.prototype.fetchCid;
     (PKC.prototype as any).fetchCid = () => Promise.reject(new Error("fetchCid failed"));

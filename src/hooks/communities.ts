@@ -26,6 +26,16 @@ import shallow from "zustand/shallow";
 import { getChainProviders, getPkcCommunityAddresses } from "../lib/pkc-compat";
 import { getCommunityRefKey, getUniqueSortedCommunityRefs } from "../lib/community-ref";
 
+const parseMaybeJson = (value: unknown) => (typeof value === "string" ? JSON.parse(value) : value);
+
+const parseFetchedCommunityStats = (fetchedCid: unknown): CommunityStats => {
+  const parsedCid = parseMaybeJson(fetchedCid);
+  if (parsedCid && typeof parsedCid === "object" && "content" in parsedCid) {
+    return parseMaybeJson((parsedCid as { content: unknown }).content) as CommunityStats;
+  }
+  return parsedCid as CommunityStats;
+};
+
 /**
  * @param community - The community identifier, e.g. {name: 'memes.eth'} or {publicKey: '12D3KooW...'}
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use
@@ -183,7 +193,7 @@ export function useCommunityStats(options?: UseCommunityStatsOptions): UseCommun
       let fetchedCid;
       try {
         fetchedCid = await account.pkc.fetchCid({ cid: communityStatsCid });
-        fetchedCid = JSON.parse(fetchedCid);
+        fetchedCid = parseFetchedCommunityStats(fetchedCid);
         if (cancelled) {
           return;
         }
