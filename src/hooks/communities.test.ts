@@ -645,6 +645,23 @@ describe("communities", () => {
     }
   });
 
+  test("useCommunityStats keeps unrecognized content responses", async () => {
+    let fetchSpy: { mockRestore: () => void } | undefined;
+    try {
+      fetchSpy = vi.spyOn(PKC.prototype as any, "fetchCid").mockResolvedValue({
+        content: "not json stats content",
+      });
+      const rendered = renderHook<any, any>(() =>
+        useCommunityStats({ community: { name: "unknown content stats" } }),
+      );
+      const waitFor = testUtils.createWaitFor(rendered);
+      await waitFor(() => rendered.result.current.state === "succeeded");
+      expect(rendered.result.current.content).toBe("not json stats content");
+    } finally {
+      fetchSpy?.mockRestore();
+    }
+  });
+
   test("useCommunityStats fetchCid error logs (stmt 110)", async () => {
     const origFetch = PKC.prototype.fetchCid;
     (PKC.prototype as any).fetchCid = () => Promise.reject(new Error("fetchCid failed"));
