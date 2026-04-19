@@ -28,10 +28,23 @@ import { getCommunityRefKey, getUniqueSortedCommunityRefs } from "../lib/communi
 
 const parseMaybeJson = (value: unknown) => (typeof value === "string" ? JSON.parse(value) : value);
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object";
+
+const isCommunityStatsPayload = (value: unknown): value is CommunityStats =>
+  isRecord(value) &&
+  ("hourActiveUserCount" in value || "weekActiveUserCount" in value || "allPostCount" in value);
+
 const parseFetchedCommunityStats = (fetchedCid: unknown): CommunityStats => {
   const parsedCid = parseMaybeJson(fetchedCid);
-  if (parsedCid && typeof parsedCid === "object" && "content" in parsedCid) {
-    return parseMaybeJson((parsedCid as { content: unknown }).content) as CommunityStats;
+  if (isCommunityStatsPayload(parsedCid)) {
+    return parsedCid;
+  }
+  if (isRecord(parsedCid) && "content" in parsedCid) {
+    const parsedContent = parseMaybeJson(parsedCid.content);
+    if (isCommunityStatsPayload(parsedContent)) {
+      return parsedContent;
+    }
   }
   return parsedCid as CommunityStats;
 };
