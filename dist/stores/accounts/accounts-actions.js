@@ -12,7 +12,7 @@ import accountsStore, { listeners } from "./accounts-store.js";
 import communitiesStore from "../communities/index.js";
 import accountsDatabase from "./accounts-database.js";
 import accountGenerator from "./account-generator.js";
-import Logger from "@pkc/pkc-logger";
+import Logger from "@pkcprotocol/pkc-logger";
 import validator from "../../lib/validator.js";
 import chain from "../../lib/chain/index.js";
 import assert from "assert";

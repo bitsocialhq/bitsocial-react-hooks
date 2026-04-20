@@ -10,7 +10,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 import { useEffect, useState, useMemo } from "react";
 import { useAccount } from "./accounts/index.js";
 import validator from "../lib/validator.js";
-import Logger from "@pkc/pkc-logger";
+import Logger from "@pkcprotocol/pkc-logger";
 const log = Logger("bitsocial-react-hooks:communities:hooks");
 import assert from "assert";
 import useInterval from "./utils/use-interval.js";

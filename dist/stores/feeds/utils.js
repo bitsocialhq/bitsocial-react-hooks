@@ -13,7 +13,7 @@ import feedSorter from "./feed-sorter.js";
 import { communityPostsCacheExpired, commentIsValid, removeInvalidComments } from "../../lib/utils/index.js";
 import { getCommentCommunityAddress, normalizeCommentCommunityAddress } from "../../lib/pkc-compat.js";
 import { doesAddressMatchCommunityRef, getCommunityRefKeys, getMatchingCommunityRefKeys, } from "../../lib/community-ref.js";
-import Logger from "@pkc/pkc-logger";
+import Logger from "@pkcprotocol/pkc-logger";
 const log = Logger("bitsocial-react-hooks:feeds:stores");
 const getFeedCommunityRefs = (feedOptions) => feedOptions.communities || [];
 const getFeedCommunityKeys = (feedOptions) => feedOptions.communityKeys || getCommunityRefKeys(getFeedCommunityRefs(feedOptions));

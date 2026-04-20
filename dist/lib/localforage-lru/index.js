@@ -13,7 +13,7 @@ try {
     if (process.env.REACT_APP_BITSOCIAL_REACT_HOOKS_NO_CACHE) {
         // @ts-ignore
         localForageLru.createInstance = () => {
-            console.warn("@bitsocialnet/bitsocial-react-hooks cache is disabled for testing");
+            console.warn("@bitsocial/bitsocial-react-hooks cache is disabled for testing");
             return {
                 getItem: function (key) {
                     return __awaiter(this, void 0, void 0, function* () { });

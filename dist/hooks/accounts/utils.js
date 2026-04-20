@@ -11,7 +11,7 @@ import { useMemo, useState, useEffect } from "react";
 // @ts-ignore
 import memoize from "memoizee";
 import PkcJs from "../../lib/pkc-js/index.js";
-import Logger from "@pkc/pkc-logger";
+import Logger from "@pkcprotocol/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:hooks");
 export const useCalculatedNotifications = (account, accountCommentsReplies) => {
     return useMemo(() => {

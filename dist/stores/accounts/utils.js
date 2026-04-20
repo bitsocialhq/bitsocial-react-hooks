@@ -8,7 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import assert from "assert";
-import Logger from "@pkc/pkc-logger";
+import Logger from "@pkcprotocol/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
 import commentsStore from "../comments/index.js";
 import repliesPagesStore from "../replies-pages/index.js";

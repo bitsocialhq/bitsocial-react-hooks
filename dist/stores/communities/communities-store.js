@@ -13,7 +13,7 @@ const communitiesDatabase = localForageLru.createInstance({
     name: "bitsocialReactHooks-communities",
     size: 500,
 });
-import Logger from "@pkc/pkc-logger";
+import Logger from "@pkcprotocol/pkc-logger";
 const log = Logger("bitsocial-react-hooks:communities:stores");
 import utils from "../../lib/utils/index.js";
 import createStore from "zustand";

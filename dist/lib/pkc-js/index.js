@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import PkcJsMockContent from "./pkc-js-mock-content.js";
-import Logger from "@pkc/pkc-logger";
+import Logger from "@pkcprotocol/pkc-logger";
 import assert from "assert";
 const log = Logger("bitsocial-react-hooks:pkc-js");
 let loadedDefaultPkc;

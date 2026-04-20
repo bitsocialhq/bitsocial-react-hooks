@@ -13,7 +13,7 @@ import chain from "../../lib/chain/index.js";
 import { v4 as uuid } from "uuid";
 import accountsDatabase from "./accounts-database.js";
 import { getPkcClientOptions, normalizeAccountProtocolConfig, withProtocolAliases, } from "../../lib/pkc-compat.js";
-import Logger from "@pkc/pkc-logger";
+import Logger from "@pkcprotocol/pkc-logger";
 const log = Logger("bitsocial-react-hooks:accounts:stores");
 export const DEFAULT_ETH_RPC_URL = "https://ethereum-rpc.publicnode.com";
 // default chain providers

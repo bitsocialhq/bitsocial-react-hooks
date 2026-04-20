@@ -1,4 +1,4 @@
-import Logger from "@pkc/pkc-logger";
+import Logger from "@pkcprotocol/pkc-logger";
 export declare const log: Logger;
 import { RepliesPages, Comment, Comments } from "../../types.js";
 type RepliesPagesState = {

@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import assert from "assert";
 import QuickLru from "quick-lru";
-import Logger from "@pkc/pkc-logger";
+import Logger from "@pkcprotocol/pkc-logger";
 import { areEquivalentCommunityAddresses } from "../community-address.js";
 import { getCommentCommunityAddress, normalizePublicationOptionsForStore } from "../pkc-compat.js";
 import { getPageRpcClients } from "../pkc-compat.js";
