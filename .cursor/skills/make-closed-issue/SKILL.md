@@ -101,7 +101,9 @@ EOF
 
 ### 7. Push branch and open PR
 
-Push the current task branch to origin and open a PR into `master`.
+Push the current task branch to origin and open a ready-for-review PR into `master`.
+
+Never open a draft PR unless the user explicitly requests a draft.
 
 Use `Closes #ISSUE_NUMBER` in the PR body so the issue closes automatically when the PR is merged.
 
