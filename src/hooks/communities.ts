@@ -26,6 +26,37 @@ import shallow from "zustand/shallow";
 import { getChainProviders, getPkcCommunityAddresses } from "../lib/pkc-compat";
 import { getCommunityRefKey, getUniqueSortedCommunityRefs } from "../lib/community-ref";
 
+const parseMaybeJson = (value: unknown) => (typeof value === "string" ? JSON.parse(value) : value);
+
+const tryParseMaybeJson = (value: unknown) => {
+  try {
+    return parseMaybeJson(value);
+  } catch {
+    return value;
+  }
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object";
+
+const isCommunityStatsPayload = (value: unknown): value is CommunityStats =>
+  isRecord(value) &&
+  ("hourActiveUserCount" in value || "weekActiveUserCount" in value || "allPostCount" in value);
+
+const parseFetchedCommunityStats = (fetchedCid: unknown): CommunityStats => {
+  const parsedCid = parseMaybeJson(fetchedCid);
+  if (isCommunityStatsPayload(parsedCid)) {
+    return parsedCid;
+  }
+  if (isRecord(parsedCid) && "content" in parsedCid) {
+    const parsedContent = tryParseMaybeJson(parsedCid.content);
+    if (isCommunityStatsPayload(parsedContent)) {
+      return parsedContent;
+    }
+  }
+  return parsedCid as CommunityStats;
+};
+
 /**
  * @param community - The community identifier, e.g. {name: 'memes.eth'} or {publicKey: '12D3KooW...'}
  * @param acountName - The nickname of the account, e.g. 'Account 1'. If no accountName is provided, use
@@ -183,7 +214,7 @@ export function useCommunityStats(options?: UseCommunityStatsOptions): UseCommun
       let fetchedCid;
       try {
         fetchedCid = await account.pkc.fetchCid({ cid: communityStatsCid });
-        fetchedCid = JSON.parse(fetchedCid);
+        fetchedCid = parseFetchedCommunityStats(fetchedCid);
         if (cancelled) {
           return;
         }

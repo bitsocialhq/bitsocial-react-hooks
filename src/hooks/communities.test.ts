@@ -532,6 +532,136 @@ describe("communities", () => {
     expect(rendered.result.current.hourActiveUserCount).toBe(1);
   });
 
+  test("useCommunityStats unwraps fetchCid content responses", async () => {
+    let fetchSpy: { mockRestore: () => void } | undefined;
+    try {
+      fetchSpy = vi.spyOn(PKC.prototype as any, "fetchCid").mockResolvedValue({
+        content: {
+          hourActiveUserCount: 3,
+          weekActiveUserCount: 33,
+          allPostCount: 333,
+        },
+      });
+      const rendered = renderHook<any, any>(() =>
+        useCommunityStats({ community: { name: "wrapped stats" } }),
+      );
+      const waitFor = testUtils.createWaitFor(rendered);
+      await waitFor(() => rendered.result.current.state === "succeeded");
+      expect(rendered.result.current.hourActiveUserCount).toBe(3);
+      expect(rendered.result.current.weekActiveUserCount).toBe(33);
+      expect(rendered.result.current.allPostCount).toBe(333);
+    } finally {
+      fetchSpy?.mockRestore();
+    }
+  });
+
+  test("useCommunityStats parses string fetchCid content responses", async () => {
+    let fetchSpy: { mockRestore: () => void } | undefined;
+    try {
+      fetchSpy = vi.spyOn(PKC.prototype as any, "fetchCid").mockResolvedValue({
+        content: JSON.stringify({
+          hourActiveUserCount: 4,
+          weekActiveUserCount: 44,
+          allPostCount: 444,
+        }),
+      });
+      const rendered = renderHook<any, any>(() =>
+        useCommunityStats({ community: { name: "string wrapped stats" } }),
+      );
+      const waitFor = testUtils.createWaitFor(rendered);
+      await waitFor(() => rendered.result.current.state === "succeeded");
+      expect(rendered.result.current.hourActiveUserCount).toBe(4);
+      expect(rendered.result.current.weekActiveUserCount).toBe(44);
+      expect(rendered.result.current.allPostCount).toBe(444);
+    } finally {
+      fetchSpy?.mockRestore();
+    }
+  });
+
+  test("useCommunityStats parses string fetchCid responses", async () => {
+    let fetchSpy: { mockRestore: () => void } | undefined;
+    try {
+      fetchSpy = vi.spyOn(PKC.prototype as any, "fetchCid").mockResolvedValue(
+        JSON.stringify({
+          hourActiveUserCount: 5,
+          weekActiveUserCount: 55,
+          allPostCount: 555,
+        }),
+      );
+      const rendered = renderHook<any, any>(() =>
+        useCommunityStats({ community: { name: "string stats" } }),
+      );
+      const waitFor = testUtils.createWaitFor(rendered);
+      await waitFor(() => rendered.result.current.state === "succeeded");
+      expect(rendered.result.current.hourActiveUserCount).toBe(5);
+      expect(rendered.result.current.weekActiveUserCount).toBe(55);
+      expect(rendered.result.current.allPostCount).toBe(555);
+    } finally {
+      fetchSpy?.mockRestore();
+    }
+  });
+
+  test("useCommunityStats accepts object fetchCid responses", async () => {
+    let fetchSpy: { mockRestore: () => void } | undefined;
+    try {
+      fetchSpy = vi.spyOn(PKC.prototype as any, "fetchCid").mockResolvedValue({
+        hourActiveUserCount: 6,
+        weekActiveUserCount: 66,
+        allPostCount: 666,
+      });
+      const rendered = renderHook<any, any>(() =>
+        useCommunityStats({ community: { name: "object stats" } }),
+      );
+      const waitFor = testUtils.createWaitFor(rendered);
+      await waitFor(() => rendered.result.current.state === "succeeded");
+      expect(rendered.result.current.hourActiveUserCount).toBe(6);
+      expect(rendered.result.current.weekActiveUserCount).toBe(66);
+      expect(rendered.result.current.allPostCount).toBe(666);
+    } finally {
+      fetchSpy?.mockRestore();
+    }
+  });
+
+  test("useCommunityStats keeps direct stats responses with content fields", async () => {
+    let fetchSpy: { mockRestore: () => void } | undefined;
+    try {
+      fetchSpy = vi.spyOn(PKC.prototype as any, "fetchCid").mockResolvedValue({
+        content: "not json stats content",
+        hourActiveUserCount: 5,
+        weekActiveUserCount: 55,
+        allPostCount: 555,
+      });
+      const rendered = renderHook<any, any>(() =>
+        useCommunityStats({ community: { name: "stats with content" } }),
+      );
+      const waitFor = testUtils.createWaitFor(rendered);
+      await waitFor(() => rendered.result.current.state === "succeeded");
+      expect(rendered.result.current.hourActiveUserCount).toBe(5);
+      expect(rendered.result.current.weekActiveUserCount).toBe(55);
+      expect(rendered.result.current.allPostCount).toBe(555);
+      expect(rendered.result.current.content).toBe("not json stats content");
+    } finally {
+      fetchSpy?.mockRestore();
+    }
+  });
+
+  test("useCommunityStats keeps unrecognized content responses", async () => {
+    let fetchSpy: { mockRestore: () => void } | undefined;
+    try {
+      fetchSpy = vi.spyOn(PKC.prototype as any, "fetchCid").mockResolvedValue({
+        content: "not json stats content",
+      });
+      const rendered = renderHook<any, any>(() =>
+        useCommunityStats({ community: { name: "unknown content stats" } }),
+      );
+      const waitFor = testUtils.createWaitFor(rendered);
+      await waitFor(() => rendered.result.current.state === "succeeded");
+      expect(rendered.result.current.content).toBe("not json stats content");
+    } finally {
+      fetchSpy?.mockRestore();
+    }
+  });
+
   test("useCommunityStats fetchCid error logs (stmt 110)", async () => {
     const origFetch = PKC.prototype.fetchCid;
     (PKC.prototype as any).fetchCid = () => Promise.reject(new Error("fetchCid failed"));
