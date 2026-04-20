@@ -256,8 +256,8 @@ export function useAuthorAddress(options) {
             const existing = resolveAuthorAddressPromises[addr];
             if (existing)
                 return existing;
-            log("useAuthorAddress protocol.resolveAuthorName", { address: addr });
-            return cacheResolveAuthorAddressPromise(addr, resolveAuthorNameWithProtocol(protocolClient, { address: addr }));
+            log("useAuthorAddress protocol.resolveAuthorName", { name: addr });
+            return cacheResolveAuthorAddressPromise(addr, resolveAuthorNameWithProtocol(protocolClient, { name: addr }));
         };
         const resolveAuthorAddress = () => __awaiter(this, void 0, void 0, function* () {
             const cached = resolvedAuthorAddressCache.get(addr);
@@ -359,9 +359,9 @@ export function useResolvedAuthorAddress(options) {
         if (Boolean(resolveAuthorAddressPromises[author === null || author === void 0 ? void 0 : author.address])) {
             return resolveAuthorAddressPromises[author === null || author === void 0 ? void 0 : author.address];
         }
-        log("useResolvedAuthorAddress protocol.resolveAuthorName", { address: author === null || author === void 0 ? void 0 : author.address });
+        log("useResolvedAuthorAddress protocol.resolveAuthorName", { name: author === null || author === void 0 ? void 0 : author.address });
         return cacheResolveAuthorAddressPromise(author === null || author === void 0 ? void 0 : author.address, resolveAuthorNameWithProtocol(protocolClient, {
-            address: author === null || author === void 0 ? void 0 : author.address,
+            name: author === null || author === void 0 ? void 0 : author.address,
         }));
     };
     const resolveAuthorAddress = () => __awaiter(this, void 0, void 0, function* () {

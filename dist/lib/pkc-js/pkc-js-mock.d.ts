@@ -1,4 +1,5 @@
 import EventEmitter from "events";
+import type { PkcResolveAuthorNameOptions, PkcResolveAuthorNameResult } from "../pkc-types.js";
 export declare const simulateLoadingTime: () => Promise<unknown>;
 export declare const resetPkcJsMock: () => void;
 export declare const debugPkcJsMock: () => void;
@@ -18,9 +19,7 @@ export declare class PKC extends EventEmitter {
     resolveAuthorAddress(options: {
         address: string;
     }): Promise<string>;
-    resolveAuthorName(options: {
-        address: string;
-    }): Promise<string>;
+    resolveAuthorName(options: PkcResolveAuthorNameOptions): Promise<PkcResolveAuthorNameResult>;
     createSigner(): Promise<{
         privateKey: string;
         address: string;

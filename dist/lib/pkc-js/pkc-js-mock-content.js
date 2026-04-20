@@ -747,7 +747,8 @@ class PKC extends EventEmitter {
     }
     resolveAuthorName(options) {
         return __awaiter(this, void 0, void 0, function* () {
-            return this.resolveAuthorAddress(options);
+            const resolvedAuthorName = yield this.resolveAuthorAddress({ address: options.name });
+            return { resolvedAuthorName };
         });
     }
     createCommunity(createCommunityOptions) {

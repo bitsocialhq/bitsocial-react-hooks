@@ -1,3 +1,4 @@
+import type { PkcResolveAuthorName, PkcResolveAuthorNameOptions } from "./pkc-types.js";
 export declare const getProtocolClient: (account: any) => any;
 export declare const getProtocolOptions: (account: any) => any;
 export declare const getChainProviders: (account: any) => any;
@@ -14,9 +15,14 @@ export type NameResolverInfo = {
 };
 export declare const getConfiguredNameResolverInfoByKey: (account: any) => Record<string, NameResolverInfo>;
 export declare const getMatchingNameResolvers: (account: any, address?: string) => NameResolverInfo[];
-export declare const resolveAuthorNameWithProtocol: (protocolClient: any, options: {
-    address?: string;
-} | Record<string, any>) => any;
+type LegacyResolveAuthorAddress = (options: {
+    address: string;
+}) => Promise<string> | string;
+type AuthorNameProtocolClient = {
+    resolveAuthorName?: PkcResolveAuthorName;
+    resolveAuthorAddress?: LegacyResolveAuthorAddress;
+};
+export declare const resolveAuthorNameWithProtocol: (protocolClient: AuthorNameProtocolClient | undefined, options: PkcResolveAuthorNameOptions) => Promise<string>;
 export declare const normalizeOptionsForPkcClient: <T extends Record<string, any> | undefined>(options: T) => T;
 export declare const getPkcClientOptions: <T extends Record<string, any> | undefined>(account: any, options: T) => T;
 export declare const normalizeAccountProtocolConfig: <T extends Record<string, any> | undefined>(account: T, defaultChainProviders?: Record<string, any>) => T;

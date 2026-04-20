@@ -1,3 +1,12 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import assert from "assert";
 import { BsoResolver } from "@bitsocial/bso-resolver";
 export const getProtocolClient = (account) => account === null || account === void 0 ? void 0 : account.pkc;
@@ -66,11 +75,22 @@ const buildConfiguredNameResolvers = (account, dataPath) => Object.values(getCon
     provider: resolverInfo.provider,
     dataPath,
 }));
-export const resolveAuthorNameWithProtocol = (protocolClient, options) => {
-    const resolveAuthorName = (protocolClient === null || protocolClient === void 0 ? void 0 : protocolClient.resolveAuthorAddress) || (protocolClient === null || protocolClient === void 0 ? void 0 : protocolClient.resolveAuthorName);
-    assert(typeof resolveAuthorName === "function", "protocol client resolveAuthorName/resolveAuthorAddress missing");
-    return resolveAuthorName.call(protocolClient, options);
+const normalizeResolvedAuthorName = (result) => {
+    if (typeof result === "string") {
+        return result;
+    }
+    assert(typeof (result === null || result === void 0 ? void 0 : result.resolvedAuthorName) === "string", "protocol client resolveAuthorName returned invalid resolvedAuthorName");
+    return result.resolvedAuthorName;
 };
+export const resolveAuthorNameWithProtocol = (protocolClient, options) => __awaiter(void 0, void 0, void 0, function* () {
+    const resolveAuthorName = protocolClient === null || protocolClient === void 0 ? void 0 : protocolClient.resolveAuthorName;
+    if (typeof resolveAuthorName === "function") {
+        return normalizeResolvedAuthorName(yield resolveAuthorName.call(protocolClient, options));
+    }
+    const resolveAuthorAddress = protocolClient === null || protocolClient === void 0 ? void 0 : protocolClient.resolveAuthorAddress;
+    assert(typeof resolveAuthorAddress === "function", "protocol client resolveAuthorName/resolveAuthorAddress missing");
+    return resolveAuthorAddress.call(protocolClient, { address: options.name });
+});
 export const normalizeOptionsForPkcClient = (options) => {
     if (!options) {
         return options;
