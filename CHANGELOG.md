@@ -1,3 +1,12 @@
+## [0.1.45](https://github.com/bitsocialnet/bitsocial-react-hooks/compare/v0.1.44...v0.1.45) (2026-09-09)
+
+
+### Bug Fixes
+
+* **test:** rename challenge exclude role to roles for pkc-js 0.0.101 ([1afe115](https://github.com/bitsocialnet/bitsocial-react-hooks/commit/1afe1150a7e935543bb54aff0ab9477b44c61084))
+
+
+
 ## [0.1.44](https://github.com/bitsocialnet/bitsocial-react-hooks/compare/v0.1.43...v0.1.44) (2026-09-03)
 
 
