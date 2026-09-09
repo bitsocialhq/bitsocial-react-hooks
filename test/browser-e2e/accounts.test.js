@@ -279,7 +279,7 @@ for (const pkcOptionsType in pkcOptionsTypes) {
                   {
                     name: "text-math",
                     pendingApproval: true,
-                    exclude: [{ role: ["moderator"] }],
+                    exclude: [{ roles: ["moderator"] }],
                   },
                 ],
               },
